@@ -72,7 +72,7 @@ const TABS=[
 {k:"talks",n:"المناقشات",see:"owner,contr",add:"owner,contr",ph:"اكتب رسالة..."},
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,mgmt,contr",add:"owner,contr",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,mgmt,contr",add:"owner,contr",ph:"عنوان التقرير وملخصه...",file:"*/*"},
-{k:"media",n:"الصور والفيديوهات",see:"owner,mgmt,contr",add:"owner,contr",ph:"وصف (اختياري)",file:"image/*,video/*"}];
+{k:"media",n:"الصور والفيديوهات",see:"owner,mgmt,contr",add:"owner,contr",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
 let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:""};
 
 /* ===== 2) مساعدات ===== */
@@ -195,7 +195,7 @@ function proj(){
   const acts=own?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">دعوة مقاول لهذا المشروع</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
-  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}">`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
+  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
@@ -230,12 +230,20 @@ async function delProj(){
   S.cur=null;S.modal=null;await load();
 }
 async function addE(){
-  const body=$("tx").value.trim(),f=$("fl")?.files[0];if(!body&&!f)return;
-  $("bt").disabled=true;$("bt").textContent="جاري الرفع...";
-  let path=null,type=null;
-  if(f){path=await up(S.cur,f);if(!path)return render();type=f.type}
-  const {error}=await sb.from("entries").insert({project_id:S.cur,kind:S.tab,body,file_path:path,file_type:type,author_role:ROLES[S.role]});
-  if(error)alert(error.message);await loadE();render();
+  const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
+  if(!body&&!fs.length)return;
+  $("bt").disabled=true;
+  const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
+  if(!fs.length)rows.push({...base,body,file_path:null,file_type:null});
+  for(let i=0;i<fs.length;i++){
+    $("bt").textContent=`جاري رفع ${i+1} من ${fs.length}...`;
+    const path=await up(S.cur,fs[i]);
+    if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type});
+  }
+  if(!rows.length)return render();
+  const {error}=await sb.from("entries").insert(rows);
+  if(error)alert(error.message);
+  await loadE();render();
 }
 async function delE(id){
   if(!confirm("حذف؟"))return;
