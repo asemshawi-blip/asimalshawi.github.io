@@ -47,6 +47,10 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .lbl{font-size:13px;color:var(--muted)}
 .item{border-bottom:1px solid var(--line);padding:12px 0}.item small{color:var(--muted);display:block;margin-top:6px}
 .item img,.item video{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-top:8px}
+.item img{cursor:zoom-in}
+.lb{position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
+.lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.lbx{position:absolute;top:14px;left:14px;background:#ffffff33;color:#fff;border:0;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer}
 .note,.empty{text-align:center;color:var(--muted);padding:22px}
 .login{max-width:380px;margin:50px auto}.msg{color:var(--late);font-size:14px;min-height:20px}
 .modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
@@ -76,6 +80,8 @@ const $=id=>document.getElementById(id);
 const clamp=v=>Math.max(0,Math.min(100,parseInt(v)||0));
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const stOpts=v=>Object.keys(ST).map(k=>`<option value="${k}" ${k===v?"selected":""}>${ST[k][0]}</option>`).join("");
+const fmt=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const daysBetween=(a,b)=>a&&b?Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5):"";
 const inv=()=>new URLSearchParams(location.search).get("invite");
 const money=v=>v==null||v===""?"-":Number(v).toLocaleString("en-US");
 /* متأخر / على الموعد + عداد الأيام (لا يظهر بعد التسليم) */
@@ -172,7 +178,7 @@ async function setTab(k){S.tab=k;await loadE();render()}
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
   const t=e.file_type||"";
-  if(t.startsWith("image"))return `<img src="${u}" loading="lazy">`;
+  if(t.startsWith("image"))return `<img src="${u}" loading="lazy" onclick="openImg(this.src)">`;
   if(t.startsWith("video"))return `<video src="${u}" controls preload="metadata"></video>`;
   return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
 }
@@ -247,8 +253,9 @@ function projForm(p){
   <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}">
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
-  <label class="lbl">تاريخ البداية</label><input id="mb" type="date" value="${esc(p.start_date)}">
-  <label class="lbl">تاريخ التسليم</label><input id="md" type="date" value="${esc(p.due)}">
+  <label class="lbl">تاريخ البداية</label><input id="mb" type="date" value="${esc(p.start_date)}" onchange="calcDue()">
+  <label class="lbl">مدة المشروع (بالأيام)</label><input id="mdays" type="number" min="1" placeholder="مثال: 120" value="${daysBetween(p.start_date,p.due)}" oninput="calcDue()">
+  <label class="lbl">تاريخ التسليم (يُحسب تلقائياً من المدة، ويمكن تعديله)</label><input id="md" type="date" value="${esc(p.due)}" onchange="calcDays()">
   <label class="lbl">السعر</label><input id="mpr" type="number" min="0" step="any" placeholder="السعر" value="${esc(p.price)}">
   <label class="lbl">${edit?"تغيير صورة الغلاف":"صورة الغلاف"}</label><input id="mc" type="file" accept="image/*">
   <button class="btn" id="mbtn" onclick="saveProj()">حفظ</button> <button class="btn alt" onclick="modal(null)">إلغاء</button>
@@ -265,6 +272,21 @@ function modalHtml(){
   ${S.link?`<p>أرسل هذا الرابط (يعمل مرة واحدة):</p><div class="link">${esc(S.link)}</div><button class="btn alt" onclick="copyLink(this)">نسخ الرابط</button>`:""}
   <br><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
 }
+function calcDue(){
+  const s=$("mb").value,n=parseInt($("mdays").value);
+  if(!s||!n||n<1)return;
+  const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);$("md").value=fmt(d);
+}
+function calcDays(){$("mdays").value=daysBetween($("mb").value,$("md").value)}
+/* عرض الصورة كاملة */
+function openImg(u){
+  const d=document.createElement("div");d.className="lb";d.id="lb";d.onclick=closeImg;
+  const i=document.createElement("img");i.src=u;
+  const x=document.createElement("button");x.className="lbx";x.textContent="✕";
+  d.append(i,x);document.body.appendChild(d);
+}
+function closeImg(){$("lb")?.remove()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeImg()});
 function copyLink(b){navigator.clipboard.writeText(S.link);b.textContent="تم النسخ"}
 async function mkInv(role){
   const {data,error}=await sb.from("invites").insert({role,project_id:role==="contr"?S.cur:null}).select().single();
