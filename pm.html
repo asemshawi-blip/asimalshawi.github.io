@@ -6,73 +6,100 @@
 <title>إدارة المشاريع</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;
---run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
+:root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;--run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Tajawal',Tahoma,sans-serif;background:var(--bg);color:var(--text)}
-header{background:var(--navy);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
-header h1{margin:0;font-size:20px}
-header span{font-size:14px;opacity:.8}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header h1{margin:0;font-size:19px}
+header label{font-size:13px;opacity:.9}
+select,input,textarea,button{font-family:inherit;font-size:15px}
+header select{padding:4px 8px;border-radius:8px;border:0}
 .wrap{max-width:1100px;margin:auto;padding:20px}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.stat{background:var(--card);border-radius:16px;padding:20px;cursor:pointer;border-top:6px solid var(--c);box-shadow:0 4px 14px #0f274212;transition:.2s}
+.stat{background:var(--card);border-radius:16px;padding:20px;cursor:pointer;border-top:6px solid var(--c);box-shadow:0 4px 14px #0f274212}
 .stat.on{outline:3px solid var(--c)}
 .stat b{display:block;font-size:44px;line-height:1.1;color:var(--c);font-weight:800}
-.stat span{font-size:16px;color:var(--muted);font-weight:500}
+.stat span{color:var(--muted);font-weight:500}
 .s-run{--c:var(--run)}.s-late{--c:var(--late)}.s-plan{--c:var(--plan)}.s-done{--c:var(--done)}
-h2{margin:30px 0 14px;font-size:22px}
+h2{margin:28px 0 14px;font-size:22px}
 .grid{display:grid;grid-template-columns:1fr;gap:20px}
-.card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px #0f274214;display:block;color:inherit;text-decoration:none}
+.card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px #0f274214;cursor:pointer}
 .img{height:260px;background-size:cover;background-position:center;position:relative}
 .badge{position:absolute;top:14px;right:14px;background:var(--c);color:#fff;padding:5px 16px;border-radius:20px;font-size:14px;font-weight:700}
-.body{padding:18px}
-.body h3{margin:0 0 4px;font-size:21px}
-.body p{margin:0;color:var(--muted);font-size:15px}
+.body{padding:18px}.body h3{margin:0 0 4px;font-size:21px}.body p{margin:0;color:var(--muted)}
 .bar{height:8px;background:var(--line);border-radius:8px;margin:14px 0 6px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--c);border-radius:8px}
+.bar i{display:block;height:100%;background:var(--c)}
 .row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
-.empty{text-align:center;color:var(--muted);padding:40px}
+.back{background:none;border:0;color:var(--run);font-weight:700;cursor:pointer;padding:0 0 12px}
+.banner{height:300px;border-radius:18px;background-size:cover;background-position:center;position:relative}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin:18px 0}
+.tab{white-space:nowrap;background:var(--card);border:1px solid var(--line);padding:9px 18px;border-radius:24px;cursor:pointer;font-weight:500}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.box{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 4px 14px #0f274210}
+.item{border-bottom:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;gap:6px}
+.item small{color:var(--muted)}
+.item img,.item video{width:100%;max-height:340px;object-fit:cover;border-radius:12px}
+.x{align-self:flex-start;background:#fee2e2;color:var(--late);border:0;padding:4px 12px;border-radius:8px;cursor:pointer}
+.add{display:flex;gap:8px;margin-bottom:12px}
+.add input{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px}
+.add button{background:var(--run);color:#fff;border:0;padding:0 20px;border-radius:10px;cursor:pointer}
+.empty,.note{text-align:center;color:var(--muted);padding:18px}
 @media(min-width:700px){.stats{grid-template-columns:repeat(4,1fr)}.grid{grid-template-columns:repeat(2,1fr)}.img{height:320px}}
 </style>
 </head>
 <body>
-<header><h1>إدارة المشاريع</h1><span>لوحة المالك</span></header>
-<div class="wrap">
-  <div class="stats" id="stats"></div>
-  <h2 id="title">كل المشاريع</h2>
-  <div class="grid" id="grid"></div>
-</div>
+<header><h1>إدارة المشاريع</h1>
+<label>معاينة الدور: <select onchange="setRole(this.value)"><option value="owner">المالك</option><option value="mgmt">الإدارة</option><option value="contr">المقاول</option></select></label></header>
+<div class="wrap" id="app"></div>
 <script>
-const STATUS={
-  run:{label:"قيد التنفيذ",cls:"s-run"},
-  late:{label:"متأخر",cls:"s-late"},
-  plan:{label:"التصميم والتخطيط",cls:"s-plan"},
-  done:{label:"تم التسليم",cls:"s-done"}
-};
-// مشاريع تجريبية: غيّر الاسم والموقع والنسبة، وحط رابط صورة حقيقية بدل img
-const PROJECTS=[
-  {name:"مشروع فيلا الأول",loc:"الرياض",status:"run",progress:62,due:"2026-12-01",img:"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=900"},
-  {name:"مجمع سكني",loc:"جدة",status:"late",progress:45,due:"2026-09-15",img:"https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=900"},
-  {name:"برج مكتبي",loc:"الدمام",status:"plan",progress:15,due:"2027-06-01",img:"https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=900"},
-  {name:"مبنى تجاري",loc:"الخبر",status:"done",progress:100,due:"2026-06-20",img:"https://images.unsplash.com/photo-1497366216548-37526070297c?w=900"}
-];
-let filter=null;
-function render(){
-  document.getElementById("stats").innerHTML=Object.keys(STATUS).map(k=>{
-    const n=PROJECTS.filter(p=>p.status===k).length;
-    return `<div class="stat ${STATUS[k].cls} ${filter===k?'on':''}" onclick="setF('${k}')"><b>${n}</b><span>${STATUS[k].label}</span></div>`;
-  }).join("");
-  const list=PROJECTS.filter(p=>!filter||p.status===filter);
-  document.getElementById("title").textContent=filter?STATUS[filter].label:"كل المشاريع";
-  document.getElementById("grid").innerHTML=list.length?list.map(p=>`
-    <a class="card ${STATUS[p.status].cls}" href="#">
-      <div class="img" style="background-image:url('${p.img}')"><span class="badge">${STATUS[p.status].label}</span></div>
-      <div class="body"><h3>${p.name}</h3><p>${p.loc}</p>
-      <div class="bar"><i style="width:${p.progress}%"></i></div>
-      <div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due}</span></div></div>
-    </a>`).join(""):'<div class="empty">لا توجد مشاريع</div>';
-}
+const ROLES={owner:"المالك",mgmt:"الإدارة",contr:"المقاول"};
+const ST={run:["قيد التنفيذ","s-run"],late:["متأخر","s-late"],plan:["التصميم والتخطيط","s-plan"],done:["تم التسليم","s-done"]};
+const TABS=[
+{k:"notes",n:"ملاحظات الإدارة",see:"owner,mgmt",add:"owner,mgmt",ph:"اكتب ملاحظة..."},
+{k:"talks",n:"مناقشات مع المقاول",see:"owner,contr",add:"owner,contr",ph:"اكتب رسالة..."},
+{k:"reports",n:"التقارير",see:"owner,mgmt,contr",add:"owner,contr",ph:"عنوان التقرير وملخصه..."},
+{k:"media",n:"الصور والفيديوهات",see:"owner,mgmt,contr",add:"owner,contr",ph:"رابط صورة أو فيديو (https://...)"}];
+const IMG=["photo-1600585154340-be6161a56a0c","photo-1545324418-cc1a3fa10c00","photo-1486406146926-c627a92ad1ab","photo-1497366216548-37526070297c"];
+const P=[["مشروع فيلا الأول","الرياض","run",62,"2026-12-01"],["مجمع سكني","جدة","late",45,"2026-09-15"],["برج مكتبي","الدمام","plan",15,"2027-06-01"],["مبنى تجاري","الخبر","done",100,"2026-06-20"]];
+const BASE=P.map((p,i)=>({id:i,name:p[0],loc:p[1],status:p[2],progress:p[3],due:p[4],img:"https://images.unsplash.com/"+IMG[i]+"?w=900",notes:[],talks:[],reports:[],media:[]}));
+let data=null;try{data=JSON.parse(localStorage.getItem("pm1"))}catch(e){}
+if(!data)data=BASE;
+let role="owner",filter=null,cur=null,tab="notes";
+const can=s=>s.split(",").includes(role);
+const save=()=>{try{localStorage.setItem("pm1",JSON.stringify(data))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const vis=()=>role==="contr"?data.filter(p=>p.id===0):data;
+function setRole(v){role=v;filter=null;if(role==="contr"&&cur!==null&&cur!==0)cur=null;render()}
 function setF(k){filter=filter===k?null:k;render()}
+function openP(i){cur=i;render();scrollTo(0,0)}
+function setTab(k){tab=k;render()}
+function setSt(v){data[cur].status=v;if(v==="done")data[cur].progress=100;save();render()}
+function add(k){const v=document.getElementById("in").value.trim();if(!v)return;
+data[cur][k].unshift({t:v,d:new Date().toLocaleDateString("ar"),by:ROLES[role]});save();render()}
+function del(k,i){if(confirm("حذف؟")){data[cur][k].splice(i,1);save();render()}}
+function home(){
+const L=vis();
+const stats=Object.keys(ST).map(k=>`<div class="stat ${ST[k][1]} ${filter===k?"on":""}" onclick="setF('${k}')"><b>${L.filter(p=>p.status===k).length}</b><span>${ST[k][0]}</span></div>`).join("");
+const list=L.filter(p=>!filter||p.status===filter);
+const cards=list.map(p=>`<div class="card ${ST[p.status][1]}" onclick="openP(${p.id})"><div class="img" style="background-image:url('${p.img}')"><span class="badge">${ST[p.status][0]}</span></div><div class="body"><h3>${esc(p.name)}</h3><p>${esc(p.loc)}</p><div class="bar"><i style="width:${p.progress}%"></i></div><div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due}</span></div></div></div>`).join("");
+return `<div class="stats">${stats}</div><h2>${filter?ST[filter][0]:"كل المشاريع"}</h2><div class="grid">${cards||'<div class="empty">لا توجد مشاريع</div>'}</div>`}
+function proj(){
+const p=data[cur],T=TABS.filter(t=>can(t.see));
+if(!T.some(t=>t.k===tab))tab=T[0].k;
+const t=TABS.find(x=>x.k===tab);
+const items=p[tab].map((x,i)=>{
+let b=esc(x.t);
+if(tab==="media"&&/^https?:/.test(x.t))b=/\.(mp4|mov|webm)/i.test(x.t)?`<video src="${esc(x.t)}" controls></video>`:`<img src="${esc(x.t)}">`;
+return `<div class="item"><div>${b}</div><small>${esc(x.by)} · ${x.d}</small>${role==="owner"?`<button class="x" onclick="del('${tab}',${i})">حذف</button>`:""}</div>`}).join("");
+const stSel=role==="owner"?`<select onchange="setSt(this.value)">${Object.keys(ST).map(k=>`<option value="${k}" ${k===p.status?"selected":""}>${ST[k][0]}</option>`).join("")}</select>`:"";
+return `<button class="back" onclick="cur=null;render()">← كل المشاريع</button>
+<div class="banner ${ST[p.status][1]}" style="background-image:url('${p.img}')"><span class="badge">${ST[p.status][0]}</span></div>
+<h2>${esc(p.name)} · ${esc(p.loc)} ${stSel}</h2>
+<div class="bar ${ST[p.status][1]}"><i style="width:${p.progress}%"></i></div>
+<div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due}</span></div>
+<div class="tabs">${T.map(x=>`<div class="tab ${x.k===tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
+<div class="box">${can(t.add)?`<div class="add"><input id="in" placeholder="${t.ph}"><button onclick="add('${tab}')">إضافة</button></div>`:'<div class="note">عرض فقط</div>'}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`}
+function render(){document.getElementById("app").innerHTML=cur===null?home():proj()}
 render();
 </script>
 </body>
