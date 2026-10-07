@@ -5,102 +5,225 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>إدارة المشاريع</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;--run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Tajawal',Tahoma,sans-serif;background:var(--bg);color:var(--text)}
-header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
 header h1{margin:0;font-size:19px}
-header label{font-size:13px;opacity:.9}
-select,input,textarea,button{font-family:inherit;font-size:15px}
-header select{padding:4px 8px;border-radius:8px;border:0}
+.hb{display:flex;gap:8px;align-items:center}.rl{font-size:13px;opacity:.85}
+input,select,textarea,button{font-family:inherit;font-size:15px}
+input,select,textarea{padding:10px;border:1px solid var(--line);border-radius:10px;width:100%;margin:4px 0 10px;background:#fff}
 .wrap{max-width:1100px;margin:auto;padding:20px}
+.sm{background:#ffffff26;color:#fff;border:0;padding:6px 14px;border-radius:8px;cursor:pointer}
+.btn{background:var(--run);color:#fff;border:0;padding:11px 22px;border-radius:10px;cursor:pointer;font-weight:700;margin:4px 0}
+.btn.alt{background:#475569}.btn.danger{background:var(--late)}
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .stat{background:var(--card);border-radius:16px;padding:20px;cursor:pointer;border-top:6px solid var(--c);box-shadow:0 4px 14px #0f274212}
 .stat.on{outline:3px solid var(--c)}
 .stat b{display:block;font-size:44px;line-height:1.1;color:var(--c);font-weight:800}
 .stat span{color:var(--muted);font-weight:500}
 .s-run{--c:var(--run)}.s-late{--c:var(--late)}.s-plan{--c:var(--plan)}.s-done{--c:var(--done)}
-h2{margin:28px 0 14px;font-size:22px}
+.top{display:flex;justify-content:space-between;align-items:center;margin:26px 0 14px}.top h2{margin:0;font-size:22px}
 .grid{display:grid;grid-template-columns:1fr;gap:20px}
 .card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px #0f274214;cursor:pointer}
-.img{height:260px;background-size:cover;background-position:center;position:relative}
+.img{height:260px;background:linear-gradient(135deg,#cbd5e1,#94a3b8);background-size:cover;background-position:center;position:relative}
 .badge{position:absolute;top:14px;right:14px;background:var(--c);color:#fff;padding:5px 16px;border-radius:20px;font-size:14px;font-weight:700}
 .body{padding:18px}.body h3{margin:0 0 4px;font-size:21px}.body p{margin:0;color:var(--muted)}
-.bar{height:8px;background:var(--line);border-radius:8px;margin:14px 0 6px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--c)}
+.bar{height:8px;background:var(--line);border-radius:8px;margin:14px 0 6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--c)}
 .row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
 .back{background:none;border:0;color:var(--run);font-weight:700;cursor:pointer;padding:0 0 12px}
-.banner{height:300px;border-radius:18px;background-size:cover;background-position:center;position:relative}
+.banner{height:300px;border-radius:18px;background:linear-gradient(135deg,#cbd5e1,#94a3b8);background-size:cover;background-position:center;position:relative}
 .tabs{display:flex;gap:8px;overflow-x:auto;margin:18px 0}
 .tab{white-space:nowrap;background:var(--card);border:1px solid var(--line);padding:9px 18px;border-radius:24px;cursor:pointer;font-weight:500}
 .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .box{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 4px 14px #0f274210}
-.item{border-bottom:1px solid var(--line);padding:12px 0;display:flex;flex-direction:column;gap:6px}
-.item small{color:var(--muted)}
-.item img,.item video{width:100%;max-height:340px;object-fit:cover;border-radius:12px}
-.x{align-self:flex-start;background:#fee2e2;color:var(--late);border:0;padding:4px 12px;border-radius:8px;cursor:pointer}
-.add{display:flex;gap:8px;margin-bottom:12px}
-.add input{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px}
-.add button{background:var(--run);color:#fff;border:0;padding:0 20px;border-radius:10px;cursor:pointer}
-.empty,.note{text-align:center;color:var(--muted);padding:18px}
+.ctl{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;align-items:end;margin-bottom:14px}.ctl label{font-size:13px;color:var(--muted)}
+.item{border-bottom:1px solid var(--line);padding:12px 0}.item small{color:var(--muted);display:block;margin-top:6px}
+.item img,.item video{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-top:8px}
+.note,.empty{text-align:center;color:var(--muted);padding:22px}
+.login{max-width:380px;margin:50px auto}.msg{color:var(--late);font-size:14px;min-height:20px}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.modal .box{width:100%;max-width:440px;max-height:92vh;overflow:auto}
+.link{background:#eff6ff;padding:10px;border-radius:10px;word-break:break-all;font-size:13px;direction:ltr;text-align:left}
 @media(min-width:700px){.stats{grid-template-columns:repeat(4,1fr)}.grid{grid-template-columns:repeat(2,1fr)}.img{height:320px}}
 </style>
 </head>
 <body>
-<header><h1>إدارة المشاريع</h1>
-<label>معاينة الدور: <select onchange="setRole(this.value)"><option value="owner">المالك</option><option value="mgmt">الإدارة</option><option value="contr">المقاول</option></select></label></header>
-<div class="wrap" id="app"></div>
+<div id="app"></div>
 <script>
+const sb=supabase.createClient("https://wmavitpimbcjohcjgqhz.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYXZpdHBpbWJjam9oY2pncWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzODg4MDQsImV4cCI6MjEwNjk2NDgwNH0.sR6dTymzM2TgclddArsdMfuxEZ3rTADB2Ti796X8d5Y");
 const ROLES={owner:"المالك",mgmt:"الإدارة",contr:"المقاول"};
 const ST={run:["قيد التنفيذ","s-run"],late:["متأخر","s-late"],plan:["التصميم والتخطيط","s-plan"],done:["تم التسليم","s-done"]};
 const TABS=[
 {k:"notes",n:"ملاحظات الإدارة",see:"owner,mgmt",add:"owner,mgmt",ph:"اكتب ملاحظة..."},
 {k:"talks",n:"مناقشات مع المقاول",see:"owner,contr",add:"owner,contr",ph:"اكتب رسالة..."},
-{k:"reports",n:"التقارير",see:"owner,mgmt,contr",add:"owner,contr",ph:"عنوان التقرير وملخصه..."},
-{k:"media",n:"الصور والفيديوهات",see:"owner,mgmt,contr",add:"owner,contr",ph:"رابط صورة أو فيديو (https://...)"}];
-const IMG=["photo-1600585154340-be6161a56a0c","photo-1545324418-cc1a3fa10c00","photo-1486406146926-c627a92ad1ab","photo-1497366216548-37526070297c"];
-const P=[["مشروع فيلا الأول","الرياض","run",62,"2026-12-01"],["مجمع سكني","جدة","late",45,"2026-09-15"],["برج مكتبي","الدمام","plan",15,"2027-06-01"],["مبنى تجاري","الخبر","done",100,"2026-06-20"]];
-const BASE=P.map((p,i)=>({id:i,name:p[0],loc:p[1],status:p[2],progress:p[3],due:p[4],img:"https://images.unsplash.com/"+IMG[i]+"?w=900",notes:[],talks:[],reports:[],media:[]}));
-let data=null;try{data=JSON.parse(localStorage.getItem("pm1"))}catch(e){}
-if(!data)data=BASE;
-let role="owner",filter=null,cur=null,tab="notes";
-const can=s=>s.split(",").includes(role);
-const save=()=>{try{localStorage.setItem("pm1",JSON.stringify(data))}catch(e){}};
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const vis=()=>role==="contr"?data.filter(p=>p.id===0):data;
-function setRole(v){role=v;filter=null;if(role==="contr"&&cur!==null&&cur!==0)cur=null;render()}
-function setF(k){filter=filter===k?null:k;render()}
-function openP(i){cur=i;render();scrollTo(0,0)}
-function setTab(k){tab=k;render()}
-function setSt(v){data[cur].status=v;if(v==="done")data[cur].progress=100;save();render()}
-function add(k){const v=document.getElementById("in").value.trim();if(!v)return;
-data[cur][k].unshift({t:v,d:new Date().toLocaleDateString("ar"),by:ROLES[role]});save();render()}
-function del(k,i){if(confirm("حذف؟")){data[cur][k].splice(i,1);save();render()}}
+{k:"reports",n:"التقارير",see:"owner,mgmt,contr",add:"owner,contr",ph:"عنوان التقرير وملخصه...",file:"*/*"},
+{k:"media",n:"الصور والفيديوهات",see:"owner,mgmt,contr",add:"owner,contr",ph:"وصف (اختياري)",file:"image/*,video/*"}];
+let S={user:null,role:"none",projects:[],cur:null,tab:"notes",filter:null,entries:[],urls:{},modal:null,link:""};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const stOpts=v=>Object.keys(ST).map(k=>`<option value="${k}" ${k===v?"selected":""}>${ST[k][0]}</option>`).join("");
+const clamp=v=>Math.max(0,Math.min(100,parseInt(v)||0));
+
+async function init(){
+  const {data}=await sb.auth.getSession();
+  S.user=data.session?.user||null;
+  S.user?boot():loginView();
+}
+function inv(){return new URLSearchParams(location.search).get("invite")}
+function loginView(msg=""){
+  $("app").innerHTML=`<div class="login box"><h2>${inv()?"قبول الدعوة":"تسجيل الدخول"}</h2>
+  <input id="em" type="email" placeholder="البريد الإلكتروني"><input id="pw" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)">
+  <div class="msg">${msg}</div><button class="btn" onclick="signIn()">دخول</button>
+  ${inv()?'<button class="btn alt" onclick="signUp()">إنشاء حساب جديد</button>':""}</div>`;
+}
+async function signIn(){
+  const {data,error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+  if(error)return loginView("البريد أو كلمة المرور غير صحيحة");
+  S.user=data.user;boot();
+}
+async function signUp(){
+  const {data,error}=await sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value});
+  if(error)return loginView(esc(error.message));
+  if(!data.session)return loginView("تم إنشاء الحساب. أكّد بريدك ثم افتح رابط الدعوة مرة ثانية وسجّل دخول.");
+  S.user=data.user;boot();
+}
+async function out(){await sb.auth.signOut();location.href=location.pathname}
+async function boot(){
+  if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
+  const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
+  S.role=p?.role||"none";
+  await load();
+}
+async function load(){
+  const {data}=await sb.from("projects").select("*").order("created_at",{ascending:false});
+  S.projects=data||[];
+  await sign(S.projects.map(p=>p.cover_path));
+  render();
+}
+async function sign(paths){
+  const need=[...new Set(paths.filter(x=>x&&!S.urls[x]))];
+  if(!need.length)return;
+  const {data}=await sb.storage.from("media").createSignedUrls(need,7200);
+  (data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl});
+}
+async function up(pid,f){
+  const ext=(f.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"")||"bin";
+  const path=`${pid}/${crypto.randomUUID()}.${ext}`;
+  const {error}=await sb.storage.from("media").upload(path,f,{contentType:f.type||"application/octet-stream"});
+  if(error){alert("فشل الرفع: "+error.message);return null}
+  return path;
+}
+
+function render(){
+  const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
+  ${S.role==="owner"?'<button class="sm" onclick="modal(\'inv\')">دعوة</button>':""}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
+  $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
+}
 function home(){
-const L=vis();
-const stats=Object.keys(ST).map(k=>`<div class="stat ${ST[k][1]} ${filter===k?"on":""}" onclick="setF('${k}')"><b>${L.filter(p=>p.status===k).length}</b><span>${ST[k][0]}</span></div>`).join("");
-const list=L.filter(p=>!filter||p.status===filter);
-const cards=list.map(p=>`<div class="card ${ST[p.status][1]}" onclick="openP(${p.id})"><div class="img" style="background-image:url('${p.img}')"><span class="badge">${ST[p.status][0]}</span></div><div class="body"><h3>${esc(p.name)}</h3><p>${esc(p.loc)}</p><div class="bar"><i style="width:${p.progress}%"></i></div><div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due}</span></div></div></div>`).join("");
-return `<div class="stats">${stats}</div><h2>${filter?ST[filter][0]:"كل المشاريع"}</h2><div class="grid">${cards||'<div class="empty">لا توجد مشاريع</div>'}</div>`}
+  const L=S.projects;
+  const stats=Object.keys(ST).map(k=>`<div class="stat ${ST[k][1]} ${S.filter===k?"on":""}" onclick="setF('${k}')"><b>${L.filter(p=>p.status===k).length}</b><span>${ST[k][0]}</span></div>`).join("");
+  const list=L.filter(p=>!S.filter||p.status===S.filter);
+  const cards=list.map(p=>{const u=S.urls[p.cover_path];
+    return `<div class="card ${ST[p.status][1]}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}><span class="badge">${ST[p.status][0]}</span></div>
+    <div class="body"><h3>${esc(p.name)}</h3><p>${esc(p.loc)}</p><div class="bar"><i style="width:${p.progress}%"></i></div>
+    <div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due||"-"}</span></div></div></div>`}).join("");
+  return `<div class="stats">${stats}</div><div class="top"><h2>${S.filter?ST[S.filter][0]:"كل المشاريع"}</h2>
+  ${S.role==="owner"?'<button class="btn" onclick="modal(\'new\')">＋ مشروع جديد</button>':""}</div>
+  <div class="grid">${cards||'<div class="empty">لا توجد مشاريع</div>'}</div>`;
+}
+function setF(k){S.filter=S.filter===k?null:k;render()}
+async function openP(id){S.cur=id;S.tab=TABS.find(t=>t.see.includes(S.role)).k;await loadE();render();scrollTo(0,0)}
+async function setTab(k){S.tab=k;await loadE();render()}
+async function loadE(){
+  const {data}=await sb.from("entries").select("*").eq("project_id",S.cur).eq("kind",S.tab).order("created_at",{ascending:false});
+  S.entries=data||[];await sign(S.entries.map(e=>e.file_path));
+}
+function fileHtml(e){
+  const u=S.urls[e.file_path];if(!u)return"";
+  if((e.file_type||"").startsWith("image"))return `<img src="${u}">`;
+  if((e.file_type||"").startsWith("video"))return `<video src="${u}" controls></video>`;
+  return `<p><a href="${u}" target="_blank">📎 فتح الملف</a></p>`;
+}
 function proj(){
-const p=data[cur],T=TABS.filter(t=>can(t.see));
-if(!T.some(t=>t.k===tab))tab=T[0].k;
-const t=TABS.find(x=>x.k===tab);
-const items=p[tab].map((x,i)=>{
-let b=esc(x.t);
-if(tab==="media"&&/^https?:/.test(x.t))b=/\.(mp4|mov|webm)/i.test(x.t)?`<video src="${esc(x.t)}" controls></video>`:`<img src="${esc(x.t)}">`;
-return `<div class="item"><div>${b}</div><small>${esc(x.by)} · ${x.d}</small>${role==="owner"?`<button class="x" onclick="del('${tab}',${i})">حذف</button>`:""}</div>`}).join("");
-const stSel=role==="owner"?`<select onchange="setSt(this.value)">${Object.keys(ST).map(k=>`<option value="${k}" ${k===p.status?"selected":""}>${ST[k][0]}</option>`).join("")}</select>`:"";
-return `<button class="back" onclick="cur=null;render()">← كل المشاريع</button>
-<div class="banner ${ST[p.status][1]}" style="background-image:url('${p.img}')"><span class="badge">${ST[p.status][0]}</span></div>
-<h2>${esc(p.name)} · ${esc(p.loc)} ${stSel}</h2>
-<div class="bar ${ST[p.status][1]}"><i style="width:${p.progress}%"></i></div>
-<div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due}</span></div>
-<div class="tabs">${T.map(x=>`<div class="tab ${x.k===tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
-<div class="box">${can(t.add)?`<div class="add"><input id="in" placeholder="${t.ph}"><button onclick="add('${tab}')">إضافة</button></div>`:'<div class="note">عرض فقط</div>'}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`}
-function render(){document.getElementById("app").innerHTML=cur===null?home():proj()}
-render();
+  const p=S.projects.find(x=>x.id===S.cur);if(!p){S.cur=null;return home()}
+  const T=TABS.filter(t=>t.see.includes(S.role)),t=TABS.find(x=>x.k===S.tab),own=S.role==="owner",u=S.urls[p.cover_path];
+  const ctl=own?`<div class="box ctl"><label>الإنجاز %<input id="pg" type="number" min="0" max="100" value="${p.progress}"></label>
+  <label>الحالة<select id="ps">${stOpts(p.status)}</select></label><label>التسليم<input id="pd" type="date" value="${p.due||""}"></label>
+  <button class="btn" onclick="updProj()">حفظ</button><button class="btn danger" onclick="delProj()">حذف المشروع</button></div>`:"";
+  const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  ${own?`<button class="sm" style="background:#fee2e2;color:#dc2626;margin-top:6px" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
+  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}">`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:'<div class="note">عرض فقط</div>';
+  return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
+  <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}><span class="badge">${ST[p.status][0]}</span></div>
+  <div class="top"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
+  <div class="bar ${ST[p.status][1]}"><i style="width:${p.progress}%"></i></div><div class="row"><span>الإنجاز ${p.progress}%</span><span>التسليم ${p.due||"-"}</span></div>
+  ${own?`<div style="margin-top:14px">${ctl}<label style="font-size:13px;color:var(--muted)">تغيير صورة الغلاف</label><input id="cvr" type="file" accept="image/*" onchange="setCover()"></div>`:""}
+  <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
+  <div class="box">${add}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`;
+}
+async function updProj(){
+  const {error}=await sb.from("projects").update({progress:clamp($("pg").value),status:$("ps").value,due:$("pd").value||null}).eq("id",S.cur);
+  if(error)return alert(error.message);await load();
+}
+async function delProj(){
+  if(!confirm("حذف المشروع وكل ما فيه؟"))return;
+  const {error}=await sb.from("projects").delete().eq("id",S.cur);
+  if(error)return alert(error.message);S.cur=null;await load();
+}
+async function setCover(){
+  const f=$("cvr").files[0];if(!f)return;
+  const path=await up(S.cur,f);if(!path)return;
+  await sb.from("projects").update({cover_path:path}).eq("id",S.cur);await load();
+}
+async function addE(){
+  const body=$("tx").value.trim(),f=$("fl")?.files[0];if(!body&&!f)return;
+  $("bt").disabled=true;$("bt").textContent="جاري الرفع...";
+  let path=null,type=null;
+  if(f){path=await up(S.cur,f);if(!path){return render()}type=f.type}
+  const {error}=await sb.from("entries").insert({project_id:S.cur,kind:S.tab,body,file_path:path,file_type:type,author_role:ROLES[S.role]});
+  if(error)alert(error.message);await loadE();render();
+}
+async function delE(id){
+  if(!confirm("حذف؟"))return;
+  const e=S.entries.find(x=>x.id===id);
+  if(e?.file_path)await sb.storage.from("media").remove([e.file_path]);
+  await sb.from("entries").delete().eq("id",id);await loadE();render();
+}
+function modal(m){S.modal=m;S.link="";render()}
+function modalHtml(){
+  if(S.modal==="new")return `<div class="modal"><div class="box"><h3>مشروع جديد</h3>
+  <input id="nn" placeholder="اسم المشروع"><input id="nl" placeholder="الموقع / المدينة">
+  <select id="ns">${stOpts("plan")}</select><input id="np" type="number" min="0" max="100" placeholder="نسبة الإنجاز %" value="0">
+  <input id="nd" type="date"><label style="font-size:13px;color:var(--muted)">صورة الغلاف</label><input id="nc" type="file" accept="image/*">
+  <button class="btn" id="nb" onclick="saveNew()">حفظ</button> <button class="btn alt" onclick="modal(null)">إلغاء</button></div></div>`;
+  return `<div class="modal"><div class="box"><h3>دعوة عضو</h3>
+  <select id="ir"><option value="contr">مقاول</option><option value="mgmt">إدارة</option></select>
+  <select id="ip"><option value="">— المشروع (للمقاول فقط) —</option>${S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
+  <button class="btn" onclick="mkInv()">إنشاء رابط الدعوة</button>
+  ${S.link?`<p>أرسل هذا الرابط (يعمل مرة واحدة):</p><div class="link">${S.link}</div><button class="btn alt" onclick="navigator.clipboard.writeText('${S.link}');this.textContent='تم النسخ'">نسخ الرابط</button>`:""}
+  <br><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+async function saveNew(){
+  const name=$("nn").value.trim();if(!name)return alert("اكتب اسم المشروع");
+  $("nb").disabled=true;$("nb").textContent="جاري الحفظ...";
+  const {data,error}=await sb.from("projects").insert({name,loc:$("nl").value.trim(),status:$("ns").value,progress:clamp($("np").value),due:$("nd").value||null}).select().single();
+  if(error){alert(error.message);return modal(null)}
+  const f=$("nc").files[0];
+  if(f){const path=await up(data.id,f);if(path)await sb.from("projects").update({cover_path:path}).eq("id",data.id)}
+  S.modal=null;await load();
+}
+async function mkInv(){
+  const role=$("ir").value,pid=$("ip").value||null;
+  if(role==="contr"&&!pid)return alert("اختر المشروع للمقاول");
+  const {data,error}=await sb.from("invites").insert({role,project_id:role==="contr"?pid:null}).select().single();
+  if(error)return alert(error.message);
+  S.link=location.origin+location.pathname+"?invite="+data.token;render();
+}
+init();
 </script>
 </body>
 </html>
