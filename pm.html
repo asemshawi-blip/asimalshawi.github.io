@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>إدارة المشاريع</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2742">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="المشاريع">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -301,6 +308,26 @@ async function mkInv(role){
   if(error)return alert(error.message);
   S.link=location.origin+location.pathname+"?invite="+data.token;render();
 }
+
+/* ===== 8) تثبيت التطبيق على الجوال ===== */
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+let DP=null;
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+function installBar(msg,btn=""){
+  if(standalone||$("ib"))return;
+  try{if(localStorage.getItem("ib0"))return}catch(e){}
+  const d=document.createElement("div");d.id="ib";
+  d.style.cssText="position:fixed;bottom:12px;left:12px;right:12px;z-index:50;background:#0f2742;color:#fff;padding:12px 14px;border-radius:14px;display:flex;gap:10px;align-items:center;font-size:14px;box-shadow:0 6px 20px #0006";
+  d.innerHTML=`<span style="flex:1">${msg}</span>${btn}<button onclick="closeIb()" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>`;
+  document.body.appendChild(d);
+}
+function closeIb(){$("ib")?.remove();try{localStorage.setItem("ib0","1")}catch(e){}}
+addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();DP=e;
+  installBar("ثبّت التطبيق على جوالك","<button class='btn' onclick='DP.prompt();closeIb()'>تثبيت</button>");
+});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent))
+  installBar("للتثبيت: اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية»");
 
 init();
 </script>
