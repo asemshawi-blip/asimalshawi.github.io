@@ -58,11 +58,14 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .lb{position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
 .lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
 .lbx{position:absolute;top:14px;left:14px;background:#ffffff33;color:#fff;border:0;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer}
+.gbtn{background:#fff;color:var(--text);border:1px solid var(--line);width:100%;display:flex;gap:8px;justify-content:center;align-items:center}
+.gbtn b{color:#4285f4;font-size:18px}
+.or{text-align:center;color:var(--muted);font-size:13px;margin:10px 0 4px}
 .note,.empty{text-align:center;color:var(--muted);padding:22px}
 .login{max-width:380px;margin:50px auto}.msg{color:var(--late);font-size:14px;min-height:20px}
 .modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
 .modal .box{width:100%;max-width:440px;max-height:92vh;overflow:auto}
-.link{background:#eff6ff;padding:10px;border-radius:10px;word-break:break-all;font-size:13px;direction:ltr;text-align:left}
+.link{white-space:pre-wrap;background:#eff6ff;padding:10px;border-radius:10px;word-break:break-all;font-size:13px;direction:ltr;text-align:left}
 @media(min-width:900px){.cols{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
@@ -70,7 +73,10 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 <div id="app"><div class="note">جاري التحميل...</div></div>
 <script>
 /* ===== 1) الإعدادات ===== */
-const sb=supabase.createClient("https://wmavitpimbcjohcjgqhz.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYXZpdHBpbWJjam9oY2pncWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzODg4MDQsImV4cCI6MjEwNjk2NDgwNH0.sR6dTymzM2TgclddArsdMfuxEZ3rTADB2Ti796X8d5Y");
+const SBU="https://wmavitpimbcjohcjgqhz.supabase.co",SBK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYXZpdHBpbWJjam9oY2pncWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzODg4MDQsImV4cCI6MjEwNjk2NDgwNH0.sR6dTymzM2TgclddArsdMfuxEZ3rTADB2Ti796X8d5Y";
+const sb=supabase.createClient(SBU,SBK);
+const sb2=supabase.createClient(SBU,SBK,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});   // لإنشاء حسابات الآخرين
+const UD="asemshawi-blip.github.io";   // نطاق داخلي لاسم المستخدم
 const ROLES={owner:"المالك",mgmt:"الإدارة",contr:"المقاول"};
 const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
 /* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
@@ -107,15 +113,21 @@ async function init(){
 }
 function loginView(msg=""){
   $("app").innerHTML=`<div class="login box"><h2>${inv()?"قبول الدعوة":"تسجيل الدخول"}</h2>
-  <input id="em" type="email" placeholder="البريد الإلكتروني" autocomplete="email">
+  <input id="em" type="text" placeholder="اسم المستخدم أو البريد الإلكتروني" autocomplete="username" autocapitalize="none" dir="ltr">
   <input id="pw" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)" onkeydown="if(event.key==='Enter')signIn()">
   <div class="msg">${msg}</div><button class="btn" onclick="signIn()">دخول</button>
   ${inv()?'<button class="btn alt" onclick="signUp()">إنشاء حساب جديد</button>':""}</div>`;
 }
 async function signIn(){
-  const {data,error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});
+  let em=$("em").value.trim();if(!em.includes("@"))em=em.toLowerCase()+"@"+UD;
+  const {data,error}=await sb.auth.signInWithPassword({email:em,password:$("pw").value});
   if(error)return loginView("البريد أو كلمة المرور غير صحيحة");
   S.user=data.user;boot();
+}
+async function googleIn(){
+  const back=location.origin+location.pathname+(inv()?"?invite="+encodeURIComponent(inv()):"");
+  const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:back}});
+  if(error)loginView(esc(error.message));
 }
 async function signUp(){
   const {data,error}=await sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value});
@@ -160,7 +172,7 @@ async function loadE(){
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="modal('invm')">دعوة الإدارة</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="modal('invm')">حساب الإدارة</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -199,7 +211,7 @@ function proj(){
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${S.role!=="contr"?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
-  const acts=own?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">دعوة مقاول لهذا المشروع</button></div>`:"";
+  const acts=own?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
@@ -260,7 +272,7 @@ async function delE(id){
 }
 
 /* ===== 7) النوافذ ===== */
-function modal(m){S.modal=m;S.link="";render()}
+function modal(m){S.modal=m;S.link="";S.cred=null;render()}
 function projForm(p){
   const edit=S.modal==="edit";
   return `<div class="modal"><div class="box"><h3>${edit?"تعديل المشروع":"مشروع جديد"}</h3>
@@ -280,11 +292,19 @@ function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
   if(m==="new")return projForm({status:"plan",progress:0});
   if(m==="edit")return projForm(p);
+  if(S.cred)return `<div class="modal"><div class="box"><h3>تم إنشاء الحساب ✅</h3>
+  <p class="lbl">احفظ البيانات الآن وأرسلها للمستخدم، كلمة المرور لا تظهر مرة ثانية.</p>
+  <div class="link">${esc(S.cred)}</div>
+  <button class="btn" onclick="copyCred(this)">نسخ البيانات</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
   const c=m==="invc";
-  return `<div class="modal"><div class="box"><h3>${c?"دعوة مقاول للمشروع: "+esc(p?.name):"دعوة الإدارة"}</h3>
+  return `<div class="modal"><div class="box"><h3>${c?"إنشاء حساب مقاول للمشروع: "+esc(p?.name):"إنشاء حساب الإدارة"}</h3>
   <p class="lbl">${c?"المقاول يرى هذا المشروع فقط: يرفع التقارير والمعوقات والصور ويناقشك، ولا يرى ملاحظات الإدارة.":"الإدارة تشاهد كل المشاريع والتقارير والمعوقات والملاحظات، ولا ترى مناقشاتك مع المقاول، ولا تعدّل شيئاً."}</p>
-  <button class="btn" onclick="mkInv('${c?"contr":"mgmt"}')">إنشاء رابط الدعوة</button>
-  ${S.link?`<p>أرسل هذا الرابط (يعمل مرة واحدة):</p><div class="link">${esc(S.link)}</div><button class="btn alt" onclick="copyLink(this)">نسخ الرابط</button>`:""}
+  <label class="lbl">اسم المستخدم (أحرف إنجليزية وأرقام)</label><input id="au" dir="ltr" autocapitalize="none" value="${c?"contr"+Math.floor(1000+Math.random()*9000):"admin"}">
+  <label class="lbl">كلمة المرور (6 أحرف فأكثر)</label><input id="ap" dir="ltr" value="${rndPass()}">
+  <button class="btn" id="ab" onclick="mkAccount('${c?"contr":"mgmt"}')">إنشاء الحساب</button>
+  <p class="lbl">أو أرسل رابط دعوة ليسجّل بنفسه:</p>
+  <button class="btn alt" onclick="mkInv('${c?"contr":"mgmt"}')">إنشاء رابط دعوة</button>
+  ${S.link?`<div class="link">${esc(S.link)}</div><button class="btn alt" onclick="copyLink(this)">نسخ الرابط</button>`:""}
   <br><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
 }
 function calcDue(){
@@ -302,6 +322,26 @@ function openImg(u){
 }
 function closeImg(){$("lb")?.remove()}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeImg()});
+const rndPass=()=>[...crypto.getRandomValues(new Uint8Array(8))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
+async function mkAccount(role){
+  const user=$("au").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,""),pass=$("ap").value;
+  if(user.length<3)return alert("اسم المستخدم 3 أحرف أو أرقام إنجليزية على الأقل");
+  if(pass.length<6)return alert("كلمة المرور 6 أحرف على الأقل");
+  $("ab").disabled=true;$("ab").textContent="جاري الإنشاء...";
+  const fail=m=>{alert(m);$("ab").disabled=false;$("ab").textContent="إنشاء الحساب"};
+  const {data:iv,error:e1}=await sb.from("invites").insert({role,project_id:role==="contr"?S.cur:null}).select().single();
+  if(e1)return fail(e1.message);
+  const {data,error}=await sb2.auth.signUp({email:user+"@"+UD,password:pass});
+  if(error||!data.session){
+    await sb.from("invites").delete().eq("token",iv.token);
+    return fail(error?(/already|registered/i.test(error.message)?"اسم المستخدم مستخدم، اختر غيره":error.message):"فعّل إنشاء الحساب بدون تأكيد البريد من إعدادات Supabase (Confirm email = OFF) ثم احذف هذا المستخدم من Authentication > Users وأعد المحاولة");
+  }
+  const {error:e3}=await sb2.rpc("accept_invite",{t:iv.token});
+  await sb2.auth.signOut();
+  if(e3)return fail(e3.message);
+  S.cred=`الموقع: ${location.origin+location.pathname}\nاسم المستخدم: ${user}\nكلمة المرور: ${pass}`;render();
+}
+function copyCred(b){navigator.clipboard.writeText(S.cred);b.textContent="تم النسخ"}
 function copyLink(b){navigator.clipboard.writeText(S.link);b.textContent="تم النسخ"}
 async function mkInv(role){
   const {data,error}=await sb.from("invites").insert({role,project_id:role==="contr"?S.cur:null}).select().single();
