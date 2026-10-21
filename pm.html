@@ -234,12 +234,54 @@ function proj(){
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
-  ${det}${talk}${acts}${ed?siteBox():""}
+  ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="exportProjectPdf()">حفظ تقرير PDF</button><button class="btn alt" onclick="exportProjectCsv()">تصدير إلى Excel (CSV)</button></div>${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
   <div class="box">${add}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`;
 }
 
 /* ===== 6) عمليات المشروع والمدخلات ===== */
+async function getProjectReportData(){
+  const p=S.projects.find(x=>x.id===S.cur);
+  if(!p)throw new Error("لم يتم العثور على المشروع");
+  const tabs=TABS.filter(t=>t.see.includes(S.role));
+  const results=await Promise.all(tabs.map(async tab=>{
+    const {data,error}=await sb.from("entries").select("*").eq("project_id",p.id).eq("kind",tab.k).order("created_at",{ascending:true});
+    if(error)throw error;
+    return {tab,entries:data||[]};
+  }));
+  return {project:p,sections:results};
+}
+function reportFields(p){
+  const rows=[["الحالة",ST[p.status]?.[0]||p.status||"-"],["نوع المشروع",TYN[p.ptype]||"-"],["الموقع",p.loc||"-"],["مدير المشروع",p.pm_name||"-"],["المقاول",p.contractor_name||"-"],["مدير المنطقة",p.area_name||"-"],["مدير الموقع",p.site_manager||"-"],["نسبة الإنجاز",clamp(p.progress)+"%"],["تاريخ البداية",p.start_date||"-"],["تاريخ التسليم",p.due||"-"]];
+  if(["owner","pm","site"].includes(S.role)){rows.push(["جوال المقاول",p.contractor_phone||"-"]);rows.push(["جوال مدير المنطقة",p.area_phone||"-"]);}
+  if(!["contr","site"].includes(S.role))rows.push(["السعر",money(p.price)]);
+  return rows;
+}
+const csvCell=v=>{let x=String(v??"");if(/^[=+@-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
+function reportEntryText(e){return [e.body||"",e.file_path?(e.file_type?.startsWith("image")?"[مرفق صورة]":e.file_type?.startsWith("video")?"[مرفق فيديو]":"[مرفق ملف]"):"",e.kind==="issues"?(e.resolved?"الحالة: تم الحل":"الحالة: قيد الحل"):""].filter(Boolean).join(" · ");}
+function saveBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function reportFilename(name,ext){const slug=String(name||"project").trim().replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-+|-+$/g,"")||"project";return slug+"-report."+ext;}
+async function exportProjectCsv(){
+  try{
+    const {project,sections}=await getProjectReportData(),rows=[["نوع السجل","التاريخ","الدور","التفاصيل"],["المشروع","","",project.name],...reportFields(project).map(([k,v])=>["بيانات المشروع","","",k+": "+v])];
+    for(const {tab,entries} of sections)for(const e of entries)rows.push([tab.n,e.created_at?new Date(e.created_at).toLocaleString("ar"):"",e.author_role||"",reportEntryText(e)]);
+    const csv="\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
+    saveBlob(new Blob([csv],{type:"text/csv;charset=utf-8"}),reportFilename(project.name,"csv"));
+  }catch(error){alert("تعذر إنشاء التقرير: "+(error.message||"خطأ غير معروف"));}
+}
+async function exportProjectPdf(){
+  const w=window.open("","_blank");
+  if(!w)return alert("اسمح بفتح نافذة التقرير من إعدادات المتصفح ثم حاول مرة أخرى.");
+  w.document.write("<!doctype html><html lang=\"ar\" dir=\"rtl\"><meta charset=\"utf-8\"><title>إعداد التقرير</title><body style=\"font:16px Tahoma,sans-serif;padding:32px;text-align:center\">جارٍ إعداد التقرير…</body></html>");w.document.close();
+  try{
+    const {project,sections}=await getProjectReportData();
+    const fields=reportFields(project).map(([k,v])=>`<div class="field"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+    const logs=sections.map(({tab,entries})=>`<section><h2>${esc(tab.n)} <small>(${entries.length})</small></h2>${entries.length?entries.map(e=>`<article><p>${esc(reportEntryText(e)||"—")}</p><small>${esc(e.author_role||"")} · ${e.created_at?esc(new Date(e.created_at).toLocaleString("ar")):""}</small></article>`).join(""):'<p class="muted">لا توجد سجلات</p>'}</section>`).join("");
+    const doc=`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(project.name)} - تقرير المشروع</title><style>*{box-sizing:border-box}body{font:14px/1.8 Tahoma,Arial,sans-serif;color:#1b2a3b;margin:0;background:#fff}.page{max-width:900px;margin:0 auto;padding:34px}.head{border-bottom:3px solid #ed8700;padding-bottom:18px;margin-bottom:22px}.brand{font-size:12px;color:#647589}.head h1{font-size:27px;color:#102944;margin:6px 0}.sub{color:#647589}.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 28px}.field{border:1px solid #e3e9ef;border-radius:9px;padding:10px 12px;min-height:62px}.field span{display:block;color:#647589;font-size:11px}.field b{display:block}.progress{height:8px;background:#e3e9ef;border-radius:9px;overflow:hidden;margin-top:6px}.progress i{display:block;height:100%;background:#2e69ad}h2{font-size:17px;color:#102944;border-bottom:1px solid #e3e9ef;padding-bottom:5px;margin:24px 0 8px}h2 small{font-size:12px;color:#647589}article{padding:11px 2px;border-bottom:1px solid #edf0f4;break-inside:avoid}article p{margin:0 0 4px;white-space:pre-wrap;overflow-wrap:anywhere}article small,.muted{color:#647589;font-size:11px}.foot{margin-top:28px;border-top:1px solid #e3e9ef;padding-top:10px;color:#647589;font-size:11px}@page{size:A4;margin:14mm}@media print{.page{max-width:none;padding:0}.head,section,.field,article{break-inside:avoid}}
+</style></head><body><main class="page"><header class="head"><div class="brand">تقرير متابعة مشروع</div><h1>${esc(project.name)}</h1><div class="sub">${esc(project.loc||"")} · أُعدّ بتاريخ ${esc(new Date().toLocaleDateString("ar"))}</div><div class="progress"><i style="width:${clamp(project.progress)}%"></i></div></header><div class="fields">${fields}</div>${logs}<footer class="foot">تم إنشاء التقرير من نظام إدارة المشاريع.</footer></main><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),250));<\/script></body></html>`;
+    w.document.open();w.document.write(doc);w.document.close();w.focus();
+  }catch(error){w.close();alert("تعذر إنشاء التقرير: "+(error.message||"خطأ غير معروف"));}
+}
 async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
   const s=$("mb").value,d=$("md").value;
@@ -448,4 +490,5 @@ init();
 </script>
 </body>
 </html>
+
 
