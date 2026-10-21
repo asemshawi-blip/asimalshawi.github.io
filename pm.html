@@ -171,7 +171,7 @@ async function loadE(){
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="modal('invp')">مدير مشروع</button><button class="sm" onclick="modal('invm')">حساب الإدارة</button><button class="sm" onclick="modal('invs')">مدير موقع</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -208,14 +208,17 @@ function proj(){
     <div><span>نوع المشروع</span><b>${TYN[p.ptype]||"-"}</b></div>
     <div><span>مدير المشروع</span><b>${esc(p.pm_name)||"-"}</b></div>
     <div><span>المقاول</span><b>${esc(p.contractor_name)||"-"}</b></div>
+    <div><span>مدير المنطقة</span><b>${esc(p.area_name)||"-"}</b></div>
+    ${["owner","pm","site"].includes(S.role)?tel("جوال المقاول",p.contractor_phone)+tel("جوال مدير المنطقة",p.area_phone):""}
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
   const cm=`بخصوص مشروع «${p.name}»${p.loc?" ("+p.loc+")":""}`;
   const toPM=p.pm_phone&&["owner","mgmt","contr","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
-  const toCT=p.contractor_phone&&["owner","pm"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
-  const talk=toPM||toCT?`<div class="acts">${toPM}${toCT}</div>`:"";
+  const toCT=p.contractor_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
+  const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
+  const talk=toPM||toCT||toAM?`<div class="acts">${toPM}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
@@ -234,9 +237,9 @@ async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
   const s=$("mb").value,d=$("md").value;
   if(s&&d&&d<s)return alert("تاريخ التسليم قبل تاريخ البداية");
-  const pp=normP($("mpp").value),cp=normP($("mcp").value);
-  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
-  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
+  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value);
+  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
+  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
   $("mbtn").disabled=true;$("mbtn").textContent="جاري الحفظ...";
   const q=S.modal==="edit"?sb.from("projects").update(row).eq("id",S.cur):sb.from("projects").insert(row);
   const {data,error}=await q.select().single();
@@ -288,6 +291,7 @@ function projForm(p){
   <input id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
   <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
+  <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
   <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${p.ptype!=="reno"?"selected":""}>إنشاء</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
@@ -302,6 +306,7 @@ function projForm(p){
 function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
   if(m==="welcome")return welcomeHtml();
+  if(m==="users")return usersHtml();
   if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
   if(m==="edit")return projForm(p);
   if(S.cred)return `<div class="modal"><div class="box"><h3>تم إنشاء الحساب ✅</h3>
@@ -401,6 +406,24 @@ async function syncSM(){
 async function addPS(){const u=$("pss").value;if(!u)return;const {error}=await sb.from("project_sites").insert({project_id:S.cur,user_id:u});if(error)return alert(error.message);await loadPS();await syncSM();render()}
 async function rmPS(u){await sb.from("project_sites").delete().eq("project_id",S.cur).eq("user_id",u);await loadPS();await syncSM();render()}
 
+/* ===== إدارة الحسابات وحذفها (المالك فقط) ===== */
+async function openUsers(){const {data,error}=await sb.rpc("list_users");if(error)return alert(error.message);S.users=data||[];modal("users")}
+function usersHtml(){
+  const L=S.users||[];
+  return `<div class="modal"><div class="box"><h3>الحسابات (${L.length})</h3>
+  <div class="acts"><button class="btn" onclick="modal('invp')">＋ مدير مشروع</button><button class="btn" onclick="modal('invm')">＋ الإدارة</button><button class="btn" onclick="modal('invs')">＋ مدير موقع</button></div>
+  ${L.map(u=>`<div class="item"><b dir="ltr">${esc(u.username)}</b> · ${ROLES[u.role]||"بدون دور"}${u.role==="owner"?"":` <button class="sm del" onclick="delUser('${u.id}')">حذف</button>`}</div>`).join("")}
+  <button class="btn alt" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+async function delUser(id){
+  const u=(S.users||[]).find(x=>x.id===id);
+  if(!confirm("حذف الحساب «"+(u?.username||"")+"» نهائياً؟"))return;
+  const {error}=await sb.rpc("delete_user",{uid:id});
+  if(error)return alert(error.message);
+  await openUsers();
+}
+
+const tel=(l,n)=>n?`<div><span>${l}</span><b dir="ltr"><a href="tel:+${esc(n)}">${esc(n)}</a></b></div>`:"";
 /* ===== 8) تثبيت التطبيق على الجوال ===== */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 let DP=null;
