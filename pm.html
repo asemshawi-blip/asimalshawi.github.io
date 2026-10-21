@@ -32,6 +32,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .top{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}.top h2{margin:0;font-size:22px}
 /* الأعمدة الثلاثة */
 .cols{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+.dashStats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 18px}.dashStat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px;box-shadow:0 3px 12px #0f274208}.dashStat span{display:block;color:var(--muted);font-size:13px}.dashStat b{display:block;font-size:24px;color:var(--navy)}.dashTools{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0 14px}.dashTools h2{margin:0}.dashSearch{max-width:360px;margin:0;background:#fff}@media(max-width:680px){.dashStats{grid-template-columns:repeat(2,1fr)}.dashTools{align-items:stretch;flex-direction:column}.dashSearch{max-width:none}}
 .col{background:#e9eef5;border-radius:18px;padding:12px;border-top:6px solid var(--c)}
 .col h3{margin:4px 4px 12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
 .col h3 b{background:var(--c);color:#fff;border-radius:20px;padding:0 12px;font-size:15px}
@@ -86,7 +87,7 @@ const TABS=[
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
 {k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
-let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[]};
+let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],q:""};
 
 /* ===== 2) مساعدات ===== */
 const $=id=>document.getElementById(id);
@@ -177,16 +178,22 @@ function render(){
 }
 function card(p){
   const u=S.urls[p.cover_path];
-  return `<div class="card ${ST[p.status][1]}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
+  return `<div class="card ${ST[p.status][1]}" data-search="${esc((String(p.name||"")+" "+String(p.loc||"")).toLocaleLowerCase())}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p><div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
   <div class="row"><span>الإنجاز ${clamp(p.progress)}%</span><span>التسليم ${esc(p.due)||"-"}</span></div></div></div>`;
 }
 function home(){
+  const total=S.projects.length,active=S.projects.filter(p=>p.status==="plan"||p.status==="run").length,late=S.projects.filter(p=>timing(p)?.late).length,done=S.projects.filter(p=>p.status==="done").length;
+  const stats=`<div class="dashStats"><div class="dashStat"><span>إجمالي المشاريع</span><b>${total}</b></div><div class="dashStat"><span>قيد العمل</span><b>${active}</b></div><div class="dashStat"><span>متأخرة</span><b>${late}</b></div><div class="dashStat"><span>تم تسليمها</span><b>${done}</b></div></div>`;
   const cols=Object.keys(ST).map(k=>{
     const L=S.projects.filter(p=>p.status===k);
-    return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")||'<div class="empty">لا توجد مشاريع</div>'}</section>`;
+    return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  return `<div class="top"><h2>المشاريع</h2>${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div><div class="cols">${cols}</div>`;
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
+}
+function filterProjects(value){
+  S.q=value.trim().toLocaleLowerCase();
+  document.querySelectorAll(".col").forEach(col=>{let count=0;col.querySelectorAll(".card[data-search]").forEach(c=>{const show=c.dataset.search.includes(S.q);c.style.display=show?"":"none";if(show)count++});const empty=col.querySelector(".empty");if(empty){empty.style.display=count?"none":"block";empty.textContent=S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}});
 }
 async function openP(id){
   S.cur=id;S.tab=TABS.find(t=>t.see.includes(S.role)).k;
@@ -441,3 +448,4 @@ init();
 </script>
 </body>
 </html>
+

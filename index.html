@@ -3,100 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>محفظة المشاريع</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#102944">
+<meta name="description" content="واجهة عربية لمتابعة المشاريع من التخطيط إلى التسليم، مع تحديثات الفريق والتقارير والمعوقات في مكان واحد.">
+<title>إدارة المشاريع | متابعة أوضح، وتسليم أفضل</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#0f2742;--blue:#2563eb;--bg:#f6f8fb;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0}
-*{box-sizing:border-box}
-body{margin:0;font-family:'Tajawal',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
-a{color:inherit;text-decoration:none}
-.wrap{max-width:1000px;margin:auto;padding:0 20px}
-nav{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid var(--line);z-index:5}
-nav .wrap{display:flex;justify-content:space-between;align-items:center;height:56px}
-nav b{color:var(--navy)}
-nav div a{margin-inline-start:18px;color:var(--muted);font-size:15px}
-.hero{background:linear-gradient(135deg,#0f2742,#1d4ed8);color:#fff;padding:70px 0 60px}
-.hero small{background:#ffffff26;padding:4px 14px;border-radius:20px;font-size:14px}
-.hero h1{font-size:40px;margin:18px 0 8px}
-.hero p{max-width:560px;opacity:.9;font-size:18px;margin:0 0 26px}
-.btn{display:inline-block;background:#fff;color:var(--navy);padding:10px 24px;border-radius:8px;font-weight:700}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:-34px}
-.stat{background:var(--card);border-radius:12px;padding:18px;text-align:center;box-shadow:0 4px 14px #0f274214}
-.stat b{display:block;font-size:30px;color:var(--blue)}
-.stat span{color:var(--muted);font-size:14px}
-section{padding:54px 0 0}
-h2{font-size:26px;margin:0 0 22px;color:var(--navy)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-.media{height:170px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);display:flex;align-items:center;justify-content:center;color:#1e40af;font-weight:700}
-.media img,.media video{width:100%;height:100%;object-fit:cover}
-.body{padding:18px}
-.body h3{margin:0 0 6px;font-size:19px}
-.body p{margin:0 0 12px;color:var(--muted);font-size:15px}
-.tag{display:inline-block;background:#eff6ff;color:var(--blue);padding:2px 10px;border-radius:20px;font-size:13px;margin-inline-end:6px}
-.meta{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
-.skills span{display:inline-block;background:var(--card);border:1px solid var(--line);padding:8px 18px;border-radius:10px;margin:0 0 10px 10px;font-weight:500}
-.contact{background:var(--navy);color:#fff;border-radius:16px;padding:36px;text-align:center}
-.contact h2{color:#fff}
-footer{text-align:center;color:var(--muted);padding:36px 0;font-size:14px}
-@media(max-width:600px){.hero h1{font-size:30px}.stat b{font-size:24px}nav div{display:none}}
+:root{--navy:#102944;--navy2:#183b5c;--orange:#ed8700;--blue:#2e69ad;--bg:#f5f7fa;--card:#fff;--text:#182b3d;--muted:#647589;--line:#e3e9ef;--green:#21865c;--shadow:0 18px 48px #10294414}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:82px}body{margin:0;font-family:'Tajawal',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.75}a{color:inherit;text-decoration:none}.wrap{width:min(1120px,calc(100% - 40px));margin-inline:auto}
+nav{position:sticky;top:0;z-index:10;background:#ffffffed;backdrop-filter:blur(14px);border-bottom:1px solid #e3e9efb8}nav .wrap{height:76px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;color:var(--navy);font-weight:800;font-size:18px}.brand img{width:44px;height:44px;border-radius:12px}.links{display:flex;align-items:center;gap:28px;color:var(--muted);font-size:15px}.links a:hover{color:var(--navy)}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:48px;padding:10px 22px;border-radius:12px;background:var(--orange);color:#fff;font-weight:700;box-shadow:0 8px 20px #ed87002c;transition:transform .18s,box-shadow .18s}.btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px #ed870044}.btn.secondary{color:var(--navy);background:#fff;border:1px solid #dbe3ec;box-shadow:none}.btn:focus-visible,a:focus-visible{outline:3px solid #7db4ed;outline-offset:3px}
+.hero{position:relative;overflow:hidden;background:radial-gradient(ellipse at 10% 10%,#2d527355,transparent 38%),linear-gradient(125deg,#102944,#193d61 70%,#1d4f73);color:#fff;padding:92px 0 106px}.hero:after{content:"";position:absolute;width:500px;height:500px;border:1px solid #ffffff12;border-radius:50%;left:-190px;bottom:-350px;box-shadow:0 0 0 44px #ffffff08,0 0 0 90px #ffffff05}.heroContent{position:relative;z-index:1;max-width:760px}.eyebrow{display:inline-flex;align-items:center;gap:9px;border:1px solid #ffffff38;background:#ffffff10;border-radius:99px;padding:6px 14px;color:#fff;font-size:14px}.dot{width:8px;height:8px;border-radius:50%;background:#ffad32;box-shadow:0 0 0 4px #ffad322b}.hero h1{font-size:clamp(38px,6vw,68px);line-height:1.18;letter-spacing:-1.2px;margin:22px 0 16px;max-width:760px}.hero h1 span{color:#ffad32}.hero p{max-width:620px;color:#d6e2ee;font-size:clamp(17px,2vw,20px);margin:0 0 28px}.heroActions{display:flex;flex-wrap:wrap;gap:12px}.hero .secondary{background:#ffffff10;border-color:#ffffff4a;color:#fff}.heroNote{font-size:13px!important;color:#b7cadb!important;margin-top:18px!important}
+.section{padding:76px 0}.sectionHead{max-width:640px;margin-bottom:30px}.kicker{color:var(--blue);font-weight:700;font-size:14px}.section h2{font-size:clamp(27px,4vw,38px);color:var(--navy);line-height:1.3;margin:8px 0 12px}.sectionHead p{color:var(--muted);font-size:17px;margin:0}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.feature{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:25px;box-shadow:0 7px 24px #10294408;transition:transform .2s,box-shadow .2s}.feature:hover{transform:translateY(-4px);box-shadow:var(--shadow)}.icon{width:48px;height:48px;border-radius:14px;background:#fff3df;color:#bd6900;display:grid;place-items:center;font-size:23px}.feature h3{color:var(--navy);font-size:19px;margin:17px 0 6px}.feature p{color:var(--muted);margin:0;font-size:15px}.workflow{background:#edf2f6}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:step}.step{position:relative;padding:24px 24px 24px 20px;background:#fff;border:1px solid var(--line);border-radius:16px}.step:before{counter-increment:step;content:"0" counter(step);display:block;color:var(--orange);font-size:14px;font-weight:800;margin-bottom:10px}.step b{display:block;color:var(--navy);font-size:18px;margin-bottom:5px}.step span{color:var(--muted);font-size:15px}.cta{padding:0 0 76px}.ctaBox{display:flex;align-items:center;justify-content:space-between;gap:28px;padding:38px 42px;border-radius:22px;background:linear-gradient(120deg,#102944,#1b486d);color:#fff}.ctaBox h2{font-size:28px;margin:0 0 6px}.ctaBox p{color:#d6e2ee;margin:0}.ctaBox .btn{flex-shrink:0}footer{border-top:1px solid var(--line);padding:23px 0;color:var(--muted);font-size:14px}footer .wrap{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
+@media(max-width:760px){nav .wrap{height:68px}.links{gap:15px}.links>a:not(.btn){display:none}.features,.steps{grid-template-columns:1fr 1fr}.hero{padding:72px 0 86px}.ctaBox{align-items:flex-start;flex-direction:column;padding:30px}}
+@media(max-width:520px){.wrap{width:min(100% - 30px,1120px)}.brand{font-size:16px}.brand img{width:38px;height:38px}.links .btn{min-height:42px;padding:8px 13px;font-size:14px}.hero h1{font-size:39px}.features,.steps{grid-template-columns:1fr}.section{padding:58px 0}.cta{padding-bottom:58px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
 </style>
 </head>
 <body>
-<nav><div class="wrap"><b>اسمك هنا</b>
-<div><a href="#projects">المشاريع</a><a href="#skills">المهارات</a><a href="#contact">تواصل</a></div></div></nav>
-
-<header class="hero"><div class="wrap">
-<small>مدير مشاريع</small>
-<h1>أحوّل الخطط إلى نتائج قابلة للقياس</h1>
-<p>أدير المشاريع من الفكرة إلى التسليم، ضمن الوقت والميزانية والجودة المطلوبة.</p>
-<a class="btn" href="#projects">شاهد مشاريعي</a>
-</div></header>
-
-<div class="wrap"><div class="stats">
-<div class="stat"><b>+20</b><span>مشروع منجز</span></div>
-<div class="stat"><b>+8</b><span>سنوات خبرة</span></div>
-<div class="stat"><b>95%</b><span>تسليم في الموعد</span></div>
-</div></div>
-
-<section id="projects"><div class="wrap">
-<h2>أبرز المشاريع</h2>
-<div class="grid">
-
-<div class="card">
-<div class="media"><span>صورة المشروع</span></div>
-<div class="body"><h3>اسم المشروع الأول</h3>
-<p>وصف مختصر للمشروع والهدف منه والنتيجة التي تحققت.</p>
-<span class="tag">Agile</span><span class="tag">بناء</span>
-<div class="meta"><span>2025</span><span>الميزانية: 2M</span></div></div></div>
-
-<div class="card">
-<div class="media"><span>صورة المشروع</span></div>
-<div class="body"><h3>اسم المشروع الثاني</h3>
-<p>وصف مختصر للمشروع والهدف منه والنتيجة التي تحققت.</p>
-<span class="tag">Waterfall</span><span class="tag">تقنية</span>
-<div class="meta"><span>2024</span><span>الميزانية: 800K</span></div></div></div>
-
-<div class="card">
-<div class="media"><span>صورة المشروع</span></div>
-<div class="body"><h3>اسم المشروع الثالث</h3>
-<p>وصف مختصر للمشروع والهدف منه والنتيجة التي تحققت.</p>
-<span class="tag">Hybrid</span><span class="tag">تشغيل</span>
-<div class="meta"><span>2023</span><span>الميزانية: 1.2M</span></div></div></div>
-
+<nav aria-label="التنقل الرئيسي"><div class="wrap"><a class="brand" href="#top"><img src="icon-192.png" alt="" width="44" height="44"><span>إدارة المشاريع</span></a><div class="links"><a href="#features">المزايا</a><a href="#workflow">طريقة العمل</a><a class="btn" href="pm.html">دخول النظام <span aria-hidden="true">←</span></a></div></div></nav>
+<main id="top">
+<header class="hero"><div class="wrap"><div class="heroContent"><span class="eyebrow"><i class="dot"></i> منصة متابعة المشاريع</span><h1>كل مشروع أوضح،<br><span>وكل خطوة في مكانها.</span></h1><p>تابع حالة المشاريع ونسب الإنجاز والمواعيد، واجمع تحديثات الفريق وتقاريره ومعوقاته في مساحة واحدة.</p><div class="heroActions"><a class="btn" href="pm.html">افتح لوحة المشاريع <span aria-hidden="true">←</span></a><a class="btn secondary" href="#features">استكشف المزايا</a></div><p class="heroNote">واجهة عربية · صلاحيات حسب الدور · مصممة للعمل على الجوال</p></div></div></header>
+<section class="section" id="features"><div class="wrap"><div class="sectionHead"><span class="kicker">متابعة عملية</span><h2>صورة واضحة للمشروع والفريق</h2><p>المعلومات الأساسية والتواصل الميداني والتحديثات اليومية تتجمع في واجهة واحدة سهلة الرجوع إليها.</p></div><div class="features">
+<article class="feature"><div class="icon" aria-hidden="true">▦</div><h3>لوحة حالة مباشرة</h3><p>رتّب المشاريع حسب مرحلة العمل، وتابع الإنجاز ومواعيد التسليم والتنبيهات على التأخير.</p></article>
+<article class="feature"><div class="icon" aria-hidden="true">◷</div><h3>تحديثات وتقارير</h3><p>أضف الملاحظات والتقارير والصور والفيديوهات إلى سجل المشروع، لتبقى مستجداته في سياقها.</p></article>
+<article class="feature"><div class="icon" aria-hidden="true">◎</div><h3>فريق بصلاحيات واضحة</h3><p>خصص الوصول للمالك ومدير المشروع والإدارة والمقاول ومدير الموقع، بحسب مسؤولية كل شخص.</p></article>
 </div></div></section>
-
-<section id="skills"><div class="wrap">
-<h2>المهارات</h2>
-<div class="skills"><span>إدارة المخاطر</span><span>التخطيط والجدولة</span><span>إدارة الميزانية</span><span>قيادة الفرق</span><span>Agile / Scrum</span><span>MS Project</span><span>Jira</span><span>PMP</span></div>
-</div></section>
-
-<section id="contact"><div class="wrap"><div class="contact">
-<h2>لنعمل معاً</h2>
-<p>للتواصل والتعاون</p>
-<a class="btn" href="mailto:name@example.com">name@example.com</a>
-</div></div></section>
-
-<footer>© 2026 اسمك هنا</footer>
+<section class="section workflow" id="workflow"><div class="wrap"><div class="sectionHead"><span class="kicker">من البداية إلى التسليم</span><h2>خطوات العمل تبقى مترابطة</h2><p>مسار بسيط يساعد الفريق على فهم ما يجري وما يحتاج إلى متابعة.</p></div><div class="steps"><div class="step"><b>خطّط</b><span>سجّل بيانات المشروع ونطاقه ومواعيده ومسؤوليه.</span></div><div class="step"><b>تابع</b><span>حدّث نسبة الإنجاز وسجّل النقاشات والمعوقات والمرفقات.</span></div><div class="step"><b>سلّم</b><span>راقب موعد التسليم وأبقِ حالة المشروع وتوثيقه محدثين.</span></div></div></div></section>
+<section class="cta" id="contact"><div class="wrap"><div class="ctaBox"><div><h2>ابدأ من لوحة المشاريع</h2><p>سجّل الدخول لمتابعة المشاريع المسندة إلى حسابك.</p></div><a class="btn" href="pm.html">دخول النظام <span aria-hidden="true">←</span></a></div></div></section>
+</main>
+<footer><div class="wrap"><span>إدارة المشاريع</span><span>واجهة عربية لمتابعة التخطيط والتنفيذ والتسليم</span></div></footer>
 </body>
 </html>
