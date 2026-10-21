@@ -77,16 +77,16 @@ const SBU="https://wmavitpimbcjohcjgqhz.supabase.co",SBK="eyJhbGciOiJIUzI1NiIsIn
 const sb=supabase.createClient(SBU,SBK);
 const sb2=supabase.createClient(SBU,SBK,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});   // لإنشاء حسابات الآخرين
 const UD="asemshawi-blip.github.io";   // نطاق داخلي لاسم المستخدم
-const ROLES={owner:"المالك",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول"};
+const ROLES={owner:"المالك",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول",site:"مدير الموقع"};
 const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
 /* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
 const TABS=[
 {k:"notes",n:"ملاحظات الإدارة",see:"owner,pm,mgmt",add:"owner,pm,mgmt",ph:"اكتب ملاحظة..."},
-{k:"talks",n:"المناقشات",see:"owner,pm,contr",add:"owner,pm,contr",ph:"اكتب رسالة..."},
-{k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr",add:"owner,pm,contr",ph:"اكتب المعوق أو الملاحظة..."},
-{k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr",add:"owner,pm,contr",ph:"عنوان التقرير وملخصه...",file:"*/*"},
-{k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr",add:"owner,pm,contr",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
-let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:""};
+{k:"talks",n:"المناقشات",see:"owner,pm,contr,site",add:"owner,pm,contr,site",ph:"اكتب رسالة..."},
+{k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
+{k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
+{k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
+let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[]};
 
 /* ===== 2) مساعدات ===== */
 const $=id=>document.getElementById(id);
@@ -139,6 +139,7 @@ async function boot(){
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
   await load();
+  if(isMg()){await loadWelcome();S.modal="welcome";render()}
 }
 
 /* ===== 4) البيانات والملفات ===== */
@@ -170,7 +171,7 @@ async function loadE(){
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="modal('invp')">مدير مشروع</button><button class="sm" onclick="modal('invm')">حساب الإدارة</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="modal('invp')">مدير مشروع</button><button class="sm" onclick="modal('invm')">حساب الإدارة</button><button class="sm" onclick="modal('invs')">مدير موقع</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -189,7 +190,7 @@ function home(){
 }
 async function openP(id){
   S.cur=id;S.tab=TABS.find(t=>t.see.includes(S.role)).k;
-  await loadE();render();scrollTo(0,0);
+  await loadE();await loadPS();render();scrollTo(0,0);
 }
 async function setTab(k){S.tab=k;await loadE();render()}
 function fileHtml(e){
@@ -210,20 +211,20 @@ function proj(){
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
-    ${S.role!=="contr"?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
+    ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
   const cm=`بخصوص مشروع «${p.name}»${p.loc?" ("+p.loc+")":""}`;
-  const toPM=p.pm_phone&&["owner","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
+  const toPM=p.pm_phone&&["owner","mgmt","contr","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
   const toCT=p.contractor_phone&&["owner","pm"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
   const talk=toPM||toCT?`<div class="acts">${toPM}${toCT}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button></div>`:"";
-  const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
-  ${det}${talk}${acts}
+  ${det}${talk}${acts}${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
   <div class="box">${add}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`;
 }
@@ -300,6 +301,7 @@ function projForm(p){
 }
 function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
+  if(m==="welcome")return welcomeHtml();
   if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
   if(m==="edit")return projForm(p);
   if(S.cred)return `<div class="modal"><div class="box"><h3>تم إنشاء الحساب ✅</h3>
@@ -308,11 +310,12 @@ function modalHtml(){
   <button class="btn" onclick="copyCred(this)">نسخ البيانات</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
   const K={invc:["contr","إنشاء حساب مقاول للمشروع: "+(p?.name||""),"المقاول يرى هذا المشروع فقط: يرفع التقارير والمعوقات والصور ويناقشك، ولا يرى ملاحظات الإدارة."],
     invm:["mgmt","إنشاء حساب الإدارة","الإدارة تشاهد كل المشاريع والتقارير والمعوقات والملاحظات، ولا ترى مناقشاتك مع المقاول، ولا تعدّل شيئاً."],
+    invs:["site","إنشاء حساب مدير موقع","مدير الموقع يدخل المشاريع التي تسنده إليها فقط: يرفع التقارير والمعوقات والصور ويناقش، ولا يرى ملاحظات الإدارة ولا السعر."],
     invp:["pm","إنشاء حساب مدير مشروع","مدير المشروع ينشئ مشاريعه ويديرها بصلاحياتك ويدعو مقاوليه، ولا يرى مشاريع غيره، ولا يحذف الملاحظات أو المناقشات أو التقارير."]};
   const [role,title,desc]=K[m];
-  const nm=role==="mgmt"?"admin":(role==="pm"?"pm":"contr")+Math.floor(1000+Math.random()*9000);
+  const nm=role==="mgmt"?"admin":(role==="pm"?"pm":role==="site"?"site":"contr")+Math.floor(1000+Math.random()*9000);
   return `<div class="modal"><div class="box"><h3>${esc(title)}</h3><p class="lbl">${desc}</p>
-  <label class="lbl">اسم المستخدم (أحرف إنجليزية وأرقام)</label><input id="au" dir="ltr" autocapitalize="none" value="${nm}">
+  ${role==="site"?'<label class="lbl">الاسم الظاهر (يظهر في المشروع)</label><input id="an" placeholder="مثال: م. أحمد">':""}<label class="lbl">اسم المستخدم (أحرف إنجليزية وأرقام)</label><input id="au" dir="ltr" autocapitalize="none" value="${nm}">
   <label class="lbl">كلمة المرور (6 أحرف فأكثر)</label><input id="ap" dir="ltr" value="${rndPass()}">
   <button class="btn" id="ab" onclick="mkAccount('${role}')">إنشاء الحساب</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
 }
@@ -340,12 +343,63 @@ async function mkAccount(role){
   const fail=m=>{alert(m);$("ab").disabled=false;$("ab").textContent="إنشاء الحساب"};
   const {data,error}=await sb2.auth.signUp({email:user+"@"+UD,password:pass});
   if(error)return fail(/already|registered/i.test(error.message)?"اسم المستخدم مستخدم، اختر غيره":error.message);
-  const {error:e2}=await sb.rpc("create_member",{uid:data.user.id,new_role:role,pid:role==="contr"?S.cur:null});
+  const {error:e2}=role==="site"?await sb.rpc("create_site",{uid:data.user.id,nm:($("an")?.value.trim())||user,un:user}):await sb.rpc("create_member",{uid:data.user.id,new_role:role,pid:role==="contr"?S.cur:null});
   sb2.auth.signOut().catch(()=>{});
   if(e2)return fail(e2.message);
   S.cred=`الموقع: ${location.origin+location.pathname}\nاسم المستخدم: ${user}\nكلمة المرور: ${pass}`;render();
 }
 function copyCred(b){navigator.clipboard.writeText(S.cred);b.textContent="تم النسخ"}
+
+/* ===== رسالة ترحيب الإدارة: المعوقات والملاحظات والمشاريع ===== */
+const isMg=()=>["owner","mgmt"].includes(S.role),canRes=()=>["owner","pm","contr","site"].includes(S.role);
+const obsBar=e=>e.resolved
+  ?`<b style="color:var(--done)">● تم الحل</b>${canRes()?` <button class="sm" onclick="resolveE('${e.id}',false)">إعادة فتح</button>`:""}`
+  :`<b style="color:var(--late)">● قيد الحل</b>${canRes()?` <button class="sm" onclick="resolveE('${e.id}',true)">تم الحل</button>`:""}`;
+async function setRes(id,v){const {error}=await sb.from("entries").update({resolved:v,resolved_at:v?new Date().toISOString():null}).eq("id",id);if(error)alert(error.message)}
+async function resolveE(id,v){await setRes(id,v);await loadE();if(isMg())await loadWelcome();render()}
+async function resolveW(id){await setRes(id,true);await loadWelcome();render()}
+async function loadWelcome(){
+  const [a,b]=await Promise.all([
+    sb.from("entries").select("*").eq("kind","issues").eq("resolved",false).order("created_at",{ascending:false}),
+    sb.from("entries").select("*").eq("kind","notes").order("created_at",{ascending:false}).limit(5)]);
+  S.wl={obs:a.data||[],notes:b.data||[]};
+}
+async function openWelcome(){await loadWelcome();modal("welcome")}
+async function goP(id,tab){S.modal=null;S.cur=id;S.tab=tab||TABS.find(t=>t.see.includes(S.role)).k;await loadE();await loadPS();render();scrollTo(0,0)}
+const pn=id=>S.projects.find(p=>p.id===id)?.name||"-";
+function welcomeHtml(){
+  const o=S.wl.obs,n=S.wl.notes,run=S.projects.filter(p=>p.status==="run"),late=S.projects.filter(p=>timing(p)?.late);
+  const it=(e,tab,btn)=>`<div class="item" style="cursor:pointer" onclick="goP('${e.project_id}','${tab}')"><b>${esc(pn(e.project_id))}</b><div>${esc(e.body)}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>${btn||""}</div>`;
+  return `<div class="modal"><div class="box"><h3>مرحباً بك 👋</h3>
+  <b>المعوقات المفتوحة (${o.length})</b>
+  ${o.map(e=>it(e,"issues",canRes()?`<button class="sm" onclick="event.stopPropagation();resolveW('${e.id}')">تم الحل</button>`:"")).join("")||'<div class="empty">لا توجد معوقات 🎉</div>'}
+  <b style="display:block;margin-top:14px">آخر ملاحظات الإدارة</b>
+  ${n.map(e=>it(e,"notes")).join("")||'<div class="empty">لا توجد ملاحظات</div>'}
+  <b style="display:block;margin-top:14px">المشاريع (${run.length} قيد التنفيذ${late.length?` · ${late.length} متأخر`:""})</b>
+  ${run.slice(0,8).map(p=>`<div class="item" style="cursor:pointer" onclick="goP('${p.id}')"><b>${esc(p.name)}</b> · ${clamp(p.progress)}%${timing(p)?.late?' · <b style="color:var(--late)">متأخر</b>':""}</div>`).join("")||'<div class="empty">لا توجد مشاريع قيد التنفيذ</div>'}
+  <button class="btn alt" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+
+/* ===== مدراء الموقع: إسناد المشاريع ===== */
+async function loadPS(){
+  S.sites=[];S.ps=[];
+  if(!["owner","pm"].includes(S.role)||!S.cur)return;
+  const [a,b]=await Promise.all([sb.from("site_managers").select("*").order("created_at"),sb.from("project_sites").select("user_id").eq("project_id",S.cur)]);
+  S.sites=a.data||[];S.ps=(b.data||[]).map(x=>x.user_id);
+}
+function siteBox(){
+  const mine=S.sites.filter(x=>S.ps.includes(x.user_id)),rest=S.sites.filter(x=>!S.ps.includes(x.user_id));
+  return `<div class="box" style="margin-top:14px"><b>مدراء الموقع في هذا المشروع</b>
+  ${mine.map(x=>`<div class="item"><b>${esc(x.name)}</b> <span dir="ltr">(${esc(x.username)})</span> <button class="sm del" onclick="rmPS('${x.user_id}')">إزالة</button></div>`).join("")||'<div class="empty">لم يُسند مدير موقع</div>'}
+  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:'<p class="lbl">أنشئ حساب مدير موقع من زر «مدير موقع» أعلى الصفحة</p>'}</div>`;
+}
+async function syncSM(){
+  const names=S.sites.filter(x=>S.ps.includes(x.user_id)).map(x=>x.name);if(!names.length)return;
+  const v=names.join("، ");await sb.from("projects").update({site_manager:v}).eq("id",S.cur);
+  const p=S.projects.find(x=>x.id===S.cur);if(p)p.site_manager=v;
+}
+async function addPS(){const u=$("pss").value;if(!u)return;const {error}=await sb.from("project_sites").insert({project_id:S.cur,user_id:u});if(error)return alert(error.message);await loadPS();await syncSM();render()}
+async function rmPS(u){await sb.from("project_sites").delete().eq("project_id",S.cur).eq("user_id",u);await loadPS();await syncSM();render()}
 
 /* ===== 8) تثبيت التطبيق على الجوال ===== */
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
