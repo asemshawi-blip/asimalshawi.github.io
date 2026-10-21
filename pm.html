@@ -364,24 +364,17 @@ async function setRes(id,v){const {error}=await sb.from("entries").update({resol
 async function resolveE(id,v){await setRes(id,v);await loadE();if(isMg())await loadWelcome();render()}
 async function resolveW(id){await setRes(id,true);await loadWelcome();render()}
 async function loadWelcome(){
-  const [a,b]=await Promise.all([
-    sb.from("entries").select("*").eq("kind","issues").eq("resolved",false).order("created_at",{ascending:false}),
-    sb.from("entries").select("*").eq("kind","notes").order("created_at",{ascending:false}).limit(5)]);
-  S.wl={obs:a.data||[],notes:b.data||[]};
+  const {data}=await sb.from("entries").select("*").eq("kind","issues").eq("resolved",false).order("created_at",{ascending:false});
+  S.wl={obs:data||[],notes:[]};
 }
 async function openWelcome(){await loadWelcome();modal("welcome")}
 async function goP(id,tab){S.modal=null;S.cur=id;S.tab=tab||TABS.find(t=>t.see.includes(S.role)).k;await loadE();await loadPS();render();scrollTo(0,0)}
 const pn=id=>S.projects.find(p=>p.id===id)?.name||"-";
 function welcomeHtml(){
-  const o=S.wl.obs,n=S.wl.notes,run=S.projects.filter(p=>p.status==="run"),late=S.projects.filter(p=>timing(p)?.late);
-  const it=(e,tab,btn)=>`<div class="item" style="cursor:pointer" onclick="goP('${e.project_id}','${tab}')"><b>${esc(pn(e.project_id))}</b><div>${esc(e.body)}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>${btn||""}</div>`;
+  const o=S.wl.obs;
   return `<div class="modal"><div class="box"><h3>مرحباً بك 👋</h3>
   <b>المعوقات المفتوحة (${o.length})</b>
-  ${o.map(e=>it(e,"issues",canRes()?`<button class="sm" onclick="event.stopPropagation();resolveW('${e.id}')">تم الحل</button>`:"")).join("")||'<div class="empty">لا توجد معوقات 🎉</div>'}
-  <b style="display:block;margin-top:14px">آخر ملاحظات الإدارة</b>
-  ${n.map(e=>it(e,"notes")).join("")||'<div class="empty">لا توجد ملاحظات</div>'}
-  <b style="display:block;margin-top:14px">المشاريع (${run.length} قيد التنفيذ${late.length?` · ${late.length} متأخر`:""})</b>
-  ${run.slice(0,8).map(p=>`<div class="item" style="cursor:pointer" onclick="goP('${p.id}')"><b>${esc(p.name)}</b> · ${clamp(p.progress)}%${timing(p)?.late?' · <b style="color:var(--late)">متأخر</b>':""}</div>`).join("")||'<div class="empty">لا توجد مشاريع قيد التنفيذ</div>'}
+  ${o.map(e=>`<div class="item" style="cursor:pointer" onclick="goP('${e.project_id}','issues')"><b>${esc(pn(e.project_id))}</b><div>${esc(e.body)}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>${canRes()?`<button class="sm" onclick="event.stopPropagation();resolveW('${e.id}')">تم الحل</button>`:""}</div>`).join("")||'<div class="empty">لا توجد معوقات 🎉</div>'}
   <button class="btn alt" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
 }
 
