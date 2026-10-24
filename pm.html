@@ -323,6 +323,30 @@ const RPCSS=`
 .rpg .rk .pl.h{background:#fdeceb;color:#b3332b}.rpg .rk .pl.m{background:#fff2dc;color:#b86800}.rpg .rk .pl.l{background:#eef1f5;color:#52667b}.rpg .rk .pl.g{background:#e6f4ec;color:#1d7a4d}
 .rpg .wh{font-size:15px;font-weight:800;color:#2e69ad;margin:12px 0 5px}
 .rpg .wp{margin:0 0 8px;font-size:13px;line-height:2;color:#182b3d;white-space:pre-wrap;overflow-wrap:anywhere}
+
+.rpg .k .sub{display:block;font-size:11px;margin-top:3px;color:#647589;font-style:normal;line-height:1.5}
+.rpg .k.gd .sub{color:#1d7a4d;font-weight:600}.rpg .k.bd .sub{color:#b3332b;font-weight:600}.rpg .k.bd b{color:#b3332b}.rpg .k.gd b{color:#1d7a4d}
+.rpg .pbar{margin:0 0 16px}
+.rpg .pbar .trk{position:relative;height:16px;border-radius:9px;background:#e6ebf1}
+.rpg .pbar .trk i{display:block;height:100%;border-radius:9px;background:#ed8700}
+.rpg .pbar .trk b{position:absolute;top:-5px;bottom:-5px;width:3px;background:#102944;border-radius:2px}
+.rpg .pbar .lg3{display:flex;justify-content:space-between;font-size:11.5px;color:#52667b;margin-top:8px}
+.rpg .at2{display:flex;gap:11px;align-items:flex-start;border:1px solid #e3e9ef;border-right:4px solid #9aa8b6;border-radius:9px;padding:8px 12px;margin-bottom:7px;background:#fff}
+.rpg .at2.h{border-right-color:#c0392b;background:#fffafa}.rpg .at2.m{border-right-color:#e08a00;background:#fffdf8}.rpg .at2.ok{border-right-color:#1d7a4d;background:#f6fbf8}
+.rpg .at2 .tt{flex:1;font-size:12.5px;line-height:1.8;font-weight:600;color:#182b3d}
+.rpg .at2 .tt small{display:block;font-weight:400;color:#647589;font-size:11px;line-height:1.6}
+.rpg .at2 .pl2{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:20px;padding:1px 11px;margin-top:3px}
+.rpg .at2 .pl2.h{background:#fdeceb;color:#b3332b}.rpg .at2 .pl2.m{background:#fff2dc;color:#b86800}.rpg .at2 .pl2.l{background:#eef1f5;color:#52667b}
+.rpg .ac{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;font-size:12.5px;line-height:1.85}
+.rpg .ac:last-child{border-bottom:0}
+.rpg .ac .d{flex:0 0 58px;color:#d17a08;font-weight:700;font-size:11.5px}
+.rpg .more{font-size:11px;color:#8996a5;margin:4px 0 12px}
+.rpg .team{display:flex;gap:8px;margin:0 0 14px}
+.rpg .team div{flex:1;border:1px solid #e3e9ef;border-radius:9px;padding:7px 10px;background:#fff;min-width:0}
+.rpg .team small{display:block;color:#8996a5;font-size:10.5px}
+.rpg .team b{font-size:12px;color:#102944;font-weight:700;line-height:1.5}
+.rpg .ab .cmp{margin:0 0 8px}
+.rpg .ab p b{color:#102944}
 .rpg .gh{background:#102944;color:#fff;border-radius:12px;padding:11px 16px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center;border-right:6px solid #ed8700}
 .rpg .gh small{display:block;color:#f6b44c;font-size:10.5px;font-weight:700}
 .rpg .gh b{font-size:16px;font-weight:700}
@@ -569,63 +593,68 @@ function rpAnalyze(p,cfg,d,G){
   if(S0&&E0&&E0>S0){
     A.total=Math.round((E0-S0)/864e5);A.el=Math.max(0,Math.round((T-S0)/864e5));A.elp=Math.max(0,Math.min(100,Math.round(A.el/A.total*100)));
     A.left=Math.round((E0-T)/864e5);A.diff=A.prog-A.elp;A.spi=A.elp>0?A.prog/A.elp:null;
+    if(!isDone){A.rem=100-A.prog;if(A.left>0)A.reqW=A.rem/(A.left/7);if(A.el>0&&A.prog>0)A.curW=A.prog/(A.el/7)}
   }
   if(S0&&!isDone&&A.prog>=5&&T>S0){const el=Math.round((T-S0)/864e5);if(el>=7){A.est=addDays(S0,Math.round(el/(A.prog/100)));if(E0)A.delta=Math.round((A.est-E0)/864e5)}}
   const act=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])];
-  A.act=act.length;A.avg=act.length/Math.max(1,G.days);
-  A.series=G.all.slice(-14).map(b=>({l:b.short,u:b.ups.length,p:b.pics.length}));
-  const best=[...G.all].sort((a,b)=>(b.ups.length+b.pics.length)-(a.ups.length+a.pics.length))[0];
-  A.best=best&&(best.ups.length+best.pics.length)?{l:best.label,n:best.ups.length+best.pics.length}:null;
-  const ds=[...new Set(act.map(e=>iso(e.created_at)))].sort();let gap=0;
-  for(let i=1;i<ds.length;i++)gap=Math.max(gap,Math.round((new Date(ds[i])-new Date(ds[i-1]))/864e5)-1);
-  A.gap=gap;A.idle=d.lastAny?Math.max(0,Math.round((T-day0(d.lastAny))/864e5)):null;
-  const I=d.issAll||[],io=A.io={tot:I.length,per:d.iss.length,open:I.filter(e=>e.resolved===false).length,res:I.filter(e=>e.resolved===true).length,known:I.some(e=>e.resolved!==undefined)};
+  A.act=act.length;
+  A.idle=d.lastAny?Math.max(0,Math.round((T-day0(d.lastAny))/864e5)):null;
+  const I=d.issAll||[],io=A.io={tot:I.length,open:0,res:I.filter(e=>e.resolved===true).length,known:I.some(e=>e.resolved!==undefined)};
+  io.list=I.filter(e=>e.resolved===false).map(e=>({e,age:Math.max(0,Math.round((T-day0(e.created_at))/864e5))})).sort((a,b)=>b.age-a.age);
+  io.open=io.list.length;io.oldest=io.open?io.list[0].age:null;
   const rt=I.filter(e=>e.resolved===true&&e.resolved_at).map(e=>(new Date(e.resolved_at)-new Date(e.created_at))/864e5);
-  io.avg=rt.length?rt.reduce((a,b)=>a+b,0)/rt.length:null;
-  const op=I.filter(e=>e.resolved===false).map(e=>Math.round((T-day0(e.created_at))/864e5));
-  io.oldest=op.length?Math.max(...op):null;io.rate=io.tot&&io.known?Math.round(io.res/io.tot*100):null;
-  const R=[];
+  io.avg=rt.length?rt.reduce((x,y)=>x+y,0)/rt.length:null;io.rate=io.tot&&io.known?Math.round(io.res/io.tot*100):null;
+  const rl=e=>ROLES[e.author_role]||e.author_role||"";
+  /* بنود تحتاج قراراً/متابعة (مرتبة بالأهمية) */
+  const att=[];let hs=false;
   if(!isDone){
-    if(A.diff!==undefined){if(A.diff<=-15)R.push(["h",`الإنجاز أقل من المخطط بمقدار ${-A.diff} نقطة مئوية (مؤشر الأداء الزمني ${A.spi.toFixed(2)})`,"s"]);else if(A.diff<-5)R.push(["m",`الإنجاز أقل من الزمن المنقضي بمقدار ${-A.diff} نقطة مئوية`])}
-    if(A.left!==undefined){if(A.left<0)R.push(["h",`تجاوز المشروع موعد التسليم بمقدار ${-A.left} يوم`,"s"]);else if(A.left<=14&&A.prog<80)R.push(["h",`يتبقى ${A.left} يوم فقط على التسليم وبلغ الإنجاز ${A.prog}%`,"s"])}
-    if(A.delta>0)R.push([A.delta>14?"h":"m",`بمعدل الإنجاز الحالي يُتوقع التسليم بعد الموعد بنحو ${A.delta} يوم`,A.delta>14?"s":""]);
-    if(A.idle!==null&&A.idle>14)R.push(["h",`لا يوجد نشاط موثّق منذ ${A.idle} يوم`]);else if(A.idle!==null&&A.idle>7)R.push(["m",`لا يوجد نشاط موثّق منذ ${A.idle} يوم`]);
+    if(A.left!==undefined&&A.left<0){att.push({l:"h",t:`تجاوز موعد التسليم بـ ${-A.left} يوماً`,s:`المتبقي من الأعمال ${100-A.prog}%`});hs=true}
+    else if(A.delta>0){att.push({l:A.delta>14?"h":"m",t:`التسليم المتوقع متأخر نحو ${A.delta} يوماً عن الموعد`,s:A.reqW&&A.curW?`المعدل الحالي ${A.curW.toFixed(1)}% أسبوعياً والمطلوب ${A.reqW.toFixed(1)}%`:""});if(A.delta>14)hs=true}
+    else if(A.diff!==undefined&&A.diff<-5){att.push({l:A.diff<=-15?"h":"m",t:`الإنجاز أقل من المخطط بمقدار ${-A.diff} نقطة مئوية`,s:`الفعلي ${A.prog}% مقابل المخطط ${A.elp}%`});if(A.diff<=-15)hs=true}
+    if(A.idle!==null&&A.idle>7)att.push({l:A.idle>14?"h":"m",t:`لا يوجد توثيق منذ ${A.idle} يوماً`,s:"آخر تحديث أو صورة مسجلة في المشروع"});
   }
-  if(io.open>0)R.push([io.oldest>14?"h":"m",`يوجد ${io.open} معوق مفتوح${io.oldest!==null?` (أقدمها منذ ${io.oldest} يوم)`:""}`]);
-  if(cfg.pho&&!d.pics.length)R.push(["l",`لا توجد صور موثقة ${cfg.full?"في المشروع":"خلال الفترة"}`]);
-  A.risks=R;const H=R.filter(x=>x[0]==="h").length,lv=(R.some(x=>x[0]==="h"&&x[2]==="s")||H>=2)?"r":(H>=1||R.some(x=>x[0]==="m"))?"a":"g";A.rag=isDone?"g":lv;
-  A.ragT=isDone?["تم تسليم المشروع","اكتملت أعمال المشروع وتم تسليمه."]:lv==="g"?["الوضع العام: جيد","لا توجد مؤشرات خطر جوهرية، والمشروع يسير وفق المعطيات المتاحة."]:lv==="a"?["الوضع العام: يحتاج متابعة","توجد مؤشرات تستدعي المتابعة القريبة (انظر مؤشرات المخاطر)."]:["الوضع العام: حرج","توجد مؤشرات خطر مرتفعة تتطلب قراراً وإجراءً عاجلاً."];
+  if(cfg.obs!==false)io.list.slice(0,5).forEach(o=>att.push({l:o.age>14?"h":"m",t:cut(cleanTxt(o.e.body).replace(/\n/g," "),120),s:`مفتوح منذ ${o.age} يوماً${rl(o.e)?` · رفعه: ${rl(o.e)}`:""}`}));
+  if(cfg.obs!==false&&io.open>5)att.push({l:"l",t:`و${io.open-5} معوقات أخرى مفتوحة`,s:"التفاصيل في سجل المعوقات"});
+  A.attn=att;
+  const H=att.filter(x=>x.l==="h").length,lv=hs||H>=2?"r":att.some(x=>x.l==="h"||x.l==="m")?"a":"g";
+  A.rag=isDone?"g":lv;
+  A.ragT=[isDone?"تم تسليم المشروع":lv==="g"?"الوضع العام: جيد":lv==="a"?"الوضع العام: يحتاج متابعة":"الوضع العام: حرج"];
+  /* خلاصة بجملة واحدة */
+  const parts=[];
+  if(isDone)parts.push("اكتملت أعمال المشروع وتم تسليمه");
+  else if(A.left!==undefined&&A.left<0)parts.push(`تجاوز المشروع موعد التسليم بـ ${-A.left} يوماً وبقي ${100-A.prog}% من الأعمال`);
+  else if(A.delta!==undefined)parts.push(A.delta>7?`المشروع متأخر عن الخطة، وبالوتيرة الحالية يُتوقع التسليم بعد الموعد بنحو ${A.delta} يوماً`:A.delta<-7?`المشروع متقدم على الخطة، ويُتوقع التسليم قبل الموعد بنحو ${-A.delta} يوماً`:"المشروع يسير وفق الخطة، والتسليم المتوقع قريب من الموعد");
+  else if(A.diff!==undefined)parts.push(`الإنجاز الفعلي ${A.prog}% ${A.diff>=0?"أعلى من":"أقل من"} المخطط حتى اليوم (${A.elp}%)`);
+  else parts.push(`نسبة الإنجاز ${A.prog}%، ولم تُحدَّد تواريخ المشروع لقياس الالتزام بالجدول`);
+  if(io.open)parts.push(`${io.open} معوق مفتوح${io.oldest>14?` (أقدمها منذ ${io.oldest} يوماً)`:""}`);
+  A.verdict=parts.join("، ")+".";
+  /* إجراءات مقترحة */
+  const ac=[];
+  io.list.filter(o=>o.age>14).slice(0,3).forEach(o=>ac.push(`تصعيد المعوق «${cut(cleanTxt(o.e.body).replace(/\n/g," "),70)}» (مفتوح منذ ${o.age} يوماً): تحديد مسؤول وموعد حل ملزم.`));
+  if(io.open&&!ac.length)ac.push(`متابعة المعوقات المفتوحة (${io.open}) أسبوعياً حتى إغلاقها.`);
+  if(A.reqW&&A.curW&&A.reqW>A.curW*1.15)ac.push(`رفع وتيرة الإنجاز من ${A.curW.toFixed(1)}% إلى ${A.reqW.toFixed(1)}% أسبوعياً للتسليم في الموعد، أو اعتماد موعد تسليم معدّل.`);
+  if(A.delta>0||(A.left!==undefined&&A.left<0&&!isDone))ac.push("إبلاغ العميل بالموقف الزمني واعتماد خطة استكمال بموعد واضح.");
+  if(A.idle!==null&&A.idle>7&&!isDone)ac.push("إلزام الموقع بالتوثيق اليومي بالتحديثات والصور.");
+  if(!p.start_date||!p.due)ac.push("استكمال تاريخي البداية والتسليم في بيانات المشروع لتفعيل قياس الالتزام بالجدول.");
+  if(!ac.length)ac.push(isDone?"حفظ سجل المشروع وتقاريره للرجوع إليها.":"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية للجدول الزمني.");
+  A.actions=ac;
   return A;
 }
 function rpDraft(p,cfg,d,A,G){
-  const L=[],tp=TYN[p.ptype]||"",tm=timing(p);
-  const per=cfg.full?`كامل مسار المشروع منذ ${dfmt(d.f)} وحتى ${dfmt(d.t)}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`,w=cfg.full?"في المشروع":"خلال الفترة";
+  const L=[],tp=TYN[p.ptype]||"",per=cfg.full?`كامل مسار المشروع منذ ${dfmt(d.f)} وحتى ${dfmt(d.t)}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`;
   L.push("# نظرة عامة");
-  L.push(`يتناول هذا التقرير مشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` الواقع في ${p.loc}`:""}، ويغطي ${per}. بلغت نسبة الإنجاز الحالية ${A.prog}%، وحالة المشروع: ${ST[p.status][0]}${tm&&!A.done?`، والموقف الزمني: ${tm.t}`:""}.`);
+  L.push(`يغطي هذا التقرير ${per} لمشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` في ${p.loc}`:""}. بلغت نسبة الإنجاز ${A.prog}%${A.elp!==undefined&&!A.done?` مقابل ${A.elp}% مخططة حتى اليوم`:""}. ${A.verdict}`);
+  if(A.est&&A.delta!==undefined&&!A.done)L.push(`التاريخ المتوقع لانتهاء الأعمال بالوتيرة الحالية هو ${dfmt(A.est)}، وهو تقدير خطي يتغير بحسب سير العمل.`);
   if(cfg.upd||cfg.pho){
-    const parts=[];if(cfg.upd)parts.push(`${d.ups.length} تحديثاً مكتوباً`);if(cfg.pho)parts.push(`${d.pics.length} صورة توثّق الأعمال`);
-    L.push("# سير الأعمال");
-    L.push(`سُجّل ${w} ${parts.join(" و")}.`+(cfg.upd&&d.ups.length?" ومن أبرز المستجدات المسجلة:":""));
-    if(cfg.upd)[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,4).forEach(e=>L.push("- "+dfmt(e.created_at)+": "+cut(cleanTxt(e.body).replace(/\n/g," "),150)));
+    L.push("# ما تم إنجازه");
+    const parts=[];if(cfg.upd)parts.push(`${d.ups.length} تحديثاً مكتوباً`);if(cfg.pho)parts.push(`${d.pics.length} صورة`);
+    L.push(`وُثّق ${cfg.full?"في المشروع":"خلال الفترة"} ${parts.join(" و")}. وأبرز الأعمال:`);
+    if(cfg.upd)[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,4).forEach(e=>L.push("- "+cut(cleanTxt(e.body).replace(/\n/g," "),150)));
   }
-  L.push("# تحليل الأداء");
-  if(A.elp!==undefined)L.push(`مضى ${A.elp}% من المدة المخططة للمشروع (${A.el} من ${A.total} يوماً)، بينما بلغ الإنجاز الفعلي ${A.prog}%، أي ${A.diff>=0?`أعلى من المخطط بمقدار ${A.diff} نقطة مئوية`:`أقل من المخطط بمقدار ${-A.diff} نقطة مئوية`}.`);
-  else L.push("لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر مقارنة الإنجاز بالجدول الزمني.");
-  if(A.est)L.push(`بمعدل الإنجاز الحالي يُقدَّر الانتهاء في ${dfmt(A.est)}${A.delta===undefined?"":A.delta>0?`، أي بعد موعد التسليم بنحو ${A.delta} يوماً`:A.delta<0?`، أي قبل موعد التسليم بنحو ${-A.delta} يوماً`:"، وهو موافق لموعد التسليم"}. وهذا تقدير خطي يتغير بحسب وتيرة العمل.`);
-  if(A.act)L.push(`بلغ متوسط التوثيق ${A.avg.toFixed(1)} إدخال يومياً${A.best?`، وكان أنشط الفترات: ${A.best.l} (${A.best.n} إدخال)`:""}${A.gap>=3?`، وأطول انقطاع عن التوثيق ${A.gap} يوم`:""}.`);
-  L.push("# المعوقات والمخاطر");
+  L.push("# المعوقات والتوصيات");
   const io=A.io;
-  L.push(io.tot?`سُجّل في المشروع ${io.tot} معوق${io.known?`، منها ${io.open} مفتوح و${io.res} تم حله${io.avg!==null?`، بمتوسط زمن حل ${io.avg.toFixed(1)} يوم`:""}`:""}.`:"لا توجد معوقات مسجلة في المشروع.");
-  if(A.risks.length)A.risks.forEach(r=>L.push("- "+r[1]));else L.push("لا توجد مؤشرات خطر جوهرية وفق البيانات المتاحة.");
-  L.push("# التوصيات");
-  const rc=[];
-  if(io.open)rc.push(`إغلاق المعوقات المفتوحة (${io.open}) ومتابعتها مع الجهات المعنية، مع تحديد مسؤول وموعد لكل معوق.`);
-  if(A.diff!==undefined&&A.diff<-5&&!A.done)rc.push("مراجعة الجدول الزمني ودعم الموقع بالموارد اللازمة لتعويض الفارق في الإنجاز.");
-  if(A.delta>0)rc.push("التنسيق مع الإدارة والعميل بشأن موعد التسليم المتوقع، أو اعتماد خطة تسريع.");
-  if(A.idle!==null&&A.idle>7&&!A.done)rc.push("رفع وتيرة التوثيق اليومي بالتحديثات والصور لضمان وضوح سير العمل.");
-  if(cfg.pho&&!d.pics.length)rc.push("توثيق الأعمال بالصور بشكل دوري.");
-  if(!rc.length)rc.push(A.done?"حفظ سجل المشروع وتقاريره للرجوع إليها.":"الاستمرار على وتيرة العمل الحالية مع المتابعة الدورية للجدول الزمني.");
-  rc.forEach(x=>L.push("- "+x));
+  L.push(io.tot?`سُجّل في المشروع ${io.tot} معوق${io.known?`: ${io.open} مفتوح و${io.res} تم حله${io.avg!==null?` (متوسط زمن الحل ${io.avg.toFixed(1)} يوم)`:""}`:""}.`:"لا توجد معوقات مسجلة في المشروع.");
+  A.actions.forEach(x=>L.push("- "+x));
   return L.join("\n");
 }
 function rpWriteBlocks(txt){
@@ -674,75 +703,63 @@ function rpPages(p,cfg,d,root){
     root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
   };
   const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
-  /* 1) الملخص التنفيذي */
+  /* 1) ملخص الإدارة */
   fresh();const tocEl=put(`<div class="toc"></div>`);
-  put(sec("الملخص التنفيذي"));mark();
-  const dd=p.due&&!isDone?Math.round((new Date(p.due+"T00:00:00")-day0(today))/864e5):null;
-  const tmB=isDone?["تم التسليم","#1d7a4d","الموقف الزمني"]:dd===null?["—","#102944","الموقف الزمني"]:dd<0?["متأخر "+(-dd)+" يوم","#b3332b","الموقف الزمني"]:dd===0?["التسليم اليوم","#102944","على الموعد"]:["باقي "+dd+" يوم","#102944","على الموعد"];
-  put(`<div class="kp"><div class="k"><b>${prog}%</b><span>نسبة الإنجاز</span><div class="mb"><i style="width:${prog}%"></i></div></div>
-    <div class="k"><b style="font-size:18px;padding:3px 0">${esc(ST[p.status][0])}</b><span>حالة المشروع</span></div>
-    <div class="k"><b style="font-size:18px;padding:3px 0;color:${tmB[1]}">${esc(tmB[0])}</b><span>${tmB[2]}</span></div>
-    <div class="k"><b style="font-size:15px;line-height:1.55">${cfg.upd?d.ups.length:0} تحديث<br>${cfg.pho?d.pics.length:0} صورة</b><span>${reno?"إجمالي التوثيق":"نشاط الفترة"}</span></div></div>`);
-  put(`<div class="rag ${A.rag}"><span class="dt"></span><div><b>${A.ragT[0]}</b><span>${A.ragT[1]}</span></div></div>`);
-  const R=(a,b)=>`<td class="a">${a}</td><td class="b">${b||"—"}</td>`,sd=v=>v?esc(dfmt(v+"T00:00:00")):"";
-  put(`<table class="info"><tr>${R("المشروع",esc(p.name))}${R("الموقع",esc(p.loc))}</tr><tr>${R("نوع المشروع",esc(TYN[p.ptype]||""))}${R("مدير المشروع",esc(p.pm_name))}</tr>
-    <tr>${R("المقاول",esc(p.contractor_name))}${R("مدير الموقع",esc(p.site_manager))}</tr><tr>${R("مدير المنطقة",esc(p.area_name))}${R("تاريخ البداية",sd(p.start_date))}</tr>
-    <tr>${R("تاريخ التسليم",sd(p.due))}${cfg.price&&p.price!=null&&p.price!==""?R("قيمة المشروع",esc(money(p.price))):R(reno?"مدة المشروع (يوم)":"أيام الفترة",String(G.days))}</tr></table>`);
-  const all=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])],bullets=[],w=reno?"في المشروع":"خلال الفترة";
-  bullets.push(reno?`يغطي هذا التقرير كامل مسار المشروع، من ${esc(dfmt(d.f))} إلى ${esc(dfmt(d.t))} (${G.days} يوماً).`:`تغطي هذه الفترة ${G.days} يوماً، من ${esc(dfmt(d.f))} إلى ${esc(dfmt(d.t))}.`);
-  if(cfg.upd||cfg.pho)bullets.push(`سُجّل ${w} ${cfg.upd?`<b>${d.ups.length}</b> تحديث مكتوب`:""}${cfg.upd&&cfg.pho?" و":""}${cfg.pho?`<b>${d.pics.length}</b> صورة من الأعمال`:""}${d.atts&&cfg.upd?`، ومعها ${d.atts} مرفق`:""}.`);
-  if(all.length){
-    const cnt={};all.forEach(e=>{const k=iso(e.created_at);cnt[k]=(cnt[k]||0)+1});
-    const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?1:-1))[0],last=all.map(e=>new Date(e.created_at)).sort((a,b)=>b-a)[0];
-    bullets.push(`آخر نشاط مسجل بتاريخ ${esc(dfmt(last))}، وأكثر الأيام نشاطاً ${esc(dfmt(top[0]+"T00:00:00"))} (${top[1]} إدخال).`);
-  }
-  if(cfg.obs){
-    const o=d.iss.filter(e=>e.resolved===false).length;
-    bullets.push(reno?`المعوقات: سُجّل ${d.iss.length} معوق في المشروع${d.iss.length?` (${o} منها مفتوح)`:""}.`:`المعوقات: سُجّل ${d.iss.length} خلال الفترة${d.iss.length?` (${o} منها مفتوح)`:""}، ويوجد ${d.issOld.length} معوق مفتوح من فترات سابقة.`);
-  }
-  put(`<div style="margin-bottom:14px"><div class="st">${reno?"ملخص المشروع":"ملخص الفترة"}</div>${bullets.map(b=>`<div class="bl"><i></i><span>${b}</span></div>`).join("")}</div>`);
+  put(sec("ملخص الإدارة"));mark();
+  put(`<div class="rag ${A.rag}"><span class="dt"></span><div><b>${A.ragT[0]}</b><span>${esc(A.verdict)}</span></div></div>`);
+  const kc=(cls,big,lab,sub,sz)=>`<div class="k ${cls}"><b${sz?` style="font-size:${sz}px;padding:${Math.round((22-sz)/2)+2}px 0"`:""}>${big}</b><span>${lab}</span>${sub?`<em class="sub">${sub}</em>`:""}</div>`;
+  const dsh=v=>esc(dfmt(v,{day:"numeric",month:"long",year:"numeric"})),io=A.io,KP=[];
+  KP.push(kc("",prog+"%","الإنجاز الفعلي",isDone?"مكتمل":A.elp!==undefined?`المخطط حتى اليوم ${A.elp}%`:""));
+  if(isDone)KP.push(kc("gd","تم التسليم","حالة المشروع",p.due?"الموعد المخطط "+dsh(p.due+"T00:00:00"):"",17));
+  else if(A.left===undefined)KP.push(kc("","—","المتبقي للتسليم","لم تُحدَّد تواريخ المشروع"));
+  else if(A.left<0)KP.push(kc("bd",`متأخر ${-A.left} يوم`,"موعد التسليم",dsh(p.due+"T00:00:00"),17));
+  else KP.push(kc("",`${A.left} يوم`,"المتبقي للتسليم","التسليم: "+dsh(p.due+"T00:00:00"),19));
+  if(isDone)KP.push(kc("",A.total!==undefined?A.total+" يوم":"—","مدة المشروع المخططة","",19));
+  else if(A.est)KP.push(kc(A.delta>0?"bd":A.delta<0?"gd":"",dsh(A.est),"التسليم المتوقع",A.delta>0?`بعد الموعد بـ ${A.delta} يوم`:A.delta<0?`قبل الموعد بـ ${-A.delta} يوم`:"في الموعد",15));
+  else KP.push(kc("","غير متاح بعد","التسليم المتوقع","يحتاج 7 أيام و5% إنجاز",15));
+  if(cfg.obs&&io.known)KP.push(kc(io.open?(io.oldest>14?"bd":""):"gd",io.open,"معوقات مفتوحة",io.open?`أقدمها منذ ${io.oldest} يوم`:"لا توجد معوقات مفتوحة"));
+  else KP.push(kc("",cfg.pho?d.pics.length:d.ups.length,cfg.pho?"صور موثقة":"تحديثات مكتوبة",reno?"منذ بداية المشروع":"خلال الفترة"));
+  put(`<div class="kp">${KP.join("")}</div>`);
+  put(`<div class="pbar"><div class="trk"><i style="width:${prog}%"></i>${A.elp!==undefined&&!isDone?`<b style="right:${A.elp}%"></b>`:""}</div><div class="lg3"><span>الإنجاز الفعلي ${prog}%</span>${A.elp!==undefined&&!isDone?`<span>العلامة الداكنة: المخطط حتى اليوم ${A.elp}%</span>`:"<span></span>"}</div></div>`);
+  /* بنود تحتاج قراراً */
+  const PL={h:"عاجل",m:"متابعة",l:"للعلم"};
+  const atRow=x=>`<div class="at2 ${x.l}"><div class="tt">${esc(x.t)}${x.s?`<small>${esc(x.s)}</small>`:""}</div><span class="pl2 ${x.l}">${PL[x.l]}</span></div>`;
+  const atRows=A.attn.length?A.attn.map(atRow):[`<div class="at2 ok"><div class="tt">لا توجد بنود تحتاج قراراً أو متابعة حالياً</div></div>`];
+  atRows.forEach((r,i)=>put(i?r:`<div><div class="st">بنود تحتاج قراراً أو متابعة الإدارة</div>${r}</div>`));
+  /* أبرز ما تم */
   if(cfg.upd&&d.ups.length){
-    const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,3);
-    const hlh=e=>`<div class="hl"><small>${esc(dfmt(e.created_at))}</small>${esc(cut(cleanTxt(e.body).replace(/\n/g," "),240))}</div>`;
-    lastUp.forEach((e,i)=>put(i?hlh(e):`<div><div class="st">أبرز المستجدات</div>${hlh(e)}</div>`));
+    const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+    const hd=`<div class="st" style="margin-top:12px">${reno?"آخر ما تم في المشروع":"أبرز ما تم خلال الفترة"} (${d.ups.length} تحديث${cfg.pho?` · ${d.pics.length} صورة`:""})</div>`;
+    const row=e=>`<div class="ac"><span class="d">${esc(dfmt(e.created_at,{day:"numeric",month:"short"}))}</span><span>${esc(cut(cleanTxt(e.body).replace(/\n/g," "),150))}</span></div>`;
+    lastUp.forEach((e,i)=>put(i?row(e):`<div>${hd}${row(e)}</div>`));
+    if(d.ups.length>lastUp.length)put(`<div class="more">و${d.ups.length-lastUp.length} تحديثات أخرى في سجل الأعمال.</div>`);
   }
-  /* 2) تحليل المشروع */
+  /* الفريق */
+  const tm2=[["مدير المشروع",p.pm_name],["المقاول",p.contractor_name],["مدير الموقع",p.site_manager],["مدير المنطقة",p.area_name]].filter(x=>x[1]);
+  if(cfg.price&&p.price!=null&&p.price!=="")tm2.push(["قيمة المشروع",money(p.price)]);
+  if(tm2.length)put(`<div><div class="st">فريق المشروع</div><div class="team">${tm2.map(x=>`<div><small>${x[0]}</small><b>${esc(x[1])}</b></div>`).join("")}</div></div>`);
+  /* أحدث الصور */
+  if(cfg.pho&&d.pics.length){
+    const ph=d.pics.slice(-3).reverse(),hh=Math.round(228*LC.H/LC.W);
+    const fr=e=>`<div class="pf l3"><img src="${d.img[e.file_path]}" alt="" style="height:${hh}px"><div class="pc" style="min-height:0"><small>${esc(dfmt(e.created_at))}</small></div></div>`;
+    put(`<div style="margin-top:6px"><div class="st">أحدث صور الموقع</div><div class="pr l3" style="margin-bottom:12px">${ph.map(fr).join("")}${'<div class="pf" style="visibility:hidden;border:0"></div>'.repeat(3-ph.length)}</div></div>`);
+  }
+  /* 2) تحليل الأداء */
   if(cfg.ana){
     let first=true;
-    const ab=inner=>{const t=first?sec("تحليل المشروع"):"";first=false;return `<div>${t}<div class="ab">${inner}</div></div>`};
+    const ab=inner=>{const t=first?sec("تحليل الأداء"):"";first=false;return `<div>${t}<div class="ab">${inner}</div></div>`};
     const tr=(a,b)=>`<tr><td>${a}</td><td><b>${b}</b></td></tr>`;
-    let h;
-    if(A.total!==undefined){
-      h=`<h4>تحليل الجدول الزمني</h4><div class="cmp" style="margin:0 0 8px"><div class="rw"><span>الزمن المنقضي</span><div class="tr"><i style="width:${A.elp}%;background:#8a97a6"></i></div><b>${A.elp}%</b></div><div class="rw"><span>الإنجاز الفعلي</span><div class="tr"><i style="width:${A.prog}%;background:#ed8700"></i></div><b>${A.prog}%</b></div></div>
-      <table>${tr("المدة الكلية للمشروع",A.total+" يوم")}${tr("المنقضي منذ البداية",`${A.el} يوم (${A.elp}%)`)}${tr("المتبقي حتى التسليم",isDone?"—":A.left<0?"متأخر "+(-A.left)+" يوم":A.left+" يوم")}
-      ${tr("الفرق بين الإنجاز والمخطط",A.diff===0?"مطابق للمخطط":(A.diff>0?"أعلى من المخطط":"أقل من المخطط")+" بمقدار "+Math.abs(A.diff)+" نقطة مئوية")}${tr("مؤشر الأداء الزمني (الإنجاز ÷ المخطط)",A.spi!==null?A.spi.toFixed(2):"—")}
-      ${isDone?"":tr("التاريخ المتوقع للانتهاء",A.est?esc(dfmt(A.est))+(A.delta===undefined?"":A.delta>0?` (بعد الموعد بـ ${A.delta} يوم)`:A.delta<0?` (قبل الموعد بـ ${-A.delta} يوم)`:" (على الموعد)"):"غير متاح بعد")}</table>
-      <p>مؤشر الأداء الزمني الأعلى من 1 يعني تقدماً أسرع من المخطط. والتاريخ المتوقع تقدير خطي مبني على وتيرة الإنجاز الحالية (يحتاج 7 أيام و5% إنجاز على الأقل).</p>`;
-    }else h=`<h4>تحليل الجدول الزمني</h4><p>لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر تحليل الجدول الزمني. يمكن إضافتها من «تعديل المشروع».</p>`;
-    put(ab(h));mark();
-    /* النشاط */
-    if(cfg.upd||cfg.pho){
-      if(A.act){
-        const mx=Math.max(1,...A.series.map(s=>s.u+s.p)),H=92;
-        h=`<h4>تحليل النشاط والتوثيق</h4><div class="ch">${A.series.map(s=>{const hu=Math.round(s.u/mx*H),hp=Math.round(s.p/mx*H);return `<div class="c">${s.u+s.p?`<div class="v">${s.u+s.p}</div>`:""}${s.u?`<div class="s1" style="height:${Math.max(hu,3)}px"></div>`:""}${s.p?`<div class="s2" style="height:${Math.max(hp,3)}px"></div>`:""}</div>`}).join("")}</div>
-        <div class="cl">${A.series.map(s=>`<div>${esc(s.l)}</div>`).join("")}</div><div class="lg2"><span><i style="background:#2e69ad"></i>تحديثات مكتوبة</span><span><i style="background:#ed8700"></i>صور</span></div>
-        <table>${tr("إجمالي الإدخالات (تحديثات + صور)",A.act)}${tr("متوسط الإدخالات اليومي",A.avg.toFixed(1))}${A.best?tr("أنشط فترة",`${esc(A.best.l)} (${A.best.n})`):""}${tr("أطول فترة بدون توثيق",A.gap+" يوم")}${A.idle!==null?tr("آخر نشاط مسجل",A.idle===0?"اليوم":"قبل "+A.idle+" يوم"):""}</table>`;
-      }else h=`<h4>تحليل النشاط والتوثيق</h4><p>لا يوجد نشاط (تحديثات أو صور) مسجل ${reno?"في المشروع":"خلال الفترة"}.</p>`;
-      put(ab(h));
+    if(A.total===undefined&&!isDone){
+      put(ab(`<h4>الالتزام بالجدول الزمني</h4><p>لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر قياس الالتزام بالجدول. يمكن إضافتها من «تعديل المشروع».</p>`));mark();
+    }else if(!isDone){
+      const sum=A.left<0?`انتهى موعد التسليم وبقي ${A.rem}% من الأعمال.`:A.reqW&&A.curW?(A.curW>=A.reqW?`المعدل الحالي يكفي للتسليم في الموعد (يتجاوز المطلوب بنحو ${Math.round((A.curW/A.reqW-1)*100)}%).`:`يلزم رفع المعدل الحالي بنحو ${Math.round((A.reqW/A.curW-1)*100)}% للتسليم في الموعد.`):"لا تتوفر بيانات كافية لحساب المعدل بعد.";
+      put(ab(`<h4>هل يلتزم المشروع بالموعد؟</h4><table>${tr("الفرق عن المخطط",A.diff===0?"مطابق للمخطط":(A.diff>0?"متقدم":"متأخر")+" بمقدار "+Math.abs(A.diff)+" نقطة مئوية")}${A.spi!==null?tr("مؤشر الأداء الزمني (1 = مطابق للخطة)",A.spi.toFixed(2)):""}${tr("الأعمال المتبقية",A.rem+"%")}${tr("المدة المتبقية",A.left<0?"متأخر "+(-A.left)+" يوم":`${A.left} يوم (${(A.left/7).toFixed(1)} أسبوع)`)}${A.reqW?tr("المعدل المطلوب للتسليم في الموعد",A.reqW.toFixed(1)+"% أسبوعياً"):""}${A.curW?tr("المعدل الحالي (منذ البداية)",A.curW.toFixed(1)+"% أسبوعياً"):""}</table><p><b>الخلاصة:</b> ${sum}</p>`));mark();
     }
-    /* المعوقات */
-    if(cfg.obs){
-      const io=A.io;
-      if(io.tot){
-        const rp=io.known?Math.round(io.res/io.tot*100):0,op=io.known?100-rp:0;
-        h=`<h4>تحليل المعوقات</h4>${io.known?`<div class="sb"><i style="width:${rp}%;background:#1d7a4d"></i><i style="width:${op}%;background:#c0392b"></i></div><div class="lg2"><span><i style="background:#1d7a4d"></i>تم الحل (${io.res})</span><span><i style="background:#c0392b"></i>مفتوح (${io.open})</span></div>`:""}
-        <table>${tr("إجمالي المعوقات المسجلة",io.tot)}${reno?"":tr("سُجّل خلال الفترة",io.per)}${io.known?tr("مفتوحة حالياً",io.open)+tr("تم حلها",io.res)+(io.rate!==null?tr("نسبة الحل",io.rate+"%"):"")+(io.avg!==null?tr("متوسط زمن الحل",io.avg.toFixed(1)+" يوم"):"")+(io.oldest!==null?tr("أقدم معوق مفتوح",io.oldest+" يوم"):""):""}</table>`;
-      }else h=`<h4>تحليل المعوقات</h4><p>لا توجد معوقات مسجلة في المشروع.</p>`;
-      put(ab(h));
+    if(cfg.obs&&io.known&&io.tot){
+      const bk=[["حتى 7 أيام",o=>o.age<=7,"#e0a42e"],["من 8 إلى 14 يوماً",o=>o.age>7&&o.age<=14,"#e08a00"],["أكثر من 14 يوماً",o=>o.age>14,"#c0392b"]].map(x=>[x[0],io.list.filter(x[1]).length,x[2]]),mx=Math.max(1,...bk.map(x=>x[1]));
+      put(ab(`<h4>المعوقات</h4>${io.open?`<div class="cmp"><div class="st" style="margin:0 0 4px">أعمار المعوقات المفتوحة</div>${bk.map(x=>`<div class="rw"><span>${x[0]}</span><div class="tr"><i style="width:${Math.round(x[1]/mx*100)}%;background:${x[2]}"></i></div><b>${x[1]}</b></div>`).join("")}</div>`:""}<p>${io.open?"":"لا توجد معوقات مفتوحة. "}تم حل <b>${io.res}</b> من <b>${io.tot}</b> معوق (${io.rate}%)${io.avg!==null?`، بمتوسط زمن حل ${io.avg.toFixed(1)} يوم`:""}.</p>`));if(first===false)mark();
     }
-    /* المخاطر */
-    const PL={h:"مرتفع",m:"متوسط",l:"منخفض"};
-    put(ab(`<h4>مؤشرات المخاطر</h4>${A.risks.length?A.risks.map(r=>`<div class="rk"><span class="pl ${r[0]}">${PL[r[0]]}</span><span>${esc(r[1])}</span></div>`).join(""):'<div class="rk"><span class="pl g">سليم</span><span>لا توجد مؤشرات خطر جوهرية وفق البيانات المتاحة.</span></div>'}`));
+    put(ab(`<h4>الإجراءات المقترحة</h4>${A.actions.map(x=>`<div class="bl"><i></i><span>${esc(x)}</span></div>`).join("")}`));mark();
     /* 3) التقرير المكتوب */
     const wb=rpWriteBlocks(cfg.text||rpDraft(p,cfg,d,A,G));
     if(wb.length){
