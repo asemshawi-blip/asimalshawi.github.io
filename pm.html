@@ -227,9 +227,9 @@ function proj(){
   const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
   const talk=toPM||toCT||toAM?`<div class="acts">${toPM}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button></div>`:"";
-  const items=S.entries.map(e=>`<div class="item"><div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
-  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
+  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
@@ -340,6 +340,7 @@ const RPCSS=`
 .rpg .ac{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;font-size:12.5px;line-height:1.85}
 .rpg .ac:last-child{border-bottom:0}
 .rpg .ac .d{flex:0 0 58px;color:#d17a08;font-weight:700;font-size:11.5px}
+.rpg .bagap{text-align:center;font-size:11px;color:#8996a5;margin:0 0 14px}
 .rpg .more{font-size:11px;color:#8996a5;margin:4px 0 12px}
 .rpg .team{display:flex;gap:8px;margin:0 0 14px}
 .rpg .team div{flex:1;border:1px solid #e3e9ef;border-radius:9px;padding:7px 10px;background:#fff;min-width:0}
@@ -417,7 +418,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 /* —— النافذة —— */
 function openReport(){
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
-  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ana:true,text:"",price:false,q:"hi",lay:"2"};
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -449,9 +450,9 @@ function reportHtml(){
   <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
   ${per}
   <label class="lbl">محتوى التقرير</label>
-  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpa","تحليل المشروع والتقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
+  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpx","قبل وبعد (الصور التي حددتها في تبويب الصور)",r.ba)}${rpCk("rpa","التقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("2","شبكة — صورتان في الصف")}${sel("1","كبيرة — صورة في كل صف")}${sel("3","مصغّرة — 3 صور في الصف")}</select>
-  <label class="lbl">التقرير المكتوب (يظهر بعد التحليل، ويمكنك تعديله)</label>
+  <label class="lbl">التقرير المكتوب (يمكنك تعديله)</label>
   <textarea id="rpw" rows="8" placeholder="اتركه فارغاً ليُكتب تلقائياً، أو اضغط «كتابة مسودة» ثم عدّل عليها.">${esc(r.text)}</textarea>
   <button class="btn alt" id="rpd" onclick="rpDraftNow()">✨ كتابة مسودة تلقائية</button>
   <p class="lbl">لتنسيق النص: ابدأ السطر بـ «# » لعنوان فرعي أو بـ «- » لنقطة.</p>
@@ -462,11 +463,11 @@ function reportHtml(){
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),
-    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
+    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,ba:$("rpx").checked,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
 }
 function rpCheck(cfg){
   if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
-  if(!cfg.upd&&!cfg.pho&&!cfg.obs&&!cfg.ana)return "اختر محتوى واحداً على الأقل";
+  if(!cfg.upd&&!cfg.pho&&!cfg.obs&&!cfg.ana&&!cfg.ba)return "اختر محتوى واحداً على الأقل";
   return "";
 }
 async function rpDraftNow(){
@@ -528,8 +529,9 @@ async function rpData(p,cfg){
 }
 function rpClassify(rows,f,t){
   const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
-  const issAll=rows.filter(e=>e.kind==="issues");
-  return {f,t,
+  const issAll=rows.filter(e=>e.kind==="issues"),byId=new Map(rows.map(e=>[String(e.id),e]));
+  const pairs=rows.filter(e=>e.ba==="after"&&e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&x.b.ba==="before"&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+  return {f,t,pairs,pairIds:new Set(),
     ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)),
     atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
     pics:rows.filter(e=>(e.kind==="media"||e.kind==="reports")&&isImg(e)&&inP(e)),
@@ -551,7 +553,7 @@ async function rpPrep(url,mode,L){
 }
 async function rpImages(p,cfg,data,prog){
   const L=LAY[cfg.lay]||LAY[2];
-  const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),p.cover_path].filter(Boolean))],urls={};
+  const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),...(cfg.ba?data.pairs.flatMap(x=>[x.a.file_path,x.b.file_path]):[]),p.cover_path].filter(Boolean))],urls={};
   for(let i=0;i<want.length;i+=100){
     const {data:d}=await sb.storage.from("media").createSignedUrls(want.slice(i,i+100),3600);
     (d||[]).forEach(x=>{if(x.signedUrl)urls[x.path]=x.signedUrl});
@@ -564,6 +566,8 @@ async function rpImages(p,cfg,data,prog){
   }));
   data.cover=data.img[p.cover_path]||"";
   data.pics=data.pics.filter(e=>data.img[e.file_path]);
+  data.pairs=cfg.ba?data.pairs.filter(x=>data.img[x.a.file_path]&&data.img[x.b.file_path]):[];
+  data.pairIds=new Set(data.pairs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
   data.fail=fail;
 }
 
@@ -579,7 +583,7 @@ function rpGroups(d,cfg){
     cur=mode==="day"?addDays(cur,1):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,1):addDays(cur,7);
   }
   if(cfg.upd)d.ups.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.ups.push(e)});
-  if(cfg.pho)d.pics.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
+  if(cfg.pho)d.pics.forEach(e=>{if(d.pairIds&&d.pairIds.has(String(e.id)))return;const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
   all.forEach((b,i)=>{
     if(mode==="day"){b.tag="يوم العمل";b.label=dfmt(b.s,RPNF);b.short=dfmt(b.s,{day:"numeric",month:"numeric"})}
     else if(mode==="month"){b.tag="الشهر";b.label=dfmt(b.s,{month:"long",year:"numeric"});b.short=dfmt(b.s,{month:"short"})}
@@ -739,44 +743,30 @@ function rpPages(p,cfg,d,root){
   if(cfg.price&&p.price!=null&&p.price!=="")tm2.push(["قيمة المشروع",money(p.price)]);
   if(tm2.length)put(`<div><div class="st">فريق المشروع</div><div class="team">${tm2.map(x=>`<div><small>${x[0]}</small><b>${esc(x[1])}</b></div>`).join("")}</div></div>`);
   /* أحدث الصور */
-  if(cfg.pho&&d.pics.length){
-    const ph=d.pics.slice(-3).reverse(),hh=Math.round(228*LC.H/LC.W);
+  if(cfg.pho&&d.pics.some(e=>!d.pairIds.has(String(e.id)))){
+    const ph=d.pics.filter(e=>!d.pairIds.has(String(e.id))).slice(-3).reverse(),hh=Math.round(228*LC.H/LC.W);
     const fr=e=>`<div class="pf l3"><img src="${d.img[e.file_path]}" alt="" style="height:${hh}px"><div class="pc" style="min-height:0"><small>${esc(dfmt(e.created_at))}</small></div></div>`;
     put(`<div style="margin-top:6px"><div class="st">أحدث صور الموقع</div><div class="pr l3" style="margin-bottom:12px">${ph.map(fr).join("")}${'<div class="pf" style="visibility:hidden;border:0"></div>'.repeat(3-ph.length)}</div></div>`);
   }
-  /* 2) تحليل الأداء */
+  /* 2) قبل وبعد (الصور التي حددها المستخدم) */
+  if(cfg.ba&&d.pairs.length){
+    const ph=Math.round(348*LC.H/LC.W),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
+    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt="" style="height:${ph}px"><div class="pc"><b>${cp(e)}</b></div></div>`;
+    d.pairs.forEach((x,i)=>{
+      const days=Math.max(0,Math.round((day0(x.a.created_at)-day0(x.b.created_at))/864e5));
+      const row=`<div class="pr l2" style="margin-bottom:6px">${side(x.b,"bf","قبل")}${side(x.a,"af","بعد")}</div><div class="bagap">المدة بين الصورتين: ${days===0?"في نفس اليوم":days+" يوماً"}</div>`;
+      put(i?`<div>${row}</div>`:`<div>${sec("قبل وبعد")}<div class="st">مقارنة بين حالة الموقع قبل العمل وبعده</div>${row}</div>`);
+      if(!i)mark();
+    });
+  }
+  /* 3) التقرير المكتوب */
   if(cfg.ana){
-    let first=true;
-    const ab=inner=>{const t=first?sec("تحليل الأداء"):"";first=false;return `<div>${t}<div class="ab">${inner}</div></div>`};
-    const tr=(a,b)=>`<tr><td>${a}</td><td><b>${b}</b></td></tr>`;
-    if(A.total===undefined&&!isDone){
-      put(ab(`<h4>الالتزام بالجدول الزمني</h4><p>لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر قياس الالتزام بالجدول. يمكن إضافتها من «تعديل المشروع».</p>`));mark();
-    }else if(!isDone){
-      const sum=A.left<0?`انتهى موعد التسليم وبقي ${A.rem}% من الأعمال.`:A.reqW&&A.curW?(A.curW>=A.reqW?`المعدل الحالي يكفي للتسليم في الموعد (يتجاوز المطلوب بنحو ${Math.round((A.curW/A.reqW-1)*100)}%).`:`يلزم رفع المعدل الحالي بنحو ${Math.round((A.reqW/A.curW-1)*100)}% للتسليم في الموعد.`):"لا تتوفر بيانات كافية لحساب المعدل بعد.";
-      put(ab(`<h4>هل يلتزم المشروع بالموعد؟</h4><table>${tr("الفرق عن المخطط",A.diff===0?"مطابق للمخطط":(A.diff>0?"متقدم":"متأخر")+" بمقدار "+Math.abs(A.diff)+" نقطة مئوية")}${A.spi!==null?tr("مؤشر الأداء الزمني (1 = مطابق للخطة)",A.spi.toFixed(2)):""}${tr("الأعمال المتبقية",A.rem+"%")}${tr("المدة المتبقية",A.left<0?"متأخر "+(-A.left)+" يوم":`${A.left} يوم (${(A.left/7).toFixed(1)} أسبوع)`)}${A.reqW?tr("المعدل المطلوب للتسليم في الموعد",A.reqW.toFixed(1)+"% أسبوعياً"):""}${A.curW?tr("المعدل الحالي (منذ البداية)",A.curW.toFixed(1)+"% أسبوعياً"):""}</table><p><b>الخلاصة:</b> ${sum}</p>`));mark();
-    }
-    if(cfg.obs&&io.known&&io.tot){
-      const bk=[["حتى 7 أيام",o=>o.age<=7,"#e0a42e"],["من 8 إلى 14 يوماً",o=>o.age>7&&o.age<=14,"#e08a00"],["أكثر من 14 يوماً",o=>o.age>14,"#c0392b"]].map(x=>[x[0],io.list.filter(x[1]).length,x[2]]),mx=Math.max(1,...bk.map(x=>x[1]));
-      put(ab(`<h4>المعوقات</h4>${io.open?`<div class="cmp"><div class="st" style="margin:0 0 4px">أعمار المعوقات المفتوحة</div>${bk.map(x=>`<div class="rw"><span>${x[0]}</span><div class="tr"><i style="width:${Math.round(x[1]/mx*100)}%;background:${x[2]}"></i></div><b>${x[1]}</b></div>`).join("")}</div>`:""}<p>${io.open?"":"لا توجد معوقات مفتوحة. "}تم حل <b>${io.res}</b> من <b>${io.tot}</b> معوق (${io.rate}%)${io.avg!==null?`، بمتوسط زمن حل ${io.avg.toFixed(1)} يوم`:""}.</p>`));if(first===false)mark();
-    }
-    put(ab(`<h4>الإجراءات المقترحة</h4>${A.actions.map(x=>`<div class="bl"><i></i><span>${esc(x)}</span></div>`).join("")}`));mark();
-    /* 3) التقرير المكتوب */
     const wb=rpWriteBlocks(cfg.text||rpDraft(p,cfg,d,A,G));
     if(wb.length){
       let pend="",tf=true;
       const flush=h2=>{const t=tf?sec("التقرير المكتوب"):"";put(`<div>${t}${h2}</div>`);if(tf){mark();tf=false}};
       wb.forEach(b=>{if(b.startsWith('<div class="wh"')){pend+=b;return}flush(pend+b);pend=""});
       if(pend)flush(pend);
-    }
-  }
-  /* قبل وبعد (للترميم) */
-  if(reno&&cfg.pho&&d.pics.length>=2){
-    const n=d.pics.length,k=Math.min(3,Math.floor(n/2)),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
-    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b>${cp(e)}</b></div></div>`;
-    for(let i=0;i<k;i++){
-      const row=`<div class="pr l2">${side(d.pics[i],"bf","قبل")}${side(d.pics[n-k+i],"af","الحالي")}</div>`;
-      put(i?row:`<div>${sec("قبل وبعد")}<div class="st">مقارنة بين أقدم الصور الموثقة وأحدثها</div>${row}</div>`);
-      if(!i)mark();
     }
   }
   /* سجل الأعمال */
@@ -833,6 +823,27 @@ async function rpPdf(p,cfg,pages,prog){
   doc.setProperties({title:`${p.name} - ${cfg.title}`,subject:cfg.full?"تقرير شامل":`${cfg.from} → ${cfg.to}`,author:cfg.by||"إدارة المشاريع",creator:"إدارة المشاريع",keywords:rpRef(p)});
   return doc;
 }
+
+/* ===== تحديد صور قبل / بعد عند الحفظ ===== */
+function baUi(){
+  return `<label class="lbl">نوع الصور (للمقارنة في التقرير)</label>
+  <select id="bat" onchange="baChange()"><option value="">صور عادية</option><option value="before">«قبل» — حالة الموقع قبل العمل</option><option value="after">«بعد» — تقابل صورة «قبل» محددة</option></select>
+  <div id="bap" style="display:none"></div>`;
+}
+function baChange(){
+  const v=$("bat").value,b=$("bap");S.baSel=null;
+  if(v!=="after"){b.style.display="none";b.innerHTML="";return}
+  const bf=S.entries.filter(e=>e.ba==="before"&&e.file_path&&S.urls[e.file_path]);
+  b.style.display="block";
+  b.innerHTML=bf.length
+    ?`<p class="lbl">اختر صورة «قبل» التي تقابلها الصور التي سترفعها (اضغط على الصورة):</p><div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px">${bf.map(e=>`<div data-id="${e.id}" onclick="baPick('${e.id}')" style="flex:none;width:92px;cursor:pointer;text-align:center"><img src="${S.urls[e.file_path]}" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:3px solid #cbd5e1;display:block"><small style="font-size:11px">${esc(cut(e.body||dfmt(e.created_at),14))}</small></div>`).join("")}</div>`
+    :`<p class="lbl">لا توجد صور «قبل» محفوظة بعد. ارفع صور «قبل» أولاً ثم ارجع لرفع صور «بعد».</p>`;
+}
+function baPick(id){S.baSel=id;document.querySelectorAll("#bap [data-id]").forEach(d=>{d.querySelector("img").style.borderColor=d.dataset.id===id?"#ed8700":"#cbd5e1"})}
+function baBadge(e){
+  const b=e.ba==="before";
+  return `<span style="display:inline-block;background:${b?"#6b7a8c":"#ed8700"};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px">${b?"قبل":"بعد"}</span>`;
+}
 async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
   const s=$("mb").value,d=$("md").value;
@@ -861,17 +872,25 @@ async function delProj(){
 async function addE(){
   const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
   if(!body&&!fs.length)return;
+  const bat=$("bat")?.value||"";
+  if(bat){
+    if(!fs.length)return alert("ارفع صورة لتحديد قبل / بعد");
+    if(fs.some(f=>!f.type.startsWith("image")))return alert("تحديد قبل / بعد للصور فقط");
+    if(bat==="after"&&!S.baSel)return alert("اختر صورة «قبل» التي تقابلها هذه الصور");
+  }
+  const bax=bat?{ba:bat,ba_ref:bat==="after"?S.baSel:null}:{};
   $("bt").disabled=true;
   const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
   if(!fs.length)rows.push({...base,body,file_path:null,file_type:null});
   for(let i=0;i<fs.length;i++){
     $("bt").textContent=`جاري رفع ${i+1} من ${fs.length}...`;
     const path=await up(S.cur,fs[i]);
-    if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type});
+    if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax});
   }
   if(!rows.length)return render();
   const {error}=await sb.from("entries").insert(rows);
-  if(error)alert(error.message);
+  if(error)alert(error.message.includes("ba")?"لم يتم تفعيل قبل/بعد في قاعدة البيانات بعد. شغّل ملف before-after.sql في Supabase ثم أعد المحاولة.":error.message);
+  S.baSel=null;
   await loadE();render();
 }
 async function delE(id){
