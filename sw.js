@@ -1,4 +1,4 @@
-const CACHE="pm-v15";
+const CACHE="pm-v16";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);

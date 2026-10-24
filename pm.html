@@ -262,22 +262,35 @@ const RPCSS=`
 .rpg .rph .r b{color:#102944;font-size:12px}
 .rpg .rpc{height:1005px;padding:22px 40px 0;overflow:hidden;display:flow-root}
 .rpg .rpf{position:absolute;bottom:0;right:0;left:0;height:60px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e3e9ef;font-size:11px;color:#8996a5}
-.rpg .rt{font-size:21px;font-weight:800;color:#102944;margin:0 0 14px;padding-right:13px;border-right:5px solid #ed8700;line-height:1.4}
+.rpg .rpf .rf{direction:ltr;font-size:10.5px;color:#aab4bf}
+.rpg .rt{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;color:#102944;margin:0 0 14px;line-height:1.4}
+.rpg .rt .no{flex:none;min-width:32px;height:32px;border-radius:9px;background:#102944;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.rpg .rt .l2{flex:1;height:2px;background:#e3e9ef}
 .rpg .st{font-size:14px;font-weight:700;color:#2e69ad;margin:4px 0 9px}
-.rpg .kp{display:flex;gap:10px;margin-bottom:16px}
+.rpg .toc{font-size:11.5px;height:48px;border:1px solid #e3e9ef;background:#f8fafc;border-radius:10px;padding:5px 14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0 18px;align-content:center;color:#52667b;overflow:hidden}
+.rpg .toc span{display:block}
+.rpg .toc b{color:#102944;font-weight:700}
+.rpg .toc u{display:inline-block;text-decoration:none;margin-left:5px}
+.rpg .toc em{font-style:normal;color:#d17a08;font-weight:800;margin-right:5px}
+.rpg .kp{display:flex;gap:10px;margin-bottom:14px}
 .rpg .k{flex:1;border:1px solid #e3e9ef;border-radius:12px;padding:12px 8px;text-align:center;background:#fff}
 .rpg .k b{display:block;font-size:22px;color:#102944;line-height:1.35;font-weight:800}
 .rpg .k span{display:block;font-size:11px;color:#647589;margin-top:2px}
 .rpg .k .mb{height:6px;border-radius:4px;background:#e6ebf1;overflow:hidden;margin-top:8px}
 .rpg .k .mb i{display:block;height:100%;background:#ed8700}
-.rpg .cmp{border:1px solid #e3e9ef;border-radius:12px;padding:13px 16px;margin-bottom:16px;background:#f8fafc}
-.rpg .cmp .rw{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:12px}
+.rpg .rag{display:flex;align-items:center;gap:14px;border-radius:12px;padding:11px 16px;margin-bottom:14px;border:1px solid}
+.rpg .rag .dt{flex:none;width:18px;height:18px;border-radius:50%}
+.rpg .rag b{display:block;font-size:15px;font-weight:800}
+.rpg .rag span{font-size:12px;color:#33475b}
+.rpg .rag.g{background:#eaf6ef;border-color:#bfe3cd}.rpg .rag.g .dt{background:#1d7a4d}.rpg .rag.g b{color:#1d7a4d}
+.rpg .rag.a{background:#fff5e5;border-color:#f6d9a6}.rpg .rag.a .dt{background:#e08a00}.rpg .rag.a b{color:#b86800}
+.rpg .rag.r{background:#fdeceb;border-color:#f3c3bf}.rpg .rag.r .dt{background:#c0392b}.rpg .rag.r b{color:#b3332b}
+.rpg .cmp .rw{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:12px}
 .rpg .cmp .rw span{width:112px;color:#52667b}
 .rpg .cmp .tr{flex:1;height:10px;border-radius:6px;background:#e3e9ef;overflow:hidden}
 .rpg .cmp .tr i{display:block;height:100%}
 .rpg .cmp .rw b{width:42px;text-align:left;color:#102944}
-.rpg .cmp p{margin:8px 0 0;font-size:12px;color:#52667b}
-.rpg table.info{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px}
+.rpg table.info{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
 .rpg table.info td{border:1px solid #e3e9ef;padding:7px 10px;vertical-align:top}
 .rpg table.info td.a{background:#f2f5f9;color:#52667b;width:17%;font-weight:600}
 .rpg table.info td.b{width:33%;color:#102944;font-weight:600}
@@ -285,6 +298,31 @@ const RPCSS=`
 .rpg .bl i{flex:none;width:7px;height:7px;border-radius:50%;background:#ed8700;margin-top:11px}
 .rpg .hl{border-right:4px solid #2e69ad;background:#f6f9fc;border-radius:8px;padding:9px 13px;margin-bottom:8px;font-size:12px;line-height:1.85}
 .rpg .hl small{display:block;color:#8996a5;font-size:10.5px}
+.rpg .ab{border:1px solid #e3e9ef;border-radius:12px;padding:13px 16px;margin-bottom:13px;background:#fff}
+.rpg .ab h4{margin:0 0 9px;font-size:14px;color:#102944;font-weight:800}
+.rpg .ab table{width:100%;border-collapse:collapse;font-size:12px}
+.rpg .ab td{padding:5px 8px;border-bottom:1px solid #eef1f5}
+.rpg .ab td:first-child{color:#52667b;width:46%}
+.rpg .ab td b{color:#102944}
+.rpg .ab tr:last-child td{border-bottom:0}
+.rpg .ab p{margin:8px 0 0;font-size:12px;color:#52667b;line-height:1.8}
+.rpg .ch{display:flex;align-items:flex-end;gap:7px;height:124px;padding:4px 4px 0;border-bottom:2px solid #dfe5ec;margin-bottom:0}
+.rpg .ch .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.rpg .ch .c .v{font-size:10px;color:#52667b;line-height:1.2;margin-bottom:2px}
+.rpg .ch .c .s1{width:68%;max-width:28px;background:#2e69ad;border-radius:3px 3px 0 0}
+.rpg .ch .c .s2{width:68%;max-width:28px;background:#ed8700}
+.rpg .cl{display:flex;gap:7px;padding:4px 4px 0}
+.rpg .cl div{flex:1;text-align:center;font-size:9.5px;color:#52667b;line-height:1.3;overflow:hidden;white-space:nowrap}
+.rpg .lg2{display:flex;gap:16px;font-size:11px;color:#52667b;margin:8px 0 10px}
+.rpg .lg2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-left:5px}
+.rpg .sb{display:flex;height:16px;border-radius:8px;overflow:hidden;background:#eef1f5;margin:2px 0 10px}
+.rpg .sb i{display:block;height:100%}
+.rpg .rk{display:flex;gap:11px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #eef1f5;font-size:12.5px;line-height:1.8}
+.rpg .rk:last-child{border-bottom:0}
+.rpg .rk .pl{flex:0 0 56px;text-align:center;border-radius:20px;font-size:10.5px;font-weight:700;padding:1px 0;margin-top:3px}
+.rpg .rk .pl.h{background:#fdeceb;color:#b3332b}.rpg .rk .pl.m{background:#fff2dc;color:#b86800}.rpg .rk .pl.l{background:#eef1f5;color:#52667b}.rpg .rk .pl.g{background:#e6f4ec;color:#1d7a4d}
+.rpg .wh{font-size:15px;font-weight:800;color:#2e69ad;margin:12px 0 5px}
+.rpg .wp{margin:0 0 8px;font-size:13px;line-height:2;color:#182b3d;white-space:pre-wrap;overflow-wrap:anywhere}
 .rpg .gh{background:#102944;color:#fff;border-radius:12px;padding:11px 16px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center;border-right:6px solid #ed8700}
 .rpg .gh small{display:block;color:#f6b44c;font-size:10.5px;font-weight:700}
 .rpg .gh b{font-size:16px;font-weight:700}
@@ -297,12 +335,18 @@ const RPCSS=`
 .rpg .uc p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.95;color:#182b3d}
 .rpg .uc .at{margin-top:5px;font-size:11px;color:#647589}
 .rpg .pr{display:flex;gap:14px;margin-bottom:14px}
+.rpg .pr.l3{gap:12px}
 .rpg .pf{flex:1;width:0;border:1px solid #e3e9ef;border-radius:10px;overflow:hidden;background:#fff}
-.rpg .pf img{display:block;width:100%;height:261px}
+.rpg .pf img{display:block;width:100%}
+.rpg .pf.l1 img{height:440px}.rpg .pf.l2 img{height:261px}.rpg .pf.l3 img{height:171px}
 .rpg .pf .pc{padding:8px 11px 9px;font-size:11.5px;line-height:1.7;min-height:52px}
+.rpg .pf.l3 .pc{padding:6px 8px 7px;font-size:10.5px;min-height:46px}
+.rpg .pf.l1 .pc{min-height:0;font-size:12.5px}
 .rpg .pf .pc b{display:block;color:#182b3d;font-weight:600}
 .rpg .pf .pc small{color:#8996a5;font-size:10.5px}
 .rpg .pf .pc i{font-style:normal;color:#d17a08;font-weight:800;margin-left:6px}
+.rpg .pf .tg{padding:5px 11px;font-size:11px;font-weight:800;color:#fff}
+.rpg .pf .tg.bf{background:#6b7a8c}.rpg .pf .tg.af{background:#ed8700}
 .rpg .oc{display:flex;gap:12px;border:1px solid #e3e9ef;border-radius:10px;padding:10px 14px;margin-bottom:9px;background:#fff;align-items:flex-start}
 .rpg .oc .bd{flex:0 0 78px;text-align:center;border-radius:8px;padding:5px 4px;font-size:11.5px;font-weight:700}
 .rpg .oc .bd.op{background:#fdeceb;color:#b3332b}
@@ -316,7 +360,6 @@ const RPCSS=`
 .rpg .sg>div{flex:1;border:1px solid #e3e9ef;border-radius:10px;padding:9px 12px;height:96px;font-size:11.5px;color:#52667b}
 .rpg .sg>div>b{display:block;color:#102944;margin-bottom:2px}
 .rpg .sg .ln{margin-top:34px;border-top:1px solid #aab6c3;padding-top:3px;font-size:10px;color:#8996a5}
-.rpg.rcv{background:#fff}
 .rpg.rcv .tp{height:338px;background:#102944;color:#fff;padding:40px 46px 0;position:relative;overflow:hidden}
 .rpg.rcv .tp:after{content:"";position:absolute;width:420px;height:420px;border:1px solid #ffffff1c;border-radius:50%;left:-170px;bottom:-250px;box-shadow:0 0 0 40px #ffffff0a,0 0 0 84px #ffffff06}
 .rpg.rcv .br{display:flex;align-items:center;gap:12px;font-weight:800;font-size:17px;position:relative;z-index:1}
@@ -339,15 +382,18 @@ const RPCSS=`
 .rpg.rcv .qs p{margin:4px 0;font-size:15px;color:#33475b}
 .rpg.rcv .mt2{display:flex;justify-content:space-between;margin:22px 46px 0;padding-top:14px;border-top:1px solid #e3e9ef;font-size:12.5px;color:#52667b}
 .rpg.rcv .mt2 b{color:#102944}
-.rpg.rcv .cf{position:absolute;bottom:0;right:0;left:0;height:46px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8996a5;border-top:1px solid #eef1f5}
+.rpg.rcv .cf{position:absolute;bottom:0;right:0;left:0;height:46px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:11px;color:#8996a5;border-top:1px solid #eef1f5}
 `;
 const RPNF={weekday:"long",day:"numeric",month:"long",year:"numeric"};
+const LAY={1:{W:1400,H:864,cap:150,n:1},2:{W:1050,H:788,cap:110,n:2},3:{W:700,H:525,cap:60,n:3}};
+const isReno=p=>!!p&&p.ptype==="reno";
 const rpStatus=e=>e.resolved===true?["ok","تم الحل"]:e.resolved===false?["op","مفتوح"]:["un","مسجّل"];
+const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").replace(/-/g,"").slice(0,4).toUpperCase();
 
 /* —— النافذة —— */
 function openReport(){
-  const t=day0(new Date());
-  S.rep={phase:"form",from:iso(addDays(t,-6)),to:iso(t),title:"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,price:false,q:"hi"};
+  const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ana:true,text:"",price:false,q:"hi",lay:"2"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -363,31 +409,54 @@ function reportHtml(){
   const r=S.rep,p=S.projects.find(x=>x.id===S.cur);
   if(r.phase==="busy")return `<div class="modal"><div class="box"><h3>جاري إنشاء التقرير…</h3><div class="bar s-run"><i id="rpbar" style="width:3%"></i></div><p id="rpmsg" class="lbl">تحضير…</p><p class="lbl">لا تغلق الصفحة حتى يكتمل التقرير.</p><button class="btn alt" onclick="RP.cancel=true">إلغاء</button></div></div>`;
   if(r.phase==="done")return `<div class="modal"><div class="box"><h3>التقرير جاهز ✅</h3>
-  <div class="item"><b>${esc(S.projects.find(x=>x.id===S.cur)?.name||"")} — ${esc(r.title)}</b><small>الفترة: ${esc(dfmt(r.from+"T00:00:00"))} – ${esc(dfmt(r.to+"T00:00:00"))}</small><small>${r.pages} صفحة · ${esc(r.size)}${r.fail?` · تعذر تضمين ${r.fail} صورة`:""}</small></div>
+  <div class="item"><b>${esc(p?.name||"")} — ${esc(r.title)}</b><small>${r.full?"التغطية: كامل المشروع":`الفترة: ${esc(dfmt(r.from+"T00:00:00"))} – ${esc(dfmt(r.to+"T00:00:00"))}`}</small><small>${r.pages} صفحة · ${esc(r.size)}${r.fail?` · تعذر تضمين ${r.fail} صورة`:""}</small></div>
   <div class="acts"><button class="btn" onclick="rpDownload()">⬇ تحميل PDF</button>${r.canShare?'<button class="btn alt" onclick="rpShare()">مشاركة</button>':""}<button class="btn alt" onclick="rpPreview()">معاينة</button></div>
   <p class="lbl">على الجوال: «تحميل» يحفظ الملف في الجهاز، و«مشاركة» تفتح قائمة الإرسال (واتساب، حفظ في الملفات…).</p>
   <button class="btn alt" onclick="S.rep.phase='form';render()">تقرير آخر</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
   const canObs=!!TABS.find(t=>t.k==="issues")?.see.includes(S.role),canPrice=!["contr","site"].includes(S.role);
   const ch=(k,l)=>`<button class="btn alt" style="padding:6px 13px;min-height:0;font-size:13px;border-radius:20px" onclick="rpPreset('${k}')">${l}</button>`;
-  return `<div class="modal"><div class="box"><h3>إنشاء تقرير إنجاز احترافي</h3>
-  <p class="lbl">المشروع: <b>${esc(p?.name)}</b></p>
+  const per=r.reno
+    ?`<div style="background:#eef3f9;border-radius:10px;padding:10px 12px;margin:6px 0 4px;font-size:13.5px;line-height:1.8">🛠 <b>مشروع ترميم:</b> يصدر التقرير شاملاً لكامل المشروع من بدايته حتى اليوم، بدون تحديد فترات.</div>`
+    :`<label class="lbl">الفترة (من – إلى)</label><div class="acts" style="margin:0 0 6px">${ch("7","آخر 7 أيام")}${ch("14","آخر 14 يوم")}${ch("m","هذا الشهر")}${ch("pm","الشهر الماضي")}${ch("all","كامل المشروع")}</div>
+  <label class="lbl">من</label><input id="rpf" type="date" value="${esc(r.from)}"><label class="lbl">إلى</label><input id="rpt" type="date" value="${esc(r.to)}">`;
+  const sel=(v,t)=>`<option value="${v}" ${String(r.lay)===v?"selected":""}>${t}</option>`;
+  return `<div class="modal"><div class="box"><h3>${r.reno?"تقرير ترميم شامل":"إنشاء تقرير إنجاز احترافي"}</h3>
+  <p class="lbl">المشروع: <b>${esc(p?.name)}</b> · ${esc(TYN[p?.ptype]||"إنشاء")}</p>
   <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
-  <label class="lbl">الفترة (من – إلى)</label>
-  <div class="acts" style="margin:0 0 6px">${ch("7","آخر 7 أيام")}${ch("14","آخر 14 يوم")}${ch("m","هذا الشهر")}${ch("pm","الشهر الماضي")}${ch("all","كامل المشروع")}</div>
-  <label class="lbl">من</label><input id="rpf" type="date" value="${esc(r.from)}">
-  <label class="lbl">إلى</label><input id="rpt" type="date" value="${esc(r.to)}">
+  ${per}
   <label class="lbl">محتوى التقرير</label>
-  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
+  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpa","تحليل المشروع والتقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
+  <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("2","شبكة — صورتان في الصف")}${sel("1","كبيرة — صورة في كل صف")}${sel("3","مصغّرة — 3 صور في الصف")}</select>
+  <label class="lbl">التقرير المكتوب (يظهر بعد التحليل، ويمكنك تعديله)</label>
+  <textarea id="rpw" rows="8" placeholder="اتركه فارغاً ليُكتب تلقائياً، أو اضغط «كتابة مسودة» ثم عدّل عليها.">${esc(r.text)}</textarea>
+  <button class="btn alt" id="rpd" onclick="rpDraftNow()">✨ كتابة مسودة تلقائية</button>
+  <p class="lbl">لتنسيق النص: ابدأ السطر بـ «# » لعنوان فرعي أو بـ «- » لنقطة.</p>
   <label class="lbl">أُعدّ بواسطة (يظهر في الغلاف والاعتماد)</label><input id="rpb" value="${esc(r.by)}">
   <label class="lbl">الجودة</label><select id="rpq"><option value="hi" ${r.q==="hi"?"selected":""}>عالية (للعرض والطباعة)</option><option value="md" ${r.q==="md"?"selected":""}>متوسطة (حجم أصغر للمشاركة)</option></select>
   <button class="btn" onclick="rpRun()">إنشاء التقرير</button> <button class="btn alt" onclick="modal(null)">إلغاء</button></div></div>`;
 }
+function rpReadCfg(){
+  const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
+  return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),
+    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
+}
+function rpCheck(cfg){
+  if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
+  if(!cfg.upd&&!cfg.pho&&!cfg.obs&&!cfg.ana)return "اختر محتوى واحداً على الأقل";
+  return "";
+}
+async function rpDraftNow(){
+  const cfg=rpReadCfg(),er=rpCheck(cfg);if(er)return alert(er);
+  const b=$("rpd"),p=S.projects.find(x=>x.id===S.cur);b.disabled=true;b.textContent="جاري تحليل البيانات…";
+  try{
+    const d=await rpData(p,cfg),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G);
+    if(cfg.text&&!confirm("سيُستبدل النص الحالي بالمسودة. متابعة؟"))return;
+    $("rpw").value=rpDraft(p,cfg,d,A,G);
+  }catch(e){alert("تعذر كتابة المسودة: "+(e.message||e))}
+  finally{b.disabled=false;b.textContent="✨ كتابة مسودة تلقائية"}
+}
 async function rpRun(){
-  const from=$("rpf").value,to=$("rpt").value;
-  if(!from||!to)return alert("حدد تاريخ البداية وتاريخ النهاية");
-  if(from>to)return alert("تاريخ البداية بعد تاريخ النهاية");
-  const cfg={title:$("rpn").value.trim()||"تقرير الإنجاز",from,to,by:$("rpb").value.trim(),upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,price:$("rpr")?.checked??false,q:$("rpq").value};
-  if(!cfg.upd&&!cfg.pho&&!cfg.obs)return alert("اختر محتوى واحداً على الأقل");
+  const cfg=rpReadCfg(),er=rpCheck(cfg);if(er)return alert(er);
   S.rep={...cfg,phase:"busy"};RP.cancel=false;render();
   try{await rpBuild(cfg)}
   catch(e){S.rep={...cfg,phase:"form"};if(e.message!=="cancel")alert("تعذر إنشاء التقرير: "+(e.message||e));render()}
@@ -400,9 +469,10 @@ async function rpBuild(cfg){
   if(document.fonts){await Promise.all(["400","500","600","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal").catch(()=>0)));await document.fonts.ready}
   step(8,"قراءة بيانات المشروع…");
   const data=await rpData(p,cfg);
+  if(cfg.full){cfg.from=iso(data.f);cfg.to=iso(data.t)}
   step(14,"تجهيز الصور…");
   await rpImages(p,cfg,data,(i,n)=>step(14+Math.round(i/Math.max(n,1)*32),`تجهيز الصور (${i}/${n})…`));
-  step(48,"تنسيق صفحات التقرير…");
+  step(48,"تحليل البيانات وتنسيق الصفحات…");
   const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0;pointer-events:none";document.body.appendChild(root);
   try{
     const pages=rpPages(p,cfg,data,root);
@@ -415,19 +485,22 @@ async function rpBuild(cfg){
     S.rep={...cfg,phase:"done",name,pages:pages.total,size:fmtSize(blob.size),canShare,fail:data.fail};render();
   }finally{root.remove()}
 }
-const rpName=(p,cfg)=>(`${p.name} - ${cfg.title} ${cfg.from} إلى ${cfg.to}`).replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()+".pdf";
+const rpName=(p,cfg)=>(cfg.full?`${p.name} - ${cfg.title} ${iso(new Date())}`:`${p.name} - ${cfg.title} ${cfg.from} إلى ${cfg.to}`).replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()+".pdf";
 function rpDownload(){const a=document.createElement("a");a.href=RP.url;a.download=S.rep.name;document.body.appendChild(a);a.click();a.remove()}
 async function rpShare(){try{await navigator.share({files:[new File([RP.blob],S.rep.name,{type:"application/pdf"})],title:S.rep.name})}catch(e){if(e.name!=="AbortError")alert("تعذرت المشاركة: "+(e.message||e))}}
 function rpPreview(){window.open(RP.url,"_blank")}
 
 /* —— البيانات —— */
 async function rpData(p,cfg){
-  const f=new Date(cfg.from+"T00:00:00"),t=new Date(cfg.to+"T23:59:59.999"),rows=[];
+  const eod=new Date();eod.setHours(23,59,59,999);
+  const f=cfg.full?new Date(0):new Date(cfg.from+"T00:00:00"),t=cfg.full?eod:new Date(cfg.to+"T23:59:59.999"),rows=[];
   for(let o=0;;o+=1000){
     const {data,error}=await sb.from("entries").select("*").eq("project_id",p.id).in("kind",["reports","media","issues"]).order("created_at",{ascending:true}).range(o,o+999);
     if(error)throw error;rows.push(...data);if(data.length<1000)break;
   }
-  return rpClassify(rows,f,t);
+  const d=rpClassify(rows,f,t);
+  if(cfg.full){const ds=rows.map(e=>new Date(e.created_at));if(p.start_date)ds.push(new Date(p.start_date+"T00:00:00"));d.f=day0(ds.length?new Date(Math.min(...ds)):new Date())}
+  return d;
 }
 function rpClassify(rows,f,t){
   const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
@@ -436,15 +509,16 @@ function rpClassify(rows,f,t){
     ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)),
     atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
     pics:rows.filter(e=>(e.kind==="media"||e.kind==="reports")&&isImg(e)&&inP(e)),
-    iss:issAll.filter(inP),issOld:issAll.filter(e=>new Date(e.created_at)<f&&e.resolved===false),
+    iss:issAll.filter(inP),issAll,issOld:issAll.filter(e=>new Date(e.created_at)<f&&e.resolved===false),
+    lastAny:rows.length?new Date(Math.max(...rows.map(e=>+new Date(e.created_at)))):null,
     img:{},fail:0,cover:""};
 }
-async function rpPrep(url,mode){
+async function rpPrep(url,mode,L){
   const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);
   const u=URL.createObjectURL(await r.blob());
   try{
     const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("decode"));i.src=u});
-    const cv=mode==="cover",W=cv?1428:1050,H=cv?1000:788,c=document.createElement("canvas");c.width=W;c.height=H;
+    const cv=mode==="cover",W=cv?1428:L.W,H=cv?1000:L.H,c=document.createElement("canvas");c.width=W;c.height=H;
     const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
     const s=cv?Math.max(W/img.naturalWidth,H/img.naturalHeight):Math.min(W/img.naturalWidth,H/img.naturalHeight),w=img.naturalWidth*s,h=img.naturalHeight*s;
     x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
@@ -452,6 +526,7 @@ async function rpPrep(url,mode){
   }finally{URL.revokeObjectURL(u)}
 }
 async function rpImages(p,cfg,data,prog){
+  const L=LAY[cfg.lay]||LAY[2];
   const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),p.cover_path].filter(Boolean))],urls={};
   for(let i=0;i<want.length;i+=100){
     const {data:d}=await sb.storage.from("media").createSignedUrls(want.slice(i,i+100),3600);
@@ -460,12 +535,108 @@ async function rpImages(p,cfg,data,prog){
   const jobs=want.filter(x=>urls[x]),q=[...jobs];let done=0,fail=want.length-jobs.length;
   await Promise.all(Array.from({length:3},async()=>{
     while(q.length){const path=q.shift();
-      try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit")}catch(e){fail++}
+      try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit",L)}catch(e){fail++}
       prog(++done,jobs.length)}
   }));
   data.cover=data.img[p.cover_path]||"";
   data.pics=data.pics.filter(e=>data.img[e.file_path]);
   data.fail=fail;
+}
+
+/* —— التحليل —— */
+function rpGroups(d,cfg){
+  const f=day0(d.f),t=day0(d.t),days=Math.round((t-f)/864e5)+1,mode=cfg.full?"month":days<=10?"day":"week";
+  const keyOf=dt=>{const x=day0(dt);if(mode==="day")return iso(x);if(mode==="month")return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0");x.setDate(x.getDate()-x.getDay());return iso(x)};
+  const all=[],map=new Map();
+  let cur=mode==="day"?new Date(f):mode==="month"?new Date(f.getFullYear(),f.getMonth(),1):addDays(f,-f.getDay());
+  while(cur<=t){
+    const s=new Date(cur),e=mode==="day"?new Date(cur):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,0):addDays(cur,6);
+    const b={k:keyOf(s),s,e,ups:[],pics:[]};all.push(b);map.set(b.k,b);
+    cur=mode==="day"?addDays(cur,1):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,1):addDays(cur,7);
+  }
+  if(cfg.upd)d.ups.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.ups.push(e)});
+  if(cfg.pho)d.pics.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
+  all.forEach((b,i)=>{
+    if(mode==="day"){b.tag="يوم العمل";b.label=dfmt(b.s,RPNF);b.short=dfmt(b.s,{day:"numeric",month:"numeric"})}
+    else if(mode==="month"){b.tag="الشهر";b.label=dfmt(b.s,{month:"long",year:"numeric"});b.short=dfmt(b.s,{month:"short"})}
+    else{b.tag="الأسبوع "+String(i+1).padStart(2,"0");const a=b.s<f?f:b.s,z=b.e>t?t:b.e;b.label=`من ${dfmt(a)} إلى ${dfmt(z)}`;b.short="أ"+(i+1)}
+  });
+  return {all,list:all.filter(b=>b.ups.length||b.pics.length),days,mode};
+}
+function rpAnalyze(p,cfg,d,G){
+  const T=day0(new Date()),isDone=p.status==="done",A={prog:clamp(p.progress),done:isDone,days:G.days};
+  const S0=p.start_date?new Date(p.start_date+"T00:00:00"):null,E0=p.due?new Date(p.due+"T00:00:00"):null;
+  if(S0&&E0&&E0>S0){
+    A.total=Math.round((E0-S0)/864e5);A.el=Math.max(0,Math.round((T-S0)/864e5));A.elp=Math.max(0,Math.min(100,Math.round(A.el/A.total*100)));
+    A.left=Math.round((E0-T)/864e5);A.diff=A.prog-A.elp;A.spi=A.elp>0?A.prog/A.elp:null;
+  }
+  if(S0&&!isDone&&A.prog>=5&&T>S0){const el=Math.round((T-S0)/864e5);if(el>=7){A.est=addDays(S0,Math.round(el/(A.prog/100)));if(E0)A.delta=Math.round((A.est-E0)/864e5)}}
+  const act=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])];
+  A.act=act.length;A.avg=act.length/Math.max(1,G.days);
+  A.series=G.all.slice(-14).map(b=>({l:b.short,u:b.ups.length,p:b.pics.length}));
+  const best=[...G.all].sort((a,b)=>(b.ups.length+b.pics.length)-(a.ups.length+a.pics.length))[0];
+  A.best=best&&(best.ups.length+best.pics.length)?{l:best.label,n:best.ups.length+best.pics.length}:null;
+  const ds=[...new Set(act.map(e=>iso(e.created_at)))].sort();let gap=0;
+  for(let i=1;i<ds.length;i++)gap=Math.max(gap,Math.round((new Date(ds[i])-new Date(ds[i-1]))/864e5)-1);
+  A.gap=gap;A.idle=d.lastAny?Math.max(0,Math.round((T-day0(d.lastAny))/864e5)):null;
+  const I=d.issAll||[],io=A.io={tot:I.length,per:d.iss.length,open:I.filter(e=>e.resolved===false).length,res:I.filter(e=>e.resolved===true).length,known:I.some(e=>e.resolved!==undefined)};
+  const rt=I.filter(e=>e.resolved===true&&e.resolved_at).map(e=>(new Date(e.resolved_at)-new Date(e.created_at))/864e5);
+  io.avg=rt.length?rt.reduce((a,b)=>a+b,0)/rt.length:null;
+  const op=I.filter(e=>e.resolved===false).map(e=>Math.round((T-day0(e.created_at))/864e5));
+  io.oldest=op.length?Math.max(...op):null;io.rate=io.tot&&io.known?Math.round(io.res/io.tot*100):null;
+  const R=[];
+  if(!isDone){
+    if(A.diff!==undefined){if(A.diff<=-15)R.push(["h",`الإنجاز أقل من المخطط بمقدار ${-A.diff} نقطة مئوية (مؤشر الأداء الزمني ${A.spi.toFixed(2)})`,"s"]);else if(A.diff<-5)R.push(["m",`الإنجاز أقل من الزمن المنقضي بمقدار ${-A.diff} نقطة مئوية`])}
+    if(A.left!==undefined){if(A.left<0)R.push(["h",`تجاوز المشروع موعد التسليم بمقدار ${-A.left} يوم`,"s"]);else if(A.left<=14&&A.prog<80)R.push(["h",`يتبقى ${A.left} يوم فقط على التسليم وبلغ الإنجاز ${A.prog}%`,"s"])}
+    if(A.delta>0)R.push([A.delta>14?"h":"m",`بمعدل الإنجاز الحالي يُتوقع التسليم بعد الموعد بنحو ${A.delta} يوم`,A.delta>14?"s":""]);
+    if(A.idle!==null&&A.idle>14)R.push(["h",`لا يوجد نشاط موثّق منذ ${A.idle} يوم`]);else if(A.idle!==null&&A.idle>7)R.push(["m",`لا يوجد نشاط موثّق منذ ${A.idle} يوم`]);
+  }
+  if(io.open>0)R.push([io.oldest>14?"h":"m",`يوجد ${io.open} معوق مفتوح${io.oldest!==null?` (أقدمها منذ ${io.oldest} يوم)`:""}`]);
+  if(cfg.pho&&!d.pics.length)R.push(["l",`لا توجد صور موثقة ${cfg.full?"في المشروع":"خلال الفترة"}`]);
+  A.risks=R;const H=R.filter(x=>x[0]==="h").length,lv=(R.some(x=>x[0]==="h"&&x[2]==="s")||H>=2)?"r":(H>=1||R.some(x=>x[0]==="m"))?"a":"g";A.rag=isDone?"g":lv;
+  A.ragT=isDone?["تم تسليم المشروع","اكتملت أعمال المشروع وتم تسليمه."]:lv==="g"?["الوضع العام: جيد","لا توجد مؤشرات خطر جوهرية، والمشروع يسير وفق المعطيات المتاحة."]:lv==="a"?["الوضع العام: يحتاج متابعة","توجد مؤشرات تستدعي المتابعة القريبة (انظر مؤشرات المخاطر)."]:["الوضع العام: حرج","توجد مؤشرات خطر مرتفعة تتطلب قراراً وإجراءً عاجلاً."];
+  return A;
+}
+function rpDraft(p,cfg,d,A,G){
+  const L=[],tp=TYN[p.ptype]||"",tm=timing(p);
+  const per=cfg.full?`كامل مسار المشروع منذ ${dfmt(d.f)} وحتى ${dfmt(d.t)}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`,w=cfg.full?"في المشروع":"خلال الفترة";
+  L.push("# نظرة عامة");
+  L.push(`يتناول هذا التقرير مشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` الواقع في ${p.loc}`:""}، ويغطي ${per}. بلغت نسبة الإنجاز الحالية ${A.prog}%، وحالة المشروع: ${ST[p.status][0]}${tm&&!A.done?`، والموقف الزمني: ${tm.t}`:""}.`);
+  if(cfg.upd||cfg.pho){
+    const parts=[];if(cfg.upd)parts.push(`${d.ups.length} تحديثاً مكتوباً`);if(cfg.pho)parts.push(`${d.pics.length} صورة توثّق الأعمال`);
+    L.push("# سير الأعمال");
+    L.push(`سُجّل ${w} ${parts.join(" و")}.`+(cfg.upd&&d.ups.length?" ومن أبرز المستجدات المسجلة:":""));
+    if(cfg.upd)[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,4).forEach(e=>L.push("- "+dfmt(e.created_at)+": "+cut(cleanTxt(e.body).replace(/\n/g," "),150)));
+  }
+  L.push("# تحليل الأداء");
+  if(A.elp!==undefined)L.push(`مضى ${A.elp}% من المدة المخططة للمشروع (${A.el} من ${A.total} يوماً)، بينما بلغ الإنجاز الفعلي ${A.prog}%، أي ${A.diff>=0?`أعلى من المخطط بمقدار ${A.diff} نقطة مئوية`:`أقل من المخطط بمقدار ${-A.diff} نقطة مئوية`}.`);
+  else L.push("لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر مقارنة الإنجاز بالجدول الزمني.");
+  if(A.est)L.push(`بمعدل الإنجاز الحالي يُقدَّر الانتهاء في ${dfmt(A.est)}${A.delta===undefined?"":A.delta>0?`، أي بعد موعد التسليم بنحو ${A.delta} يوماً`:A.delta<0?`، أي قبل موعد التسليم بنحو ${-A.delta} يوماً`:"، وهو موافق لموعد التسليم"}. وهذا تقدير خطي يتغير بحسب وتيرة العمل.`);
+  if(A.act)L.push(`بلغ متوسط التوثيق ${A.avg.toFixed(1)} إدخال يومياً${A.best?`، وكان أنشط الفترات: ${A.best.l} (${A.best.n} إدخال)`:""}${A.gap>=3?`، وأطول انقطاع عن التوثيق ${A.gap} يوم`:""}.`);
+  L.push("# المعوقات والمخاطر");
+  const io=A.io;
+  L.push(io.tot?`سُجّل في المشروع ${io.tot} معوق${io.known?`، منها ${io.open} مفتوح و${io.res} تم حله${io.avg!==null?`، بمتوسط زمن حل ${io.avg.toFixed(1)} يوم`:""}`:""}.`:"لا توجد معوقات مسجلة في المشروع.");
+  if(A.risks.length)A.risks.forEach(r=>L.push("- "+r[1]));else L.push("لا توجد مؤشرات خطر جوهرية وفق البيانات المتاحة.");
+  L.push("# التوصيات");
+  const rc=[];
+  if(io.open)rc.push(`إغلاق المعوقات المفتوحة (${io.open}) ومتابعتها مع الجهات المعنية، مع تحديد مسؤول وموعد لكل معوق.`);
+  if(A.diff!==undefined&&A.diff<-5&&!A.done)rc.push("مراجعة الجدول الزمني ودعم الموقع بالموارد اللازمة لتعويض الفارق في الإنجاز.");
+  if(A.delta>0)rc.push("التنسيق مع الإدارة والعميل بشأن موعد التسليم المتوقع، أو اعتماد خطة تسريع.");
+  if(A.idle!==null&&A.idle>7&&!A.done)rc.push("رفع وتيرة التوثيق اليومي بالتحديثات والصور لضمان وضوح سير العمل.");
+  if(cfg.pho&&!d.pics.length)rc.push("توثيق الأعمال بالصور بشكل دوري.");
+  if(!rc.length)rc.push(A.done?"حفظ سجل المشروع وتقاريره للرجوع إليها.":"الاستمرار على وتيرة العمل الحالية مع المتابعة الدورية للجدول الزمني.");
+  rc.forEach(x=>L.push("- "+x));
+  return L.join("\n");
+}
+function rpWriteBlocks(txt){
+  const out=[];
+  for(const raw of String(txt).replace(/\r\n?/g,"\n").split("\n")){
+    const l=raw.trim();if(!l)continue;
+    if(l.startsWith("# "))out.push(`<div class="wh">${esc(l.slice(2))}</div>`);
+    else if(l.startsWith("- "))out.push(`<div class="bl"><i></i><span>${esc(l.slice(2))}</span></div>`);
+    else rpChunks(l,900).forEach(c=>out.push(`<div class="wp">${esc(c)}</div>`));
+  }
+  return out;
 }
 
 /* —— بناء الصفحات —— */
@@ -481,63 +652,45 @@ function rpChunks(t,max=1150){
   }
   if(cur)out.push(cur);return out;
 }
-function rpGroups(d,cfg){
-  const f=day0(d.f),t=day0(d.t),days=Math.round((t-f)/864e5)+1,byDay=days<=10,map=new Map();
-  const key=dt=>{const x=day0(dt);if(byDay)return iso(x);x.setDate(x.getDate()-x.getDay());return iso(x)};
-  const g=dt=>{const k=key(dt);if(!map.has(k)){const s=new Date(k+"T00:00:00"),e=addDays(s,6);map.set(k,{k,s,e,ups:[],pics:[]})}return map.get(k)};
-  if(cfg.upd)d.ups.forEach(e=>g(e.created_at).ups.push(e));
-  if(cfg.pho)d.pics.forEach(e=>g(e.created_at).pics.push(e));
-  const list=[...map.values()].sort((a,b)=>a.k<b.k?-1:1);
-  list.forEach((x,i)=>{
-    if(byDay){x.tag="يوم العمل";x.label=dfmt(x.s,RPNF)}
-    else{x.tag="الأسبوع "+String(i+1).padStart(2,"0");const a=x.s<f?f:x.s,b=x.e>t?t:x.e;x.label=`من ${dfmt(a)} إلى ${dfmt(b)}`}
-  });
-  return {list,days,byDay};
-}
 function rpPages(p,cfg,d,root){
   if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
-  const pages=[],today=new Date(),G=rpGroups(d,cfg),isDone=p.status==="done";
-  const range=`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p);
-  const prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"";
+  const pages=[],today=new Date(),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G),isDone=p.status==="done",reno=!!cfg.full;
+  const range=`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p),prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"",ref=rpRef(p),LY=String(cfg.lay||"2"),LC=LAY[LY]||LAY[2];
   const mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
+  let no=0;const marks=[];
+  const sec=t=>{no++;marks.push([no,t,0]);return `<div class="rt"><span class="no">${no}</span><span>${t}</span><i class="l2"></i></div>`};
+  const mark=()=>{const m=marks[marks.length-1];if(m&&!m[2])m[2]=pages.length};
   /* غلاف */
   const cov=mk(`<div class="rpg rcv"><div class="tp"><div class="br"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div>
-    <div class="ey">تقرير رسمي</div><h1>${esc(cfg.title)}</h1><div class="pj">${esc(p.name)}</div><div class="lc">${esc(p.loc||"")}</div></div><div class="sp"></div>
-    <div class="pe"><div><small>فترة التقرير</small><b>${esc(range)}</b></div><div><small>مدة الفترة</small><b>${G.days} ${G.days===1?"يوم":"يوم"}</b></div><div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>
+    <div class="ey">${reno?"تقرير ترميم شامل":"تقرير رسمي"}</div><h1>${esc(cfg.title)}</h1><div class="pj">${esc(p.name)}</div><div class="lc">${esc(p.loc||"")}</div></div><div class="sp"></div>
+    <div class="pe"><div><small>${reno?"من بداية المشروع":"فترة التقرير"}</small><b>${esc(range)}</b></div><div><small>${reno?"مدة المشروع":"مدة الفترة"}</small><b>${G.days} يوم</b></div><div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>
     ${d.cover?`<div class="im"><img src="${d.cover}" alt=""></div>`:`<div class="qs"><small style="color:#8996a5;font-size:12px">نسبة الإنجاز الحالية</small><div class="big">${prog}%</div><div class="tr"><i style="width:${prog}%"></i></div><p>الحالة: <b>${esc(ST[p.status][0])}</b></p>${tm?`<p>${esc(tm.t)}</p>`:""}${p.due?`<p>تاريخ التسليم: ${esc(dfmt(p.due+"T00:00:00"))}</p>`:""}</div>`}
     <div class="mt2"><span>أُعدّ بواسطة: <b>${by||"—"}</b></span><span>الحالة: <b>${esc(ST[p.status][0])}</b> · الإنجاز: <b>${prog}%</b></span></div>
-    <div class="cf">سري — للاستخدام الداخلي</div></div>`);
+    <div class="cf"><span>سري — للاستخدام الداخلي</span><span>·</span><span dir="ltr">${ref}</span></div></div>`);
   root.appendChild(cov);pages.push(cov);
   let box=null;
   const fresh=()=>{
-    const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div><div class="r"><b>${esc(cfg.title)}</b><br>${esc(p.name)}</div></div><div class="rpc"></div><div class="rpf"><span class="pnum"></span><span>${esc(range)}</span></div></div>`);
+    const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div><div class="r"><b>${esc(cfg.title)}</b><br>${esc(p.name)}</div></div><div class="rpc"></div><div class="rpf"><span class="pnum"></span><span class="rf">${ref}</span><span>${esc(range)}</span></div></div>`);
     root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
   };
   const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
-  /* الملخص التنفيذي */
-  fresh();
-  const elapsed=(()=>{if(!p.start_date||!p.due)return null;const s=new Date(p.start_date+"T00:00:00"),e=new Date(p.due+"T00:00:00"),tot=(e-s)/864e5;if(tot<=0)return null;return Math.max(0,Math.min(100,Math.round((day0(today)-s)/864e5/tot*100)))})();
+  /* 1) الملخص التنفيذي */
+  fresh();const tocEl=put(`<div class="toc"></div>`);
+  put(sec("الملخص التنفيذي"));mark();
   const dd=p.due&&!isDone?Math.round((new Date(p.due+"T00:00:00")-day0(today))/864e5):null;
   const tmB=isDone?["تم التسليم","#1d7a4d","الموقف الزمني"]:dd===null?["—","#102944","الموقف الزمني"]:dd<0?["متأخر "+(-dd)+" يوم","#b3332b","الموقف الزمني"]:dd===0?["التسليم اليوم","#102944","على الموعد"]:["باقي "+dd+" يوم","#102944","على الموعد"];
-  put(`<div class="rt">الملخص التنفيذي</div>`);
   put(`<div class="kp"><div class="k"><b>${prog}%</b><span>نسبة الإنجاز</span><div class="mb"><i style="width:${prog}%"></i></div></div>
     <div class="k"><b style="font-size:18px;padding:3px 0">${esc(ST[p.status][0])}</b><span>حالة المشروع</span></div>
     <div class="k"><b style="font-size:18px;padding:3px 0;color:${tmB[1]}">${esc(tmB[0])}</b><span>${tmB[2]}</span></div>
-    <div class="k"><b style="font-size:15px;line-height:1.55">${cfg.upd?d.ups.length:0} تحديث<br>${cfg.pho?d.pics.length:0} صورة</b><span>نشاط الفترة</span></div></div>`);
-  if(elapsed!==null&&!isDone){
-    const diff=prog-elapsed,sent=diff>=0?`الإنجاز أعلى من الزمن المنقضي بمقدار ${diff} نقطة مئوية.`:`الإنجاز أقل من الزمن المنقضي بمقدار ${-diff} نقطة مئوية.`;
-    put(`<div class="cmp"><div class="st" style="margin-top:0">مقارنة الإنجاز بالزمن المنقضي من مدة المشروع</div>
-      <div class="rw"><span>الزمن المنقضي</span><div class="tr"><i style="width:${elapsed}%;background:#8a97a6"></i></div><b>${elapsed}%</b></div>
-      <div class="rw"><span>نسبة الإنجاز</span><div class="tr"><i style="width:${prog}%;background:#ed8700"></i></div><b>${prog}%</b></div><p>${sent}</p></div>`);
-  }
+    <div class="k"><b style="font-size:15px;line-height:1.55">${cfg.upd?d.ups.length:0} تحديث<br>${cfg.pho?d.pics.length:0} صورة</b><span>${reno?"إجمالي التوثيق":"نشاط الفترة"}</span></div></div>`);
+  put(`<div class="rag ${A.rag}"><span class="dt"></span><div><b>${A.ragT[0]}</b><span>${A.ragT[1]}</span></div></div>`);
   const R=(a,b)=>`<td class="a">${a}</td><td class="b">${b||"—"}</td>`,sd=v=>v?esc(dfmt(v+"T00:00:00")):"";
   put(`<table class="info"><tr>${R("المشروع",esc(p.name))}${R("الموقع",esc(p.loc))}</tr><tr>${R("نوع المشروع",esc(TYN[p.ptype]||""))}${R("مدير المشروع",esc(p.pm_name))}</tr>
     <tr>${R("المقاول",esc(p.contractor_name))}${R("مدير الموقع",esc(p.site_manager))}</tr><tr>${R("مدير المنطقة",esc(p.area_name))}${R("تاريخ البداية",sd(p.start_date))}</tr>
-    <tr>${R("تاريخ التسليم",sd(p.due))}${cfg.price&&p.price!=null&&p.price!==""?R("قيمة المشروع",esc(money(p.price))):R("عدد أيام الفترة",String(G.days))}</tr></table>`);
-  /* ملخص الفترة */
-  const all=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])],bullets=[];
-  bullets.push(`تغطي هذه الفترة ${G.days} يوماً، من ${esc(dfmt(d.f))} إلى ${esc(dfmt(d.t))}.`);
-  if(cfg.upd||cfg.pho)bullets.push(`سُجّل خلال الفترة ${cfg.upd?`<b>${d.ups.length}</b> تحديث مكتوب`:""}${cfg.upd&&cfg.pho?" و":""}${cfg.pho?`<b>${d.pics.length}</b> صورة من الأعمال`:""}${d.atts&&cfg.upd?`، ومعها ${d.atts} مرفق`:""}.`);
+    <tr>${R("تاريخ التسليم",sd(p.due))}${cfg.price&&p.price!=null&&p.price!==""?R("قيمة المشروع",esc(money(p.price))):R(reno?"مدة المشروع (يوم)":"أيام الفترة",String(G.days))}</tr></table>`);
+  const all=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])],bullets=[],w=reno?"في المشروع":"خلال الفترة";
+  bullets.push(reno?`يغطي هذا التقرير كامل مسار المشروع، من ${esc(dfmt(d.f))} إلى ${esc(dfmt(d.t))} (${G.days} يوماً).`:`تغطي هذه الفترة ${G.days} يوماً، من ${esc(dfmt(d.f))} إلى ${esc(dfmt(d.t))}.`);
+  if(cfg.upd||cfg.pho)bullets.push(`سُجّل ${w} ${cfg.upd?`<b>${d.ups.length}</b> تحديث مكتوب`:""}${cfg.upd&&cfg.pho?" و":""}${cfg.pho?`<b>${d.pics.length}</b> صورة من الأعمال`:""}${d.atts&&cfg.upd?`، ومعها ${d.atts} مرفق`:""}.`);
   if(all.length){
     const cnt={};all.forEach(e=>{const k=iso(e.created_at);cnt[k]=(cnt[k]||0)+1});
     const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?1:-1))[0],last=all.map(e=>new Date(e.created_at)).sort((a,b)=>b-a)[0];
@@ -545,47 +698,106 @@ function rpPages(p,cfg,d,root){
   }
   if(cfg.obs){
     const o=d.iss.filter(e=>e.resolved===false).length;
-    bullets.push(`المعوقات: سُجّل ${d.iss.length} خلال الفترة${d.iss.length?` (${o} منها مفتوح)`:""}، ويوجد ${d.issOld.length} معوق مفتوح من فترات سابقة.`);
+    bullets.push(reno?`المعوقات: سُجّل ${d.iss.length} معوق في المشروع${d.iss.length?` (${o} منها مفتوح)`:""}.`:`المعوقات: سُجّل ${d.iss.length} خلال الفترة${d.iss.length?` (${o} منها مفتوح)`:""}، ويوجد ${d.issOld.length} معوق مفتوح من فترات سابقة.`);
   }
-  put(`<div style="margin-bottom:14px"><div class="st">ملخص الفترة</div>${bullets.map(b=>`<div class="bl"><i></i><span>${b}</span></div>`).join("")}</div>`);
+  put(`<div style="margin-bottom:14px"><div class="st">${reno?"ملخص المشروع":"ملخص الفترة"}</div>${bullets.map(b=>`<div class="bl"><i></i><span>${b}</span></div>`).join("")}</div>`);
   if(cfg.upd&&d.ups.length){
     const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,3);
     const hlh=e=>`<div class="hl"><small>${esc(dfmt(e.created_at))}</small>${esc(cut(cleanTxt(e.body).replace(/\n/g," "),240))}</div>`;
     lastUp.forEach((e,i)=>put(i?hlh(e):`<div><div class="st">أبرز المستجدات</div>${hlh(e)}</div>`));
   }
+  /* 2) تحليل المشروع */
+  if(cfg.ana){
+    let first=true;
+    const ab=inner=>{const t=first?sec("تحليل المشروع"):"";first=false;return `<div>${t}<div class="ab">${inner}</div></div>`};
+    const tr=(a,b)=>`<tr><td>${a}</td><td><b>${b}</b></td></tr>`;
+    let h;
+    if(A.total!==undefined){
+      h=`<h4>تحليل الجدول الزمني</h4><div class="cmp" style="margin:0 0 8px"><div class="rw"><span>الزمن المنقضي</span><div class="tr"><i style="width:${A.elp}%;background:#8a97a6"></i></div><b>${A.elp}%</b></div><div class="rw"><span>الإنجاز الفعلي</span><div class="tr"><i style="width:${A.prog}%;background:#ed8700"></i></div><b>${A.prog}%</b></div></div>
+      <table>${tr("المدة الكلية للمشروع",A.total+" يوم")}${tr("المنقضي منذ البداية",`${A.el} يوم (${A.elp}%)`)}${tr("المتبقي حتى التسليم",isDone?"—":A.left<0?"متأخر "+(-A.left)+" يوم":A.left+" يوم")}
+      ${tr("الفرق بين الإنجاز والمخطط",A.diff===0?"مطابق للمخطط":(A.diff>0?"أعلى من المخطط":"أقل من المخطط")+" بمقدار "+Math.abs(A.diff)+" نقطة مئوية")}${tr("مؤشر الأداء الزمني (الإنجاز ÷ المخطط)",A.spi!==null?A.spi.toFixed(2):"—")}
+      ${isDone?"":tr("التاريخ المتوقع للانتهاء",A.est?esc(dfmt(A.est))+(A.delta===undefined?"":A.delta>0?` (بعد الموعد بـ ${A.delta} يوم)`:A.delta<0?` (قبل الموعد بـ ${-A.delta} يوم)`:" (على الموعد)"):"غير متاح بعد")}</table>
+      <p>مؤشر الأداء الزمني الأعلى من 1 يعني تقدماً أسرع من المخطط. والتاريخ المتوقع تقدير خطي مبني على وتيرة الإنجاز الحالية (يحتاج 7 أيام و5% إنجاز على الأقل).</p>`;
+    }else h=`<h4>تحليل الجدول الزمني</h4><p>لم تُحدَّد تواريخ البداية والتسليم للمشروع، لذا يتعذر تحليل الجدول الزمني. يمكن إضافتها من «تعديل المشروع».</p>`;
+    put(ab(h));mark();
+    /* النشاط */
+    if(cfg.upd||cfg.pho){
+      if(A.act){
+        const mx=Math.max(1,...A.series.map(s=>s.u+s.p)),H=92;
+        h=`<h4>تحليل النشاط والتوثيق</h4><div class="ch">${A.series.map(s=>{const hu=Math.round(s.u/mx*H),hp=Math.round(s.p/mx*H);return `<div class="c">${s.u+s.p?`<div class="v">${s.u+s.p}</div>`:""}${s.u?`<div class="s1" style="height:${Math.max(hu,3)}px"></div>`:""}${s.p?`<div class="s2" style="height:${Math.max(hp,3)}px"></div>`:""}</div>`}).join("")}</div>
+        <div class="cl">${A.series.map(s=>`<div>${esc(s.l)}</div>`).join("")}</div><div class="lg2"><span><i style="background:#2e69ad"></i>تحديثات مكتوبة</span><span><i style="background:#ed8700"></i>صور</span></div>
+        <table>${tr("إجمالي الإدخالات (تحديثات + صور)",A.act)}${tr("متوسط الإدخالات اليومي",A.avg.toFixed(1))}${A.best?tr("أنشط فترة",`${esc(A.best.l)} (${A.best.n})`):""}${tr("أطول فترة بدون توثيق",A.gap+" يوم")}${A.idle!==null?tr("آخر نشاط مسجل",A.idle===0?"اليوم":"قبل "+A.idle+" يوم"):""}</table>`;
+      }else h=`<h4>تحليل النشاط والتوثيق</h4><p>لا يوجد نشاط (تحديثات أو صور) مسجل ${reno?"في المشروع":"خلال الفترة"}.</p>`;
+      put(ab(h));
+    }
+    /* المعوقات */
+    if(cfg.obs){
+      const io=A.io;
+      if(io.tot){
+        const rp=io.known?Math.round(io.res/io.tot*100):0,op=io.known?100-rp:0;
+        h=`<h4>تحليل المعوقات</h4>${io.known?`<div class="sb"><i style="width:${rp}%;background:#1d7a4d"></i><i style="width:${op}%;background:#c0392b"></i></div><div class="lg2"><span><i style="background:#1d7a4d"></i>تم الحل (${io.res})</span><span><i style="background:#c0392b"></i>مفتوح (${io.open})</span></div>`:""}
+        <table>${tr("إجمالي المعوقات المسجلة",io.tot)}${reno?"":tr("سُجّل خلال الفترة",io.per)}${io.known?tr("مفتوحة حالياً",io.open)+tr("تم حلها",io.res)+(io.rate!==null?tr("نسبة الحل",io.rate+"%"):"")+(io.avg!==null?tr("متوسط زمن الحل",io.avg.toFixed(1)+" يوم"):"")+(io.oldest!==null?tr("أقدم معوق مفتوح",io.oldest+" يوم"):""):""}</table>`;
+      }else h=`<h4>تحليل المعوقات</h4><p>لا توجد معوقات مسجلة في المشروع.</p>`;
+      put(ab(h));
+    }
+    /* المخاطر */
+    const PL={h:"مرتفع",m:"متوسط",l:"منخفض"};
+    put(ab(`<h4>مؤشرات المخاطر</h4>${A.risks.length?A.risks.map(r=>`<div class="rk"><span class="pl ${r[0]}">${PL[r[0]]}</span><span>${esc(r[1])}</span></div>`).join(""):'<div class="rk"><span class="pl g">سليم</span><span>لا توجد مؤشرات خطر جوهرية وفق البيانات المتاحة.</span></div>'}`));
+    /* 3) التقرير المكتوب */
+    const wb=rpWriteBlocks(cfg.text||rpDraft(p,cfg,d,A,G));
+    if(wb.length){
+      let pend="",tf=true;
+      const flush=h2=>{const t=tf?sec("التقرير المكتوب"):"";put(`<div>${t}${h2}</div>`);if(tf){mark();tf=false}};
+      wb.forEach(b=>{if(b.startsWith('<div class="wh"')){pend+=b;return}flush(pend+b);pend=""});
+      if(pend)flush(pend);
+    }
+  }
+  /* قبل وبعد (للترميم) */
+  if(reno&&cfg.pho&&d.pics.length>=2){
+    const n=d.pics.length,k=Math.min(3,Math.floor(n/2)),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
+    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b>${cp(e)}</b></div></div>`;
+    for(let i=0;i<k;i++){
+      const row=`<div class="pr l2">${side(d.pics[i],"bf","قبل")}${side(d.pics[n-k+i],"af","الحالي")}</div>`;
+      put(i?row:`<div>${sec("قبل وبعد")}<div class="st">مقارنة بين أقدم الصور الموثقة وأحدثها</div>${row}</div>`);
+      if(!i)mark();
+    }
+  }
   /* سجل الأعمال */
   let un=0,pn=0;
   const upHtml=(e,n,txt,cont)=>`<div class="uc"><div class="mt"><i>${String(n).padStart(2,"0")}</i><b>${esc(tfmt(e.created_at))}</b>${e.author_role?`<span>· ${esc(ROLES[e.author_role]||e.author_role)}</span>`:""}${cont?"<span>· (تابع)</span>":""}</div><p>${esc(txt)}</p>${!cont&&e.file_path&&!(e.file_type||"").startsWith("image")?'<div class="at">مرفق: ملف مرفوع مع هذا التحديث</div>':""}</div>`;
-  const picHtml=(e,n)=>`<div class="pf"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",110))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
+  const picCard=(e,n)=>`<div class="pf l${LY}"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
+  const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push(`<div class="pr l${LY}">${h}</div>`)}return rows};
   if(G.list.length){
-    let ttl='<div class="rt">سجل الأعمال</div>';
+    let ttl=sec(reno?"سجل أعمال الترميم":"سجل الأعمال"),firstPut=true;
+    const putT=h=>{put(h);if(firstPut){mark();firstPut=false}};
     G.list.forEach(g=>{
       const head=ttl+`<div class="gh"><div><small>${esc(g.tag)}</small><b>${esc(g.label)}</b></div><div class="cn">${cfg.upd?`<span>${g.ups.length} تحديث</span>`:""}${cfg.pho?`<span>${g.pics.length} صورة</span>`:""}</div></div>`;
       const items=[];
       g.ups.forEach(e=>{const ch=rpChunks(cleanTxt(e.body));un++;ch.forEach((c,i)=>items.push(upHtml(e,un,c,i>0)))});
       ttl="";let first=true;
-      items.forEach(h=>{if(first){put(`<div>${head}${h}</div>`);first=false}else put(h)});
+      items.forEach(h=>{if(first){putT(`<div>${head}${h}</div>`);first=false}else put(h)});
       if(g.pics.length){
-        const rows=[];for(let i=0;i<g.pics.length;i+=2){const a=g.pics[i],b=g.pics[i+1];rows.push(`<div class="pr">${picHtml(a,++pn)}${b?picHtml(b,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)}
-        rows.forEach((r,i)=>{
-          if(i===0){const lead=first?head:"";first=false;put(`<div>${lead}<div class="st">صور الأعمال</div>${r}</div>`)}else put(r);
+        picRows(g.pics).forEach((r,i)=>{
+          if(i===0){const lead=first?head:"";first=false;putT(`<div>${lead}<div class="st">صور الأعمال</div>${r}</div>`)}else put(r);
         });
       }
-      if(first)put(head);
+      if(first)putT(head);
     });
-  }else if(cfg.upd||cfg.pho)put(`<div class="em">لا توجد تحديثات أو صور مسجلة في هذه الفترة.</div>`);
+  }else if(cfg.upd||cfg.pho)put(`<div class="em">لا توجد تحديثات أو صور مسجلة ${reno?"في المشروع":"في هذه الفترة"}.</div>`);
   /* المعوقات */
   if(cfg.obs&&(d.iss.length||d.issOld.length)){
     const oc=e=>{const [c,l]=rpStatus(e);return `<div class="oc"><div class="bd ${c}">${l}</div><div class="tx"><p>${esc(cleanTxt(e.body))}</p><small>سُجّل ${esc(dfmt(e.created_at))}${e.resolved&&e.resolved_at?` · حُلّ ${esc(dfmt(e.resolved_at))}`:""}${e.author_role?` · ${esc(ROLES[e.author_role]||e.author_role)}`:""}</small></div></div>`};
-    let ot='<div class="rt" style="margin-top:6px">المعوقات</div>';
-    const lst=(title,arr)=>arr.forEach((e,i)=>{put(i?oc(e):`<div>${ot}<div class="st">${title} (${arr.length})</div>${oc(e)}</div>`);if(!i)ot=""});
-    if(d.iss.length)lst("معوقات سُجّلت خلال الفترة",d.iss);
+    let ot=sec("سجل المعوقات"),op=true;
+    const lst=(title,arr)=>arr.forEach((e,i)=>{put(i?oc(e):`<div>${ot}<div class="st">${title} (${arr.length})</div>${oc(e)}</div>`);if(!i&&op){mark();op=false}ot=""});
+    if(d.iss.length)lst(reno?"جميع المعوقات المسجلة":"معوقات سُجّلت خلال الفترة",d.iss);
     if(d.issOld.length)lst("معوقات مفتوحة من فترات سابقة",d.issOld);
   }
   /* الاعتماد */
   const pBox=box,pEl=box.lastElementChild;
   const sgEl=put(`<div class="sg"><div><b>أعدّه</b>${by||"&nbsp;"}<div class="ln">التوقيع / التاريخ</div></div><div><b>راجعه</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div><div><b>اعتمده</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div></div>`);
-  if(box!==pBox&&pEl&&pEl.parentNode===pBox){pBox.removeChild(pEl);box.insertBefore(pEl,sgEl)}  // لا تترك الاعتماد وحده في صفحة
+  if(box!==pBox&&pEl&&pEl.parentNode===pBox){pBox.removeChild(pEl);box.insertBefore(pEl,sgEl)}
+  /* الفهرس */
+  tocEl.innerHTML=marks.filter(m=>m[2]).map(m=>`<span><b>${m[0]}.</b> ${m[1].split(" ").map(w=>`<b><u>${w}</u></b>`).join("")}<em>ص ${m[2]}</em></span>`).join("");
   pages.total=pages.length;return pages;
 }
 async function rpPdf(p,cfg,pages,prog){
@@ -601,7 +813,7 @@ async function rpPdf(p,cfg,pages,prog){
     cv.width=cv.height=0;pages[i].remove();
     await new Promise(r=>setTimeout(r,0));
   }
-  doc.setProperties({title:`${p.name} - ${cfg.title}`,subject:`${cfg.from} → ${cfg.to}`,author:cfg.by||"إدارة المشاريع",creator:"إدارة المشاريع"});
+  doc.setProperties({title:`${p.name} - ${cfg.title}`,subject:cfg.full?"تقرير شامل":`${cfg.from} → ${cfg.to}`,author:cfg.by||"إدارة المشاريع",creator:"إدارة المشاريع",keywords:rpRef(p)});
   return doc;
 }
 async function saveProj(){
