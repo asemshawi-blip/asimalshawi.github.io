@@ -418,7 +418,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 /* —— النافذة —— */
 function openReport(){
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
-  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2"};
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2",dur:"",du:"d"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -441,7 +441,7 @@ function reportHtml(){
   const canObs=!!TABS.find(t=>t.k==="issues")?.see.includes(S.role),canPrice=!["contr","site"].includes(S.role);
   const ch=(k,l)=>`<button class="btn alt" style="padding:6px 13px;min-height:0;font-size:13px;border-radius:20px" onclick="rpPreset('${k}')">${l}</button>`;
   const per=r.reno
-    ?`<div style="background:#eef3f9;border-radius:10px;padding:10px 12px;margin:6px 0 4px;font-size:13.5px;line-height:1.8">🛠 <b>مشروع ترميم:</b> يصدر التقرير شاملاً لكامل المشروع من بدايته حتى اليوم، بدون تحديد فترات.</div>`
+    ?`<div style="background:#eef3f9;border-radius:10px;padding:10px 12px;margin:6px 0 4px;font-size:13.5px;line-height:1.8">🛠 <b>مشروع ترميم:</b> يصدر التقرير شاملاً لكامل المشروع من بدايته حتى اليوم، بدون تحديد فترات، ودون إظهار تاريخ بداية أو نهاية.</div><label class="lbl">مدة التنفيذ (تظهر في التقرير بدلاً من التواريخ)</label><div style="display:flex;gap:8px"><input id="rpdur" type="number" min="0" step="any" inputmode="decimal" placeholder="مثال: 12" value="${esc(r.dur)}" style="flex:1"><select id="rpdu" style="flex:1"><option value="h" ${r.du==="h"?"selected":""}>ساعات</option><option value="d" ${r.du!=="h"?"selected":""}>أيام</option></select></div>`
     :`<label class="lbl">الفترة (من – إلى)</label><div class="acts" style="margin:0 0 6px">${ch("7","آخر 7 أيام")}${ch("14","آخر 14 يوم")}${ch("m","هذا الشهر")}${ch("pm","الشهر الماضي")}${ch("all","كامل المشروع")}</div>
   <label class="lbl">من</label><input id="rpf" type="date" value="${esc(r.from)}"><label class="lbl">إلى</label><input id="rpt" type="date" value="${esc(r.to)}">`;
   const sel=(v,t)=>`<option value="${v}" ${String(r.lay)===v?"selected":""}>${t}</option>`;
@@ -462,11 +462,12 @@ function reportHtml(){
 }
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
-  return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),
+  return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
     upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,ba:$("rpx").checked,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
 }
 function rpCheck(cfg){
   if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
+  if(cfg.dur&&!(+cfg.dur>0))return "مدة التنفيذ يجب أن تكون رقماً أكبر من صفر";
   if(!cfg.upd&&!cfg.pho&&!cfg.obs&&!cfg.ana&&!cfg.ba)return "اختر محتوى واحداً على الأقل";
   return "";
 }
@@ -593,7 +594,7 @@ function rpGroups(d,cfg){
 }
 function rpAnalyze(p,cfg,d,G){
   const T=day0(new Date()),isDone=p.status==="done",A={prog:clamp(p.progress),done:isDone,days:G.days};
-  const S0=p.start_date?new Date(p.start_date+"T00:00:00"):null,E0=p.due?new Date(p.due+"T00:00:00"):null;
+  const S0=!cfg.full&&p.start_date?new Date(p.start_date+"T00:00:00"):null,E0=!cfg.full&&p.due?new Date(p.due+"T00:00:00"):null;
   if(S0&&E0&&E0>S0){
     A.total=Math.round((E0-S0)/864e5);A.el=Math.max(0,Math.round((T-S0)/864e5));A.elp=Math.max(0,Math.min(100,Math.round(A.el/A.total*100)));
     A.left=Math.round((E0-T)/864e5);A.diff=A.prog-A.elp;A.spi=A.elp>0?A.prog/A.elp:null;
@@ -629,7 +630,7 @@ function rpAnalyze(p,cfg,d,G){
   else if(A.left!==undefined&&A.left<0)parts.push(`تجاوز المشروع موعد التسليم بـ ${-A.left} يوماً وبقي ${100-A.prog}% من الأعمال`);
   else if(A.delta!==undefined)parts.push(A.delta>7?`المشروع متأخر عن الخطة، وبالوتيرة الحالية يُتوقع التسليم بعد الموعد بنحو ${A.delta} يوماً`:A.delta<-7?`المشروع متقدم على الخطة، ويُتوقع التسليم قبل الموعد بنحو ${-A.delta} يوماً`:"المشروع يسير وفق الخطة، والتسليم المتوقع قريب من الموعد");
   else if(A.diff!==undefined)parts.push(`الإنجاز الفعلي ${A.prog}% ${A.diff>=0?"أعلى من":"أقل من"} المخطط حتى اليوم (${A.elp}%)`);
-  else parts.push(`نسبة الإنجاز ${A.prog}%، ولم تُحدَّد تواريخ المشروع لقياس الالتزام بالجدول`);
+  else parts.push(cfg.full?`نسبة الإنجاز ${A.prog}%`:`نسبة الإنجاز ${A.prog}%، ولم تُحدَّد تواريخ المشروع لقياس الالتزام بالجدول`);
   if(io.open)parts.push(`${io.open} معوق مفتوح${io.oldest>14?` (أقدمها منذ ${io.oldest} يوماً)`:""}`);
   A.verdict=parts.join("، ")+".";
   /* إجراءات مقترحة */
@@ -639,13 +640,13 @@ function rpAnalyze(p,cfg,d,G){
   if(A.reqW&&A.curW&&A.reqW>A.curW*1.15)ac.push(`رفع وتيرة الإنجاز من ${A.curW.toFixed(1)}% إلى ${A.reqW.toFixed(1)}% أسبوعياً للتسليم في الموعد، أو اعتماد موعد تسليم معدّل.`);
   if(A.delta>0||(A.left!==undefined&&A.left<0&&!isDone))ac.push("إبلاغ العميل بالموقف الزمني واعتماد خطة استكمال بموعد واضح.");
   if(A.idle!==null&&A.idle>7&&!isDone)ac.push("إلزام الموقع بالتوثيق اليومي بالتحديثات والصور.");
-  if(!p.start_date||!p.due)ac.push("استكمال تاريخي البداية والتسليم في بيانات المشروع لتفعيل قياس الالتزام بالجدول.");
-  if(!ac.length)ac.push(isDone?"حفظ سجل المشروع وتقاريره للرجوع إليها.":"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية للجدول الزمني.");
+  if(!cfg.full&&(!p.start_date||!p.due))ac.push("استكمال تاريخي البداية والتسليم في بيانات المشروع لتفعيل قياس الالتزام بالجدول.");
+  if(!ac.length)ac.push(isDone?"حفظ سجل المشروع وتقاريره للرجوع إليها.":(cfg.full?"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية.":"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية للجدول الزمني."));
   A.actions=ac;
   return A;
 }
 function rpDraft(p,cfg,d,A,G){
-  const L=[],tp=TYN[p.ptype]||"",per=cfg.full?`كامل مسار المشروع منذ ${dfmt(d.f)} وحتى ${dfmt(d.t)}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`;
+  const L=[],tp=TYN[p.ptype]||"",per=cfg.full?`كامل مسار المشروع${rpDurTxt(cfg.dur,cfg.du)?` بمدة تنفيذ ${rpDurTxt(cfg.dur,cfg.du)}`:""}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`;
   L.push("# نظرة عامة");
   L.push(`يغطي هذا التقرير ${per} لمشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` في ${p.loc}`:""}. بلغت نسبة الإنجاز ${A.prog}%${A.elp!==undefined&&!A.done?` مقابل ${A.elp}% مخططة حتى اليوم`:""}. ${A.verdict}`);
   if(A.est&&A.delta!==undefined&&!A.done)L.push(`التاريخ المتوقع لانتهاء الأعمال بالوتيرة الحالية هو ${dfmt(A.est)}، وهو تقدير خطي يتغير بحسب سير العمل.`);
@@ -677,6 +678,9 @@ function rpCutAt(t,max){
   const w=t.slice(0,max);let i=Math.max(w.lastIndexOf(". "),w.lastIndexOf("؟ "),w.lastIndexOf("! "),w.lastIndexOf("، "));
   if(i<max*.5)i=w.lastIndexOf(" ");if(i<max*.3)i=max-1;return i+1;
 }
+const rpDurTxt=(n,u)=>{n=+n;if(!(n>0))return"";const h=u==="h",x=Number.isInteger(n)?String(n):String(+n.toFixed(2));
+  if(n===1)return h?"ساعة واحدة":"يوم واحد";if(n===2)return h?"ساعتان":"يومان";
+  if(Number.isInteger(n)&&n<=10)return x+(h?" ساعات":" أيام");return x+(h?" ساعة":" يوماً")};
 function rpChunks(t,max=1150){
   const out=[];let cur="";
   for(const para of t.split("\n")){
@@ -688,7 +692,7 @@ function rpChunks(t,max=1150){
 function rpPages(p,cfg,d,root){
   if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
   const pages=[],today=new Date(),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G),isDone=p.status==="done",reno=!!cfg.full;
-  const range=`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p),prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"",ref=rpRef(p),LY=String(cfg.lay||"2"),LC=LAY[LY]||LAY[2];
+  const execTxt=rpDurTxt(cfg.dur,cfg.du),range=reno?(execTxt?`مدة التنفيذ: ${execTxt}`:""):`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p),prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"",ref=rpRef(p),LY=String(cfg.lay||"2"),LC=LAY[LY]||LAY[2];
   const mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
   let no=0;const marks=[];
   const sec=t=>{no++;marks.push([no,t,0]);return `<div class="rt"><span class="no">${no}</span><span>${t}</span><i class="l2"></i></div>`};
@@ -696,8 +700,8 @@ function rpPages(p,cfg,d,root){
   /* غلاف */
   const cov=mk(`<div class="rpg rcv"><div class="tp"><div class="br"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div>
     <div class="ey">${reno?"تقرير ترميم شامل":"تقرير رسمي"}</div><h1>${esc(cfg.title)}</h1><div class="pj">${esc(p.name)}</div><div class="lc">${esc(p.loc||"")}</div></div><div class="sp"></div>
-    <div class="pe"><div><small>${reno?"من بداية المشروع":"فترة التقرير"}</small><b>${esc(range)}</b></div><div><small>${reno?"مدة المشروع":"مدة الفترة"}</small><b>${G.days} يوم</b></div><div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>
-    ${d.cover?`<div class="im"><img src="${d.cover}" alt=""></div>`:`<div class="qs"><small style="color:#8996a5;font-size:12px">نسبة الإنجاز الحالية</small><div class="big">${prog}%</div><div class="tr"><i style="width:${prog}%"></i></div><p>الحالة: <b>${esc(ST[p.status][0])}</b></p>${tm?`<p>${esc(tm.t)}</p>`:""}${p.due?`<p>تاريخ التسليم: ${esc(dfmt(p.due+"T00:00:00"))}</p>`:""}</div>`}
+    <div class="pe">${reno?(execTxt?`<div><small>مدة التنفيذ</small><b>${esc(execTxt)}</b></div>`:""):`<div><small>فترة التقرير</small><b>${esc(range)}</b></div><div><small>مدة الفترة</small><b>${G.days} يوم</b></div>`}<div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>
+    ${d.cover?`<div class="im"><img src="${d.cover}" alt=""></div>`:`<div class="qs"><small style="color:#8996a5;font-size:12px">نسبة الإنجاز الحالية</small><div class="big">${prog}%</div><div class="tr"><i style="width:${prog}%"></i></div><p>الحالة: <b>${esc(ST[p.status][0])}</b></p>${!reno&&tm?`<p>${esc(tm.t)}</p>`:""}${!reno&&p.due?`<p>تاريخ التسليم: ${esc(dfmt(p.due+"T00:00:00"))}</p>`:""}</div>`}
     <div class="mt2"><span>أُعدّ بواسطة: <b>${by||"—"}</b></span><span>الحالة: <b>${esc(ST[p.status][0])}</b> · الإنجاز: <b>${prog}%</b></span></div>
     <div class="cf"><span>سري — للاستخدام الداخلي</span><span>·</span><span dir="ltr">${ref}</span></div></div>`);
   root.appendChild(cov);pages.push(cov);
@@ -714,6 +718,7 @@ function rpPages(p,cfg,d,root){
   const kc=(cls,big,lab,sub,sz)=>`<div class="k ${cls}"><b${sz?` style="font-size:${sz}px;padding:${Math.round((22-sz)/2)+2}px 0"`:""}>${big}</b><span>${lab}</span>${sub?`<em class="sub">${sub}</em>`:""}</div>`;
   const dsh=v=>esc(dfmt(v,{day:"numeric",month:"long",year:"numeric"})),io=A.io,KP=[];
   KP.push(kc("",prog+"%","الإنجاز الفعلي",isDone?"مكتمل":A.elp!==undefined?`المخطط حتى اليوم ${A.elp}%`:""));
+  if(reno){if(execTxt)KP.push(kc("",esc(execTxt),"مدة التنفيذ","",19))}else{
   if(isDone)KP.push(kc("gd","تم التسليم","حالة المشروع",p.due?"الموعد المخطط "+dsh(p.due+"T00:00:00"):"",17));
   else if(A.left===undefined)KP.push(kc("","—","المتبقي للتسليم","لم تُحدَّد تواريخ المشروع"));
   else if(A.left<0)KP.push(kc("bd",`متأخر ${-A.left} يوم`,"موعد التسليم",dsh(p.due+"T00:00:00"),17));
@@ -721,6 +726,7 @@ function rpPages(p,cfg,d,root){
   if(isDone)KP.push(kc("",A.total!==undefined?A.total+" يوم":"—","مدة المشروع المخططة","",19));
   else if(A.est)KP.push(kc(A.delta>0?"bd":A.delta<0?"gd":"",dsh(A.est),"التسليم المتوقع",A.delta>0?`بعد الموعد بـ ${A.delta} يوم`:A.delta<0?`قبل الموعد بـ ${-A.delta} يوم`:"في الموعد",15));
   else KP.push(kc("","غير متاح بعد","التسليم المتوقع","يحتاج 7 أيام و5% إنجاز",15));
+  }
   if(cfg.obs&&io.known)KP.push(kc(io.open?(io.oldest>14?"bd":""):"gd",io.open,"معوقات مفتوحة",io.open?`أقدمها منذ ${io.oldest} يوم`:"لا توجد معوقات مفتوحة"));
   else KP.push(kc("",cfg.pho?d.pics.length:d.ups.length,cfg.pho?"صور موثقة":"تحديثات مكتوبة",reno?"منذ بداية المشروع":"خلال الفترة"));
   put(`<div class="kp">${KP.join("")}</div>`);
@@ -812,7 +818,7 @@ async function rpPdf(p,cfg,pages,prog){
   try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const sc=cfg.q==="hi"?2.5:2,ql=cfg.q==="hi"?.92:.85,N=pages.length;
-  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v22`});
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v23`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
