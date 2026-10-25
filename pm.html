@@ -490,7 +490,7 @@ async function rpBuild(cfg){
   const step=(pct,msg)=>{if(RP.cancel)throw new Error("cancel");const b=$("rpbar"),m=$("rpmsg");if(b)b.style.width=pct+"%";if(m)m.textContent=msg};
   const p=S.projects.find(x=>x.id===S.cur);if(!p)throw new Error("لم يتم العثور على المشروع");
   step(3,"تحميل المكتبات…");
-  await loadLib("html2canvas.min.js");await loadLib("jspdf.umd.min.js");
+  await loadLib("html2canvas.min.js?v=22");await loadLib("jspdf.umd.min.js");
   if(document.fonts){await Promise.all(["400","500","600","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal","ابتثجحخدذرزسشصضطظعغفقكلمنهوىيءأإآؤئة٠١٢٣٤٥٦٧٨٩ Aa0").catch(()=>0)));await document.fonts.ready}
   step(8,"قراءة بيانات المشروع…");
   const data=await rpData(p,cfg);
@@ -812,7 +812,7 @@ async function rpPdf(p,cfg,pages,prog){
   try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const sc=cfg.q==="hi"?2.5:2,ql=cfg.q==="hi"?.92:.85,N=pages.length;
-  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N}`});
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v22`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
