@@ -254,7 +254,7 @@ const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/
 const loadLib=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("تعذر تحميل "+src));document.head.appendChild(s)});
 const RPCSS=`
 .rpg{width:794px;height:1123px;background:#fff;position:relative;overflow:hidden;direction:rtl;text-align:right;font-family:'Tajawal',Tahoma,sans-serif;color:#182b3d;line-height:1.7;box-sizing:border-box;font-size:13px}
-.rpg *{box-sizing:border-box;letter-spacing:0!important}
+.rpg,.rpg *{box-sizing:border-box;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal;font-feature-settings:normal}
 .rpg .rph{height:58px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #ed8700;background:#fff}
 .rpg .rph .l{display:flex;align-items:center;gap:10px;font-weight:800;color:#102944;font-size:14px}
 .rpg .rph img{width:32px;height:32px;border-radius:8px;display:block}
@@ -491,7 +491,7 @@ async function rpBuild(cfg){
   const p=S.projects.find(x=>x.id===S.cur);if(!p)throw new Error("لم يتم العثور على المشروع");
   step(3,"تحميل المكتبات…");
   await loadLib("html2canvas.min.js");await loadLib("jspdf.umd.min.js");
-  if(document.fonts){await Promise.all(["400","500","600","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal").catch(()=>0)));await document.fonts.ready}
+  if(document.fonts){await Promise.all(["400","500","600","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal","ابتثجحخدذرزسشصضطظعغفقكلمنهوىيءأإآؤئة٠١٢٣٤٥٦٧٨٩ Aa0").catch(()=>0)));await document.fonts.ready}
   step(8,"قراءة بيانات المشروع…");
   const data=await rpData(p,cfg);
   if(cfg.full){cfg.from=iso(data.f);cfg.to=iso(data.t)}
@@ -809,12 +809,12 @@ function rpPages(p,cfg,d,root){
 }
 async function rpPdf(p,cfg,pages,prog){
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
-  const sc=cfg.q==="hi"?2:1.4,ql=cfg.q==="hi"?.9:.8,N=pages.length;
+  const sc=cfg.q==="hi"?2.5:2,ql=cfg.q==="hi"?.92:.85,N=pages.length;
   pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N}`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
-    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true});
+    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
     if(i)doc.addPage();
     doc.addImage(cv.toDataURL("image/jpeg",ql),"JPEG",0,0,W,H,undefined,"FAST");
     cv.width=cv.height=0;pages[i].remove();
