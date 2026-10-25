@@ -254,7 +254,7 @@ const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/
 const loadLib=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("تعذر تحميل "+src));document.head.appendChild(s)});
 const RPCSS=`
 .rpg{width:794px;height:1123px;background:#fff;position:relative;overflow:hidden;direction:rtl;text-align:right;font-family:'Tajawal',Tahoma,sans-serif;color:#182b3d;line-height:1.7;box-sizing:border-box;font-size:13px}
-.rpg,.rpg *{box-sizing:border-box;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal;font-feature-settings:normal}
+.rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;box-sizing:border-box;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal;font-feature-settings:normal}
 .rpg .rph{height:58px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #ed8700;background:#fff}
 .rpg .rph .l{display:flex;align-items:center;gap:10px;font-weight:800;color:#102944;font-size:14px}
 .rpg .rph img{width:32px;height:32px;border-radius:8px;display:block}
@@ -322,7 +322,7 @@ const RPCSS=`
 .rpg .rk .pl{flex:0 0 56px;text-align:center;border-radius:20px;font-size:10.5px;font-weight:700;padding:1px 0;margin-top:3px}
 .rpg .rk .pl.h{background:#fdeceb;color:#b3332b}.rpg .rk .pl.m{background:#fff2dc;color:#b86800}.rpg .rk .pl.l{background:#eef1f5;color:#52667b}.rpg .rk .pl.g{background:#e6f4ec;color:#1d7a4d}
 .rpg .wh{font-size:15px;font-weight:800;color:#2e69ad;margin:12px 0 5px}
-.rpg .wp{margin:0 0 8px;font-size:13px;line-height:2;color:#182b3d;white-space:pre-wrap;overflow-wrap:anywhere}
+.rpg .wp{margin:0 0 8px;font-size:13px;line-height:2;color:#182b3d;white-space:pre-wrap;overflow-wrap:normal}
 
 .rpg .k .sub{display:block;font-size:11px;margin-top:3px;color:#647589;font-style:normal;line-height:1.5}
 .rpg .k.gd .sub{color:#1d7a4d;font-weight:600}.rpg .k.bd .sub{color:#b3332b;font-weight:600}.rpg .k.bd b{color:#b3332b}.rpg .k.gd b{color:#1d7a4d}
@@ -357,7 +357,7 @@ const RPCSS=`
 .rpg .uc .mt{display:flex;align-items:center;gap:8px;font-size:11px;color:#8996a5;margin-bottom:3px}
 .rpg .uc .mt i{font-style:normal;color:#d17a08;font-weight:800}
 .rpg .uc .mt b{color:#52667b;font-weight:600}
-.rpg .uc p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.95;color:#182b3d}
+.rpg .uc p{margin:0;white-space:pre-wrap;overflow-wrap:normal;font-size:13px;line-height:1.95;color:#182b3d}
 .rpg .uc .at{margin-top:5px;font-size:11px;color:#647589}
 .rpg .pr{display:flex;gap:14px;margin-bottom:14px}
 .rpg .pr.l3{gap:12px}
@@ -378,7 +378,7 @@ const RPCSS=`
 .rpg .oc .bd.ok{background:#e6f4ec;color:#1d7a4d}
 .rpg .oc .bd.un{background:#eef1f5;color:#52667b}
 .rpg .oc .tx{flex:1}
-.rpg .oc .tx p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12.5px;line-height:1.9}
+.rpg .oc .tx p{margin:0;white-space:pre-wrap;overflow-wrap:normal;font-size:12.5px;line-height:1.9}
 .rpg .oc .tx small{color:#8996a5;font-size:10.5px}
 .rpg .em{padding:16px;background:#f5f7f9;color:#77879a;border-radius:10px;font-size:12px;text-align:center;margin-bottom:12px}
 .rpg .sg{display:flex;gap:14px;margin-top:18px}
@@ -816,7 +816,7 @@ async function rpPdf(p,cfg,pages,prog){
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
-    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
+    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
     if(i)doc.addPage();
     doc.addImage(cv.toDataURL("image/jpeg",ql),"JPEG",0,0,W,H,undefined,"FAST");
     cv.width=cv.height=0;pages[i].remove();
