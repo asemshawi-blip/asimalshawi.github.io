@@ -808,6 +808,8 @@ function rpPages(p,cfg,d,root){
   pages.total=pages.length;return pages;
 }
 async function rpPdf(p,cfg,pages,prog){
+  /* تعطيل Intl.Segmenter: تقسيمه للنص العربي على بعض الجوالات يقطّع الحروف؛ المكتبة تستخدم بديلها الداخلي */
+  try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const sc=cfg.q==="hi"?2.5:2,ql=cfg.q==="hi"?.92:.85,N=pages.length;
   pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N}`});
