@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="المشاريع">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;--run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
@@ -157,7 +157,18 @@ async function sign(paths){
   const {data}=await sb.storage.from("media").createSignedUrls(need,7200);
   (data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl});
 }
+async function shrink(f){
+  if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<250*1024)return f;
+  try{
+    const bmp=await createImageBitmap(f,{imageOrientation:"from-image"}),M=1600,k=Math.min(1,M/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);if(bmp.close)bmp.close();
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));c.width=c.height=0;
+    return b&&b.size<f.size?new File([b],"photo.jpg",{type:"image/jpeg"}):f;
+  }catch(e){return f}
+}
 async function up(pid,f){
+  f=await shrink(f);
   const ext=(f.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"")||"bin";
   const path=`${pid}/${crypto.randomUUID()}.${ext}`;
   const {error}=await sb.storage.from("media").upload(path,f,{contentType:f.type||"application/octet-stream"});
@@ -197,14 +208,14 @@ function filterProjects(value){
 }
 async function openP(id){
   S.cur=id;S.tab=TABS.find(t=>t.see.includes(S.role)).k;
-  await loadE();await loadPS();render();scrollTo(0,0);
+  await Promise.all([loadE(),loadPS()]);render();scrollTo(0,0);
 }
 async function setTab(k){S.tab=k;await loadE();render()}
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
   const t=e.file_type||"";
   if(t.startsWith("image"))return `<img src="${u}" loading="lazy" onclick="openImg(this.src)">`;
-  if(t.startsWith("video"))return `<video src="${u}" controls preload="metadata"></video>`;
+  if(t.startsWith("video"))return `<video src="${u}" controls preload="none"></video>`;
   return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
 }
 function proj(){
@@ -817,8 +828,8 @@ async function rpPdf(p,cfg,pages,prog){
   /* تعطيل Intl.Segmenter: تقسيمه للنص العربي على بعض الجوالات يقطّع الحروف؛ المكتبة تستخدم بديلها الداخلي */
   try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
-  const sc=cfg.q==="hi"?2.5:2,ql=cfg.q==="hi"?.92:.85,N=pages.length;
-  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v23`});
+  const sc=cfg.q==="hi"?2:1.4,ql=cfg.q==="hi"?.9:.8,N=pages.length;
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v24`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
@@ -890,11 +901,11 @@ async function addE(){
   $("bt").disabled=true;
   const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
   if(!fs.length)rows.push({...base,body,file_path:null,file_type:null});
-  for(let i=0;i<fs.length;i++){
-    $("bt").textContent=`جاري رفع ${i+1} من ${fs.length}...`;
-    const path=await up(S.cur,fs[i]);
-    if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax});
-  }
+  {const res=new Array(fs.length);let nx=0,dn=0;
+  await Promise.all(Array.from({length:Math.min(3,fs.length)},async()=>{
+    while(nx<fs.length){const i=nx++;res[i]=await up(S.cur,fs[i]);$("bt").textContent=`جاري رفع ${++dn} من ${fs.length}...`}
+  }));
+  res.forEach((path,i)=>{if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax})});}
   if(!rows.length)return render();
   const {error}=await sb.from("entries").insert(rows);
   if(error)alert(error.message.includes("ba")?"لم يتم تفعيل قبل/بعد في قاعدة البيانات بعد. شغّل ملف before-after.sql في Supabase ثم أعد المحاولة.":error.message);

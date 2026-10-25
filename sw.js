@@ -1,4 +1,4 @@
-const CACHE="pm-v23";
+const CACHE="pm-v24",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -7,24 +7,33 @@ self.addEventListener("install",event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{
   const keys=await caches.keys();
-  await Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)));
+  await Promise.all(keys.filter(key=>key!==CACHE&&key!==CDN).map(key=>caches.delete(key)));
   await self.clients.claim();
 })()));
+const CDN_HOSTS=["cdn.jsdelivr.net","fonts.googleapis.com","fonts.gstatic.com"];
 self.addEventListener("fetch",event=>{
   const request=event.request,url=new URL(request.url);
-  if(request.method!=="GET"||url.origin!==self.location.origin)return;
+  if(request.method!=="GET")return;
+  /* مكتبات وخطوط خارجية: من الكاش فورا وتتحدث في الخلفية */
+  if(CDN_HOSTS.includes(url.hostname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(CDN),hit=await cache.match(request);
+      const net=fetch(request).then(r=>{if(r&&(r.ok||r.type==="opaque"))cache.put(request,r.clone());return r}).catch(()=>null);
+      return hit||(await net)||Response.error();
+    })());
+    return;
+  }
+  if(url.origin!==self.location.origin)return;
   // Invite links contain a one-time token. Never persist query-string URLs.
   if(url.search)return;
   const path=url.pathname;
   if(!APP_FILES.some(file=>new URL(file,self.location.href).pathname===path))return;
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE);
-    try{
-      const response=await fetch(request);
-      if(response.ok&&response.type==="basic")await cache.put(request,response.clone());
-      return response;
-    }catch{
-      return (await cache.match(request))||Response.error();
-    }
+    /* شبكة أولا؛ إذا تأخرت أكثر من 3 ثوان نعرض النسخة المخزنة */
+    const net=fetch(request).then(r=>{if(r.ok&&r.type==="basic")cache.put(request,r.clone());return r});
+    const slow=new Promise(res=>setTimeout(async()=>res(await cache.match(request)),3000));
+    try{return (await Promise.race([net,slow]))||await net}
+    catch{return (await cache.match(request))||Response.error()}
   })());
 });
