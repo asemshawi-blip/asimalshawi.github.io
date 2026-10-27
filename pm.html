@@ -82,12 +82,13 @@ const ROLES={owner:"المالك",pm:"مدير مشروع",mgmt:"الإدارة"
 const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
 /* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
 const TABS=[
+{k:"works",n:"متابعة الأعمال",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site"},
 {k:"notes",n:"ملاحظات الإدارة",see:"owner,pm,mgmt",add:"owner,pm,mgmt",ph:"اكتب ملاحظة..."},
 {k:"talks",n:"المناقشات",see:"owner,pm,contr,site",add:"owner,pm,contr,site",ph:"اكتب رسالة..."},
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
 {k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
-let S={user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],q:""};
+let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],q:""};
 
 /* ===== 2) مساعدات ===== */
 const $=id=>document.getElementById(id);
@@ -176,8 +177,79 @@ async function up(pid,f){
   return path;
 }
 async function loadE(){
+  if(S.tab==="works")return loadW();
   const {data}=await sb.from("entries").select("*").eq("project_id",S.cur).eq("kind",S.tab).order("created_at",{ascending:false});
   S.entries=data||[];await sign(S.entries.map(e=>e.file_path));
+}
+
+
+/* ===== متابعة الأعمال: مراحل المشروع مرتبطة بنسبة الإنجاز ===== */
+const WTPL=[
+["التسلّم والتجهيز",[["استلام العظم ومطابقته للمخطط ورفع المقاسات",2],["تجهيز الموقع والتسوير ومخازن المواد",2]]],
+["الجدران والفواصل",[["بناء جدران المخزن ودورتي المياه والجانيتور واللوبي",5],["فتحات الأبواب والشبابيك والعتبات",3]]],
+["السباكة والصرف",[["تأسيس مياه وصرف الدورات (مصافي ×3 وكراسي معلقة ×2)",4],["تأسيس الحوض الثلاثي ونقاط البار",2]]],
+["الكهرباء والتكييف والبيانات",[["تأسيس الكهرباء والإنارة",4],["تأسيس التكييف والتهوية والستائر الهوائية ×3",4],["شبكة البيانات للشاشات ×4 وشاشة الطلبات",2]]],
+["الأسقف",[["جبس بورد مستوى +3.00 و +4.60 مع الشادو جاب",4],["سقف ألمنيوم 60×60",2],["سقف خشب الجوز مستوى +4.60",3]]],
+["الأرضيات",[["بورسلان إسباني 120×60 (الصالة والبار والدورات)",6],["جرانيت سعودي 60×60 للمخزن",2],["فواصل ستانلس L بين البلاط",1]]],
+["الدهانات والتكسيات",[["دهان الجزيرة كنتارا (وجهين) للصالة والبار",3],["دهان جوتن شبه لامع للدورات والجانيتور",2],["قشرة جوز وبلوط للجدران",3]]],
+["الدورات",[["رخام ترافرتين بيج وبلاطة الأحواض",3],["مرايا بإضاءة خلفية ×2 وتركيب القطع الصحية",2]]],
+["الواجهة والزجاج",[["دهان الواجهة البيج الخشن",2],["ألواح WPC بعرض 12 سم",3],["كلادينج ألمنيوم وC-channel والكنب",3],["زجاج وألمنيوم CW01/CW02/CW03 وشباك الدرايف ثرو",4]]],
+["الأبواب",[["الأبواب D01–D06 (ألمنيوم، خشب، حريق، WPC)",3]]],
+["النجارة والأثاث الثابت",[["كاونتر البار برخام الترافرتين الأحمر",4],["وحدة المنتجات (Merchandise)",2],["الكنب الثابت مع أحواض الزرع",3],["ستائر الرول",1]]],
+["الإنارة",[["سبوت وبندانت وبروفايل LED وإنارة مخفية",3]]],
+["البار والمعدات",[["ماكينات القهوة والطواحين وثلاجات العرض",3]]],
+["اللوحات والشعارات",[["الشعارات والكانوبي (6 شعارات) وشاشات المنيو",3]]],
+["الأعمال الخارجية",[["الانترلوك والبلدورات المنحنية ومسارات الدخول والخروج",3],["المسطحات الخضراء والحصى الأبيض والأثاث الخارجي",1],["درابزين ستانلس ومنحدر الإعاقة والرذاذ وأعمدة الإنارة",1]]],
+["التسليم",[["تنظيف نهائي واختبار الأنظمة",1],["قائمة الملاحظات (Punch list) والتسليم",1]]]];
+async function loadW(){
+  const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
+  if(error)alert(error.message);S.works=data||[];
+}
+const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.round(a.reduce((x,i)=>x+i.weight*i.pct,0)/w):0};
+function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
+async function seedW(){
+  if(!confirm("تحميل قالب مراحل مشروع التشطيب؟"))return;
+  let n=0;const rows=[];
+  WTPL.forEach(([ph,it])=>it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++})));
+  const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
+  await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function setW(id,v){
+  const {error}=await sb.from("work_items").update({pct:+v}).eq("id",id);if(error)return alert(error.message);
+  const i=S.works.find(x=>x.id===id);i.pct=+v;i.updated_at=new Date().toISOString();
+  wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function addW(){
+  const ph=$("wph").value.trim(),nm=$("wnm").value.trim(),w=parseFloat($("wwt").value)||1;
+  if(!ph||!nm)return alert("اكتب المرحلة واسم البند");
+  const {error}=await sb.from("work_items").insert({project_id:S.cur,phase:ph,name:nm,weight:w,sort:S.works.length+1000});
+  if(error)return alert(error.message);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function delW(id){
+  if(!confirm("حذف البند؟"))return;
+  await sb.from("work_items").delete().eq("id",id);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function moveP(i,d){
+  const ph=[...new Set(S.works.map(x=>x.phase))],j=i+d;if(j<0||j>=ph.length)return;
+  [ph[i],ph[j]]=[ph[j],ph[i]];let n=0;const ch=[];
+  ph.forEach(f=>S.works.filter(x=>x.phase===f).forEach(x=>{if(x.sort!==n)ch.push([x,n]);n++}));
+  const r=await Promise.all(ch.map(([x,k])=>sb.from("work_items").update({sort:k}).eq("id",x.id)));
+  const er=r.find(q=>q.error);if(er)return alert(er.error.message);
+  ch.forEach(([x,k])=>x.sort=k);S.works.sort((a,b)=>a.sort-b.sort);render();
+}
+function worksHtml(p){
+  const ed=["owner","pm","contr","site"].includes(S.role),adm=["owner","pm"].includes(S.role),W=S.works;
+  if(!W.length)return `<div class="empty">لم تُحدد مراحل الأعمال لهذا المشروع بعد</div>${adm?`<button class="btn" onclick="seedW()">تحميل مراحل المشروع الجاهزة</button>`:""}`;
+  const ph=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0),dn=W.filter(i=>i.pct===100).length;
+  const opts=v=>[0,10,20,30,40,50,60,70,80,90,100].map(n=>`<option ${n===v?"selected":""} value="${n}">${n}%</option>`).join("");
+  const blocks=ph.map(f=>{
+    const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0);
+    return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>${esc(f)} <small style="font-weight:500;color:${pc===100?"var(--done)":pc>0?"var(--run)":"var(--muted)"}">· ${pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ"}</small></span><span>${ed?`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},-1)" aria-label="أعلى">▲</button> <button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},1)" aria-label="أسفل">▼</button> `:""}${pc}%</span></div>
+    <div class="bar ${pc===100?"s-done":"s-run"}"><i style="width:${pc}%"></i></div><div class="lbl">وزن المرحلة ${Math.round(w/tot*1000)/10}% من المشروع</div>
+    ${it.map(i=>`<div class="item" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:200px">${i.pct===100?"✅ ":""}${esc(i.name)}<small>الوزن ${i.weight}${i.pct?" · آخر تحديث "+new Date(i.updated_at).toLocaleDateString("ar"):""}</small></div>
+    ${ed?`<select style="width:90px;margin:0" onchange="setW('${i.id}',this.value)">${opts(i.pct)}</select>`:`<b>${i.pct}%</b>`}${adm?`<button class="sm del" style="margin:0" onclick="delW('${i.id}')">حذف</button>`:""}</div>`).join("")}</div>`}).join("");
+  return `<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>بنود مكتملة</span><b>${dn} / ${W.length}</b></div><div><span>المراحل</span><b>${ph.length}</b></div></div>${blocks}
+  ${adm?`<div class="box"><b>إضافة بند</b><input id="wph" list="wphl" placeholder="المرحلة"><datalist id="wphl">${ph.map(f=>`<option value="${esc(f)}">`).join("")}</datalist><input id="wnm" placeholder="اسم البند"><input id="wwt" type="number" min="0.5" step="0.5" value="1" placeholder="الوزن"><button class="btn" onclick="addW()">إضافة</button></div>`:""}`;
 }
 
 /* ===== 5) العرض ===== */
@@ -247,7 +319,7 @@ function proj(){
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
   ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
-  <div class="box">${add}${items||'<div class="empty">لا يوجد شيء بعد</div>'}</div>`;
+  <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
 }
 
 /* ===== 6) عمليات المشروع والمدخلات ===== */
