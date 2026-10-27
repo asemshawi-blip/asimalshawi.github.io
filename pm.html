@@ -78,7 +78,7 @@ const SBU="https://wmavitpimbcjohcjgqhz.supabase.co",SBK="eyJhbGciOiJIUzI1NiIsIn
 const sb=supabase.createClient(SBU,SBK);
 const sb2=supabase.createClient(SBU,SBK,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});   // لإنشاء حسابات الآخرين
 const UD="asemshawi-blip.github.io";   // نطاق داخلي لاسم المستخدم
-const ROLES={owner:"المالك",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول",site:"مدير الموقع"};
+const ROLES={owner:"مدير المشروع",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول",site:"مدير الموقع"};
 const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
 /* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
 const TABS=[
@@ -501,7 +501,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 /* —— النافذة —— */
 function openReport(){
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
-  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2",dur:"",du:"d"};
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,wrk:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2",dur:"",du:"d"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -533,7 +533,7 @@ function reportHtml(){
   <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
   ${per}
   <label class="lbl">محتوى التقرير</label>
-  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpx","قبل وبعد (الصور التي حددتها في تبويب الصور)",r.ba)}${rpCk("rpa","التقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
+  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpk","مراحل الأعمال ونسب إنجازها (من تبويب متابعة الأعمال)",r.wrk)}${rpCk("rpx","قبل وبعد (الصور التي حددتها في تبويب الصور)",r.ba)}${rpCk("rpa","التقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("2","شبكة — صورتان في الصف")}${sel("1","كبيرة — صورة في كل صف")}${sel("3","مصغّرة — 3 صور في الصف")}</select>
   <label class="lbl">التقرير المكتوب (يمكنك تعديله)</label>
   <textarea id="rpw" rows="8" placeholder="اتركه فارغاً ليُكتب تلقائياً، أو اضغط «كتابة مسودة» ثم عدّل عليها.">${esc(r.text)}</textarea>
@@ -546,7 +546,7 @@ function reportHtml(){
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
-    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,ba:$("rpx").checked,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
+    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,wrk:$("rpk")?.checked??false,ba:$("rpx").checked,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
 }
 function rpCheck(cfg){
   if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
@@ -608,6 +608,7 @@ async function rpData(p,cfg){
     if(error)throw error;rows.push(...data);if(data.length<1000)break;
   }
   const d=rpClassify(rows,f,t);
+  d.works=[];if(cfg.wrk){const {data:w}=await sb.from("work_items").select("*").eq("project_id",p.id).order("sort");d.works=w||[]}
   if(cfg.full){const ds=rows.map(e=>new Date(e.created_at));if(p.start_date)ds.push(new Date(p.start_date+"T00:00:00"));d.f=day0(ds.length?new Date(Math.min(...ds)):new Date())}
   return d;
 }
@@ -732,6 +733,7 @@ function rpDraft(p,cfg,d,A,G){
   const L=[],tp=TYN[p.ptype]||"",per=cfg.full?`كامل مسار المشروع${rpDurTxt(cfg.dur,cfg.du)?` بمدة تنفيذ ${rpDurTxt(cfg.dur,cfg.du)}`:""}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`;
   L.push("# نظرة عامة");
   L.push(`يغطي هذا التقرير ${per} لمشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` في ${p.loc}`:""}. بلغت نسبة الإنجاز ${A.prog}%${A.elp!==undefined&&!A.done?` مقابل ${A.elp}% مخططة حتى اليوم`:""}. ${A.verdict}`);
+  if(d.works&&d.works.length){const P=[...new Set(d.works.map(i=>i.phase))],pc=P.map(f=>wCalc(d.works.filter(i=>i.phase===f))),dn=pc.filter(x=>x===100).length,rn=pc.filter(x=>x>0&&x<100).length;L.push(`من أصل ${P.length} مرحلة عمل: اكتملت ${dn}، وجارية ${rn}، ولم تبدأ ${P.length-dn-rn}.`)}
   if(A.est&&A.delta!==undefined&&!A.done)L.push(`التاريخ المتوقع لانتهاء الأعمال بالوتيرة الحالية هو ${dfmt(A.est)}، وهو تقدير خطي يتغير بحسب سير العمل.`);
   if(cfg.upd||cfg.pho){
     L.push("# ما تم إنجازه");
@@ -819,6 +821,14 @@ function rpPages(p,cfg,d,root){
   const atRow=x=>`<div class="at2 ${x.l}"><div class="tt">${esc(x.t)}${x.s?`<small>${esc(x.s)}</small>`:""}</div><span class="pl2 ${x.l}">${PL[x.l]}</span></div>`;
   const atRows=A.attn.length?A.attn.map(atRow):[`<div class="at2 ok"><div class="tt">لا توجد بنود تحتاج قراراً أو متابعة حالياً</div></div>`];
   atRows.forEach((r,i)=>put(i?r:`<div><div class="st">بنود تحتاج قراراً أو متابعة الإدارة</div>${r}</div>`));
+  /* مراحل الأعمال */
+  if(cfg.wrk&&d.works&&d.works.length){
+    const W=d.works,PH=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0);
+    const row=f=>{const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0),c=pc===100?"#1d7a4d":pc>0?"#ed8700":"#9aa8b6",st=pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ";
+      return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #eef1f5;font-size:12.5px"><span style="flex:1;color:#182b3d;font-weight:600">${esc(f)}<small style="color:#8996a5;font-weight:400;margin-right:6px">وزن ${Math.round(w/tot*1000)/10}%</small></span><span style="width:54px;color:${c};font-size:11.5px;font-weight:700">${st}</span><span style="width:170px;height:9px;border-radius:5px;background:#e6ebf1;overflow:hidden;display:block"><i style="display:block;height:100%;width:${pc}%;background:${c}"></i></span><b style="width:38px;text-align:left;color:#102944">${pc}%</b></div>`};
+    const dn=PH.filter(f=>wCalc(W.filter(i=>i.phase===f))===100).length;
+    PH.forEach((f,i)=>put(i?row(f):`<div style="margin-top:6px"><div class="st">مراحل الأعمال ونسب الإنجاز (${dn} من ${PH.length} مراحل مكتملة)</div>${row(f)}</div>`));
+  }
   /* أبرز ما تم */
   if(cfg.upd&&d.ups.length){
     const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
@@ -1027,7 +1037,7 @@ function modalHtml(){
   const K={invc:["contr","إنشاء حساب مقاول للمشروع: "+(p?.name||""),"المقاول يرى هذا المشروع فقط: يرفع التقارير والمعوقات والصور ويناقشك، ولا يرى ملاحظات الإدارة."],
     invm:["mgmt","إنشاء حساب الإدارة","الإدارة تشاهد كل المشاريع والتقارير والمعوقات والملاحظات، ولا ترى مناقشاتك مع المقاول، ولا تعدّل شيئاً."],
     invs:["site","إنشاء حساب مدير موقع","مدير الموقع يدخل المشاريع التي تسنده إليها فقط: يرفع التقارير والمعوقات والصور ويناقش، ولا يرى ملاحظات الإدارة ولا السعر."],
-    invp:["pm","إنشاء حساب مدير مشروع","مدير المشروع ينشئ مشاريعه ويديرها بصلاحياتك ويدعو مقاوليه، ولا يرى مشاريع غيره، ولا يحذف الملاحظات أو المناقشات أو التقارير."]};
+    invp:["pm","إنشاء حساب مدير مشروع","مدير مشروع (بدون «ال») ينشئ مشاريعه ويديرها بصلاحياتك ويدعو مقاوليه، ولا يرى مشاريع غيره، ولا يحذف الملاحظات أو المناقشات أو التقارير."]};
   const [role,title,desc]=K[m];
   const nm=role==="mgmt"?"admin":(role==="pm"?"pm":role==="site"?"site":"contr")+Math.floor(1000+Math.random()*9000);
   return `<div class="modal"><div class="box"><h3>${esc(title)}</h3><p class="lbl">${desc}</p>
