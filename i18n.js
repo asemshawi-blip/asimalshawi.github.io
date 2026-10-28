@@ -6,7 +6,7 @@ var D={
 "التصميم":"Design","قيد التنفيذ":"In progress","تم التسليم":"Delivered",
 "متابعة الأعمال":"Work Tracking","ملاحظات الإدارة":"Management Notes","المناقشات":"Discussions","المعوقات والملاحظات":"Issues & Notes","التقارير":"Reports","الصور والفيديوهات":"Photos & Videos",
 "اكتب ملاحظة":"Write a note","اكتب رسالة":"Write a message","اكتب المعوق أو الملاحظة":"Describe the issue or note","عنوان التقرير وملخصه":"Report title and summary","وصف (اختياري)":"Description (optional)",
-"متأخر":"Late","على الموعد":"On time","إنشاء":"New build","ترميم":"Renovation","الدخول":"Login","قبول الدعوة":"Accept invitation","تسجيل الدخول":"Sign in",
+"متأخر":"Late","على الموعد":"On time","إنشاء":"Construction","ترميم":"Refurbishment","مشروع ترميم":"Refurbishment project","تقرير ترميم شامل":"Comprehensive refurbishment report","الدخول":"Login","قبول الدعوة":"Accept invitation","تسجيل الدخول":"Sign in",
 "اسم المستخدم أو البريد الإلكتروني":"Username or email","كلمة المرور":"Password","دخول":"Sign in","إنشاء حساب جديد":"Create new account",
 "البريد أو كلمة المرور غير صحيحة":"Incorrect email or password","تم إنشاء الحساب":"Account created","تعذر تحميل المشاريع":"Could not load projects","فشل الرفع":"Upload failed",
 "التسلّم والتجهيز":"Handover & Preparation","استلام الموقع ورفع المقاسات":"Site handover and measurements","تجهيز الموقع":"Site preparation",
