@@ -135,13 +135,15 @@ async function signUp(){
   if(!data.session)return loginView("تم إنشاء الحساب. أكّد بريدك ثم افتح رابط الدعوة مرة ثانية وسجّل دخول.");
   S.user=data.user;boot();
 }
-async function out(){await sb.auth.signOut();location.href=location.pathname}
+async function out(){try{const r=await navigator.serviceWorker.ready,x=await r.pushManager.getSubscription();if(x)await sb.rpc("push_drop",{e:x.endpoint})}catch(e){}await sb.auth.signOut();location.href=location.pathname}
 async function boot(){
   if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
   await load();
-  if(isMg()){await loadWelcome();S.modal="welcome";render()}
+  const dl=await deepLink();
+  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}
+  checkPush();
 }
 
 /* ===== 4) البيانات والملفات ===== */
@@ -252,10 +254,43 @@ function worksHtml(p){
   ${adm?`<div class="box"><b>إضافة بند</b><input id="wph" list="wphl" placeholder="المرحلة"><datalist id="wphl">${ph.map(f=>`<option value="${esc(f)}">`).join("")}</datalist><input id="wnm" placeholder="اسم البند"><input id="wwt" type="number" min="0.5" step="0.5" value="1" placeholder="الوزن"><button class="btn" onclick="addW()">إضافة</button></div>`:""}`;
 }
 
+/* ===== الإشعارات ===== */
+const VAPID_PUBLIC="BO0Nn0gRZtyZmGyf_kTbN_r70ucgvAOcPkS8HFIlh_AcsezhqC21Qu3uKhRSO5JwLJrImuHyzUMpdA_XNw3Go8U";
+const b64=s=>{s=(s+"=".repeat((4-s.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+const isMob=()=>/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+const pushBtn=()=>("PushManager" in window&&isMob()&&!S.pushOn)?'<button class="sm" onclick="enablePush()">🔔 تفعيل الإشعارات</button>':"";
+const pushSave=sub=>{const j=sub.toJSON();return sb.rpc("push_save",{e:j.endpoint,k:j.keys.p256dh,a:j.keys.auth})};
+async function checkPush(){
+  try{if(!("PushManager" in window)||Notification.permission!=="granted")return;
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(sub){await pushSave(sub);S.pushOn=true;render()}}catch(e){}
+}
+async function enablePush(){
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),st=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  if(ios&&!st)return alert("في الآيفون: افتح الموقع من Safari ← مشاركة ← إضافة إلى الشاشة الرئيسية، ثم افتح التطبيق من الشاشة الرئيسية وفعّل الإشعارات");
+  if(!("PushManager" in window))return alert("هذا المتصفح لا يدعم الإشعارات");
+  if(VAPID_PUBLIC.startsWith("PUT_"))return alert("مفتاح الإشعارات غير مضبوط بعد");
+  try{
+    if(await Notification.requestPermission()!=="granted")return alert("لم يتم السماح بالإشعارات. فعّلها من إعدادات الموقع في المتصفح");
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID_PUBLIC)});
+    const {error}=await pushSave(sub);if(error)throw error;
+    S.pushOn=true;render();alert("تم تفعيل الإشعارات على هذا الجهاز")
+  }catch(e){alert("تعذر تفعيل الإشعارات: "+(e.message||e))}
+}
+async function deepLink(p,t){
+  const q=new URLSearchParams(location.search);p=p||q.get("p");t=t||q.get("t");
+  const pr=p&&S.projects.find(x=>String(x.id)===String(p));if(!pr)return false;
+  S.modal=null;await openP(pr.id);
+  if(t&&TABS.some(x=>x.k===t&&x.see.includes(S.role)))await setTab(t);
+  history.replaceState(null,"",location.pathname);return true;
+}
+navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&S.user)deepLink(e.data.open.p,e.data.open.t)});
+
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }

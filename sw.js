@@ -1,4 +1,4 @@
-const CACHE="pm-v25",CDN="pm-cdn-v1";
+const CACHE="pm-v26",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -35,5 +35,20 @@ self.addEventListener("fetch",event=>{
     const slow=new Promise(res=>setTimeout(async()=>res(await cache.match(request)),3000));
     try{return (await Promise.race([net,slow]))||await net}
     catch{return (await cache.match(request))||Response.error()}
+  })());
+});
+
+/* الإشعارات */
+self.addEventListener("push",e=>{
+  let d={};try{d=e.data.json()}catch(_){d={body:e.data?e.data.text():""}}
+  e.waitUntil(self.registration.showNotification(d.title||"إدارة المشاريع",{body:d.body||"",icon:"./icon-192.png",badge:"./icon-192.png",tag:d.tag,renotify:!!d.tag,dir:"rtl",lang:"ar",data:{p:d.p,t:d.t}}));
+});
+self.addEventListener("notificationclick",e=>{
+  e.notification.close();const {p,t}=e.notification.data||{};
+  e.waitUntil((async()=>{
+    const cs=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+    const c=cs.find(x=>new URL(x.url).pathname.endsWith("pm.html"))||cs[0];
+    if(c){await c.focus();c.postMessage({open:{p,t}});return}
+    await self.clients.openWindow("./pm.html"+(p?"?p="+encodeURIComponent(p)+"&t="+encodeURIComponent(t||""):""));
   })());
 });

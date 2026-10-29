@@ -1,7 +1,7 @@
 /* زر تبديل اللغة: عربي / English — يترجم واجهة الموقع فقط (التقارير تبقى بالعربية) */
 (function(){
 var D={
-"إدارة المشاريع":"Project Management","المشاريع":"Projects","جاري التحميل":"Loading","الإعدادات":"Settings",
+"إدارة المشاريع":"Project Management","تفعيل الإشعارات":"Enable notifications","تم تفعيل الإشعارات على هذا الجهاز":"Notifications enabled on this device","مفتاح الإشعارات غير مضبوط بعد":"Notification key is not configured yet","هذا المتصفح لا يدعم الإشعارات":"This browser does not support notifications","المشاريع":"Projects","جاري التحميل":"Loading","الإعدادات":"Settings",
 "مدير المشروع":"Project Director","مدير مشروع":"Project Manager","الإدارة":"Management","المقاول":"Contractor","مدير الموقع":"Site Manager","مدير موقع":"Site manager",
 "التصميم":"Design","قيد التنفيذ":"In progress","تم التسليم":"Delivered",
 "متابعة الأعمال":"Work Tracking","ملاحظات الإدارة":"Management Notes","المناقشات":"Discussions","المعوقات والملاحظات":"Issues & Notes","التقارير":"Reports","الصور والفيديوهات":"Photos & Videos",
