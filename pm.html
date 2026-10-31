@@ -345,7 +345,7 @@ function home(){
     const L=S.projects.filter(p=>p.status===k);
     return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm","mgmt"].includes(S.role)?`<button class="btn alt" onclick="xlPush()">📥 إضافة إلى ملف Excel</button>${window.showOpenFilePicker?`<button class="btn alt" onclick="xlPush(null,true)">📁 ملف آخر</button>`:""}`:""}${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm","mgmt"].includes(S.role)?`<button class="btn alt" onclick="xlPush()">📥 إضافة إلى ملف Excel</button>`:""}${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
   S.q=value.trim().toLocaleLowerCase();
@@ -1209,12 +1209,13 @@ async function xlPush(pid,pick){
   const pr=true;let h=null,file=null;
   try{
     if(window.showOpenFilePicker){
-      if(!pick){try{const sh=await XH.get();if(sh&&(await sh.requestPermission({mode:"readwrite"}))==="granted"){file=await sh.getFile();h=sh}}catch(e){h=null;file=null}}
-      if(!h){
-        [h]=await showOpenFilePicker({types:[{description:"ملف Excel",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
-        if(await h.requestPermission({mode:"readwrite"})!=="granted")return alert("لم يُسمح بالتعديل على الملف");
-        file=await h.getFile();try{await XH.set(h)}catch(e){}
-      }
+      /* يفتح نافذة اختيار الملف في كل مرة، ويبدأ من مجلد الملف السابق للتسهيل */
+      let st=null;try{st=await XH.get()}catch(e){}
+      const opt={types:[{description:"ملف Excel",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]};
+      try{[h]=await showOpenFilePicker(st?{...opt,startIn:st}:opt)}
+      catch(e){if(e&&e.name==="AbortError")return;if(!st)throw e;[h]=await showOpenFilePicker(opt)}
+      if(await h.requestPermission({mode:"readwrite"})!=="granted")return alert("لم يُسمح بالتعديل على الملف");
+      file=await h.getFile();try{await XH.set(h)}catch(e){}
     }else{file=await xlInput();if(!file)return}
   }catch(e){if(e&&e.name==="AbortError")return;return alert("تعذر فتح الملف: "+(e&&e.message||e))}
   if(!/\.xlsx$/i.test(file.name))return alert("المدعوم ملفات xlsx فقط. احفظ ملفك بصيغة xlsx ثم أعد المحاولة");
@@ -1246,7 +1247,7 @@ async function xlPush(pid,pick){
     const known=new Set(Object.values(map)),other=[];
     ws.getRow(hr).eachCell({includeEmpty:false},(c,ci)=>{if(!known.has(ci)&&String(c.text).trim())other.push(String(c.text).trim())});
     const addTxt=add.slice(0,6).map(p=>{const q=xlParse(p);return `${q.num||p.name}${q.city?" ← قسم "+q.city:""}`}).join("، ")+(add.length>6?" ...":"");
-    if(!confirm(`الملف: ${file.name}\nالورقة: ${ws.name}\n\nتحديث ${upd.length} مشروع موجود، وإضافة ${add.length} مشروع جديد.${add.length?"\nسيُضاف: "+addTxt:""}${stale.length?"\nسيُحذف السطر "+stale.join("، ")+" (إضافة سابقة بصيغة غير صحيحة) ويُعاد إدراجه في مكانه الصحيح":""}\nالأعمدة المطابقة: ${Object.keys(map).length}${other.length?"\nأعمدة لن ألمسها: "+other.slice(0,8).join("، "):""}\n\nتنبيه: احتفظ بنسخة احتياطية من الملف. الرسوم البيانية والجداول المحورية داخل الملف قد لا تُحفظ.\n\nمتابعة؟`))return;
+    if(!confirm(`(نسخة الإضافة 33)\nالملف: ${file.name}\nالورقة: ${ws.name}\n\nتحديث ${upd.length} مشروع موجود، وإضافة ${add.length} مشروع جديد.${add.length?"\nسيُضاف: "+addTxt:""}${stale.length?"\nسيُحذف السطر "+stale.join("، ")+" (إضافة سابقة بصيغة غير صحيحة) ويُعاد إدراجه في مكانه الصحيح":""}\nالأعمدة المطابقة: ${Object.keys(map).length}${other.length?"\nأعمدة لن ألمسها: "+other.slice(0,8).join("، "):""}\n\nتنبيه: احتفظ بنسخة احتياطية من الملف. الرسوم البيانية والجداول المحورية داخل الملف قد لا تُحفظ.\n\nمتابعة؟`))return;
     xlApply(ws,hr,map,pl);
     const buf=await wb.xlsx.writeBuffer();let saved=false;
     if(h){try{const w=await h.createWritable();await w.write(buf);await w.close();saved=true}catch(e){alert("تعذر الحفظ مباشرة في الملف ("+(e&&e.message||e)+"). سأنزّل نسخة محدّثة بدلاً من ذلك.")}}
