@@ -170,12 +170,13 @@ async function shrink(f){
     return b&&b.size<f.size?new File([b],"photo.jpg",{type:"image/jpeg"}):f;
   }catch(e){return f}
 }
-async function up(pid,f){
+const isNetErr=e=>/fetch|network|load failed|timeout|abort|offline/i.test(String((e&&e.message)||e));
+async function up(pid,f,quiet){
   f=await shrink(f);
   const ext=(f.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"")||"bin";
   const path=`${pid}/${crypto.randomUUID()}.${ext}`;
-  const {error}=await sb.storage.from("media").upload(path,f,{contentType:f.type||"application/octet-stream"});
-  if(error){alert("فشل الرفع: "+error.message);return null}
+  let error;try{({error}=await sb.storage.from("media").upload(path,f,{contentType:f.type||"application/octet-stream"}))}catch(e){error=e}
+  if(error){if(quiet&&(!navigator.onLine||isNetErr(error)))return "NET";alert("فشل الرفع: "+error.message);return null}
   return path;
 }
 async function loadE(){
@@ -228,17 +229,18 @@ async function seedW(){
 }
 async function setW(id,v){
   const {error}=await sb.from("work_items").update({pct:+v}).eq("id",id);if(error)return alert(error.message);
-  const i=S.works.find(x=>x.id===id);i.pct=+v;i.updated_at=new Date().toISOString();
+  const i=S.works.find(x=>x.id===id);logA("work",`${i.name}: ${i.pct}% ← ${+v}%`);i.pct=+v;i.updated_at=new Date().toISOString();
   wSync(S.projects.find(x=>x.id===S.cur));render();
 }
 async function addW(){
   const ph=$("wph").value.trim(),nm=$("wnm").value.trim(),w=parseFloat($("wwt").value)||1;
   if(!ph||!nm)return alert("اكتب المرحلة واسم البند");
   const {error}=await sb.from("work_items").insert({project_id:S.cur,phase:ph,name:nm,weight:w,sort:S.works.length+1000});
-  if(error)return alert(error.message);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+  if(error)return alert(error.message);logA("work","إضافة بند: "+nm+" ("+ph+")");await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
 }
 async function delW(id){
   if(!confirm("حذف البند؟"))return;
+  logA("work","حذف بند: "+((S.works.find(x=>x.id===id)||{}).name||""));
   await sb.from("work_items").delete().eq("id",id);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
 }
 async function moveP(i,d){
@@ -256,7 +258,7 @@ async function addM(nm){
   nm=(nm||$("mtn").value).trim();if(!nm)return alert("اكتب اسم العمل");
   const pl=($("mtp")?$("mtp").value:"").trim()||"عام";
   const {error}=await sb.from("work_items").insert({project_id:S.cur,phase:pl,name:nm,weight:1,sort:S.works.length+1000});
-  if(error)return alert(error.message);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+  if(error)return alert(error.message);logA("work","إضافة عمل: "+nm+(pl!=="عام"?" ("+pl+")":""));await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
 }
 function maintHtml(p){
   const ed=["owner","pm","contr","site"].includes(S.role),adm=["owner","pm"].includes(S.role),W=S.works;
@@ -343,7 +345,7 @@ function home(){
     const L=S.projects.filter(p=>p.status===k);
     return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm","mgmt"].includes(S.role)?`<button class="btn alt" onclick="exportX()">📊 تصدير Excel</button>`:""}${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
   S.q=value.trim().toLocaleLowerCase();
@@ -372,6 +374,7 @@ function proj(){
     <div><span>مدير المنطقة</span><b>${esc(p.area_name)||"-"}</b></div>
     ${["owner","pm","site"].includes(S.role)?tel("جوال المقاول",p.contractor_phone)+tel("جوال مدير المنطقة",p.area_phone):""}
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
+    ${["owner","pm","contr"].includes(S.role)?tel("جوال مدير الموقع",p.site_phone):""}
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
@@ -379,8 +382,9 @@ function proj(){
   const toPM=p.pm_phone&&["owner","mgmt","contr","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
   const toCT=p.contractor_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
   const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
-  const talk=toPM||toCT||toAM?`<div class="acts">${toPM}${toCT}${toAM}</div>`:"";
-  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button></div>`:"";
+  const toSM=p.site_phone&&["owner","pm","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.site_phone,`السلام عليكم${p.site_manager?" "+p.site_manager:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير الموقع</a>`:"";
+  const talk=toPM||toCT||toAM||toSM?`<div class="acts">${toPM}${toSM}${toCT}${toAM}</div>`:"";
+  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="exportX(S.cur)">📊 تصدير Excel</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
@@ -1020,15 +1024,20 @@ async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
   const s=$("mb").value,d=$("md").value;
   if(s&&d&&d<s)return alert("تاريخ التسليم قبل تاريخ البداية");
-  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value);
-  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
-  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
+  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value),sp=normP($("msp").value);
+  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap)||($("msp").value.trim()&&!sp))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
+  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
   $("mbtn").disabled=true;$("mbtn").textContent="جاري الحفظ...";
   const q=S.modal==="edit"?sb.from("projects").update(row).eq("id",S.cur):sb.from("projects").insert(row);
   const {data,error}=await q.select().single();
   if(error){alert(error.message);return modal(null)}
   const f=$("mc").files[0];
   if(f){const path=await up(data.id,f);if(path)await sb.from("projects").update({cover_path:path}).eq("id",data.id)}
+  {const o=S.modal==="edit"?S.projects.find(x=>x.id===S.cur):null,ch=[];
+   if(!o)ch.push("إنشاء المشروع");
+   else{const df=(l,a,b)=>{if(String(a??"")!==String(b??""))ch.push(`${l}: ${a||"-"} ← ${b||"-"}`)};
+     df("الاسم",o.name,row.name);df("الحالة",(ST[o.status]||[])[0],ST[row.status][0]);df("النوع",TYN[o.ptype]||"إنشاء",TYN[row.ptype]);df("الإنجاز",o.progress,row.progress);df("تاريخ البداية",o.start_date,row.start_date);df("تاريخ التسليم",o.due,row.due);df("المقاول",o.contractor_name,row.contractor_name);df("السعر",o.price,row.price)}
+   if(ch.length)logA("project",ch.join(" · "),data.id)}
   S.modal=null;await load();
 }
 async function delProj(){
@@ -1041,6 +1050,86 @@ async function delProj(){
   if(error)return alert(error.message);
   S.cur=null;S.modal=null;await load();
 }
+/* ===== سجل النشاط ===== */
+function logA(action,detail,pid){try{if(!S.user||!(pid||S.cur))return;sb.from("activity_log").insert({project_id:pid||S.cur,user_id:S.user.id,role:ROLES[S.role]||"",action,detail:String(detail||"").slice(0,300)}).then(()=>{},()=>{})}catch(e){}}
+async function openLog(){
+  const {data,error}=await sb.from("activity_log").select("*").eq("project_id",S.cur).order("created_at",{ascending:false}).limit(200);
+  S.log=error?null:(data||[]);modal("log");
+}
+function logHtml(){
+  const L=S.log,AC={project:"المشروع",work:"الأعمال",entry:"السجل"};
+  return `<div class="modal"><div class="box" style="max-height:85vh;overflow:auto"><h3>سجل النشاط</h3>${L===null?`<p class="lbl">لم يُفعَّل سجل النشاط في قاعدة البيانات بعد. شغّل ملف activity-log.sql في Supabase.</p>`:!L.length?`<div class="empty">لا توجد أنشطة مسجلة بعد</div>`:L.map(a=>`<div class="item"><div>${esc(a.detail)}</div><small>${esc(a.role)} · ${AC[a.action]||esc(a.action)} · ${new Date(a.created_at).toLocaleString("ar")}</small></div>`).join("")}<button class="btn" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+
+/* ===== طابور الرفع بدون إنترنت (IndexedDB) ===== */
+const QDB=(()=>{let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open("pm-queue",1);r.onupgradeneeded=()=>r.result.createObjectStore("q",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(m,f)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction("q",m),r=f(t.objectStore("q"));t.oncomplete=()=>res(r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})};
+  return{put:v=>tx("readwrite",s=>s.put(v)),all:()=>tx("readonly",s=>s.getAll()),del:id=>tx("readwrite",s=>s.delete(id)),clear:()=>tx("readwrite",s=>s.clear())};
+})();
+async function qAdd(it,noRender){
+  it.id=crypto.randomUUID();it.ts=Date.now();
+  try{await QDB.put(it)}catch(e){alert("تعذر الحفظ على الجهاز: "+(e&&e.message||e));if(!noRender)render();return}
+  await qUpd();
+  alert("لا يوجد اتصال مستقر. حُفظ العنصر على جهازك وسيُرفع تلقائيا عند عودة الإنترنت.");
+  if(!noRender)render();
+}
+async function qUpd(){
+  let n=0;try{n=(await QDB.all()).length}catch(e){}
+  let b=$("qb");
+  if(!n){if(b)b.remove();return}
+  if(!b){b=document.createElement("div");b.id="qb";b.style.cssText="position:fixed;left:12px;right:12px;bottom:12px;z-index:50;background:#102944;color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;box-shadow:0 8px 24px #0004;font-size:14px";document.body.appendChild(b)}
+  b.innerHTML=`<span>⏳ ${n} عنصر بانتظار الرفع${navigator.onLine?"":" (لا يوجد اتصال)"}</span><span><button class="sm" onclick="syncQ()">رفع الآن</button> <button class="sm" onclick="qClear()">حذف المعلّق</button></span>`;
+}
+async function qClear(){if(!confirm("حذف كل العناصر المعلّقة من الجهاز دون رفعها؟"))return;try{await QDB.clear()}catch(e){}qUpd()}
+async function syncQ(){
+  if(syncQ.b||!navigator.onLine||!S.user)return;syncQ.b=true;let ok=0;
+  try{
+    const L=(await QDB.all()).sort((a,b)=>a.ts-b.ts);
+    for(const it of L){
+      const base={project_id:it.project_id,kind:it.kind,author_role:it.author_role},rows=[],ups=[];let bad=false;
+      if(!it.files.length)rows.push({...base,body:it.body,file_path:null,file_type:null});
+      else for(const f of it.files){const path=await up(it.project_id,f,true);if(!path||path==="NET"){bad=true;break}ups.push(path);rows.push({...base,body:it.body,file_path:path,file_type:f.type,...(it.bax||{})})}
+      if(bad){if(ups.length)await sb.storage.from("media").remove(ups);break}
+      const {error}=await sb.from("entries").insert(rows);
+      if(error){if(ups.length)await sb.storage.from("media").remove(ups);break}
+      await QDB.del(it.id);ok++;
+      logA("entry",`${(TABS.find(x=>x.k===it.kind)||{}).n||""}: ${it.files.length?it.files.length+" ملف":String(it.body||"").slice(0,60)} (رُفع بعد عودة الاتصال)`,it.project_id);
+    }
+  }catch(e){}
+  finally{syncQ.b=false}
+  await qUpd();
+  if(ok){
+    if(S.cur&&S.tab!=="works"){try{await loadE()}catch(e){}}
+    const ae=document.activeElement;if(!S.modal&&!(ae&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName)))render();
+  }
+}
+addEventListener("online",()=>{qUpd();syncQ()});addEventListener("offline",qUpd);
+setInterval(()=>syncQ(),60000);setTimeout(()=>{qUpd();syncQ()},3000);
+
+/* ===== تصدير Excel ===== */
+function loadX(){return window.XLSX?Promise.resolve():new Promise((res,rej)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";e.onload=res;e.onerror=()=>rej(new Error("xlsx"));document.head.appendChild(e)})}
+async function exportX(pid){
+  const L=pid?S.projects.filter(p=>p.id===pid):S.projects;if(!L.length)return alert("لا توجد مشاريع للتصدير");
+  const ids=L.map(p=>p.id),pr=["owner","pm","mgmt"].includes(S.role),pn=Object.fromEntries(L.map(p=>[p.id,p]));
+  document.body.style.cursor="wait";
+  try{
+    try{await loadX()}catch(e){return alert("تعذر تحميل مكتبة التصدير. تأكد من الاتصال بالإنترنت ثم أعد المحاولة")}
+    const all=async(tbl,ord)=>{const out=[];for(let f=0;;f+=1000){const {data,error}=await ord(sb.from(tbl).select("*").in("project_id",ids)).range(f,f+999);if(error)throw error;out.push(...data);if(data.length<1000)break}return out};
+    let W,E;
+    try{[W,E]=await Promise.all([all("work_items",q=>q.order("project_id").order("sort")),all("entries",q=>q.eq("kind","issues").order("created_at"))])}catch(e){return alert("تعذر جلب البيانات: "+e.message)}
+    const tp=p=>TYN[p.ptype]||"إنشاء",dt=v=>v?fmt(new Date(v)):"";
+    const R1=L.map(p=>({"المشروع":p.name||"","الموقع":p.loc||"","النوع":tp(p),"الحالة":ST[p.status][0],"الإنجاز %":clamp(p.progress),"تاريخ البداية":p.start_date||"","تاريخ التسليم":p.due||"","الموعد":(timing(p)||{}).t||"","مدير المشروع":p.pm_name||"","المقاول":p.contractor_name||"","مدير الموقع":p.site_manager||"","مدير المنطقة":p.area_name||"",...(pr?{"السعر":p.price==null?"":p.price}:{})}));
+    const R2=W.filter(w=>pn[w.project_id]).map(w=>({"المشروع":pn[w.project_id].name,"النوع":tp(pn[w.project_id]),"المرحلة / المكان":w.phase||"","البند":w.name||"","الوزن":w.weight,"الإنجاز %":w.pct,"الحالة":w.pct>=100?"تمّ":w.pct>0?"جاري":"لم يبدأ","آخر تحديث":w.pct?dt(w.updated_at):""}));
+    const R3=E.filter(e=>pn[e.project_id]).map(e=>({"المشروع":pn[e.project_id].name,"المعوق / الملاحظة":e.body||"","الحالة":e.resolved===true?"تم الحل":e.resolved===false?"مفتوح":"مسجّل","التاريخ":dt(e.created_at),"المسجّل":e.author_role||""}));
+    const wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};
+    const add=(n,rows)=>{if(!rows.length)return;const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=Object.keys(rows[0]).map(k=>{let m=k.length+2;rows.forEach(r=>{const l=String(r[k]??"").length+2;if(l>m)m=l});return{wch:Math.min(45,m)}});XLSX.utils.book_append_sheet(wb,ws,n)};
+    add("المشاريع",R1);add("الأعمال",R2);add("المعوقات",R3);
+    const nm=pid?("مشروع-"+String(L[0].name||"").replace(/[\\\/:*?"<>|]/g,"").trim()):"المشاريع";
+    XLSX.writeFile(wb,nm+"-"+fmt(new Date())+".xlsx");
+  }finally{document.body.style.cursor=""}
+}
+
 async function addE(){
   const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
   if(!body&&!fs.length)return;
@@ -1053,21 +1142,25 @@ async function addE(){
   const bax=bat?{ba:bat,ba_ref:bat==="after"?S.baSel:null}:{};
   $("bt").disabled=true;
   const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
+  if(!navigator.onLine)return qAdd({...base,body,bax,files:fs});
   if(!fs.length)rows.push({...base,body,file_path:null,file_type:null});
   {const res=new Array(fs.length);let nx=0,dn=0;
   await Promise.all(Array.from({length:Math.min(3,fs.length)},async()=>{
-    while(nx<fs.length){const i=nx++;res[i]=await up(S.cur,fs[i]);$("bt").textContent=`جاري رفع ${++dn} من ${fs.length}...`}
+    while(nx<fs.length){const i=nx++;res[i]=await up(S.cur,fs[i],true);$("bt").textContent=`جاري رفع ${++dn} من ${fs.length}...`}
   }));
-  res.forEach((path,i)=>{if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax})});}
+  const net=[];res.forEach((path,i)=>{if(path==="NET")net.push(fs[i]);else if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax})});if(net.length)await qAdd({...base,body,bax,files:net},true);}
   if(!rows.length)return render();
   const {error}=await sb.from("entries").insert(rows);
+  if(error&&!fs.length&&isNetErr(error)){await qAdd({...base,body,bax,files:[]});return}
   if(error)alert(error.message.includes("ba")?"لم يتم تفعيل قبل/بعد في قاعدة البيانات بعد. شغّل ملف before-after.sql في Supabase ثم أعد المحاولة.":error.message);
+  if(!error)logA("entry",`${(TABS.find(x=>x.k===S.tab)||{}).n||""}: ${fs.length?fs.length+" ملف":body.slice(0,60)}`);
   S.baSel=null;
   await loadE();render();
 }
 async function delE(id){
   if(!confirm("حذف؟"))return;
   const e=S.entries.find(x=>x.id===id);
+  logA("entry","حذف من "+((TABS.find(x=>x.k===S.tab)||{}).n||"")+": "+String((e&&e.body)||"").slice(0,40));
   if(e?.file_path)await sb.storage.from("media").remove([e.file_path]);
   await sb.from("entries").delete().eq("id",id);await loadE();render();
 }
@@ -1078,7 +1171,7 @@ function projForm(p){
   const edit=S.modal==="edit";
   return `<div class="modal"><div class="box"><h3>${edit?"تعديل المشروع":"مشروع جديد"}</h3>
   <input id="mn" placeholder="اسم المشروع" value="${esc(p.name)}"><input id="ml" placeholder="الموقع / المدينة" value="${esc(p.loc)}">
-  <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}">
+  <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}"><input id="msp" dir="ltr" inputmode="tel" placeholder="جوال مدير الموقع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.site_phone)}">
   <input id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
   <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
@@ -1098,6 +1191,7 @@ function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
   if(m==="welcome")return welcomeHtml();
   if(m==="report")return reportHtml();
+  if(m==="log")return logHtml();
   if(m==="users")return usersHtml();
   if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
   if(m==="edit")return projForm(p);
