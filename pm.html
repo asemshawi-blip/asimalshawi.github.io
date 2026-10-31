@@ -87,7 +87,7 @@ const TABS=[
 {k:"coord",n:"التنسيق",see:"owner,pm,site",add:"owner,pm,site",ph:"اكتب ملاحظة أو خطوات التنسيق مع المالك..."},
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
-{k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
+{k:"media",n:"الصور",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*",multi:1}];
 let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],q:""};
 
 /* ===== 2) مساعدات ===== */
@@ -161,14 +161,19 @@ async function sign(paths){
   (data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl});
 }
 async function shrink(f){
-  if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<250*1024)return f;
-  try{
-    const bmp=await createImageBitmap(f,{imageOrientation:"from-image"}),M=1600,k=Math.min(1,M/Math.max(bmp.width,bmp.height));
-    const c=document.createElement("canvas");c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
-    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);if(bmp.close)bmp.close();
-    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",.82));c.width=c.height=0;
-    return b&&b.size<f.size?new File([b],"photo.jpg",{type:"image/jpeg"}):f;
-  }catch(e){return f}
+  if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<120*1024)return f;
+  /* يجرب 3 مستويات ويقف عند أول ناتج ≤ 180 كيلوبايت */
+  const LV=[[1280,.72],[1100,.62],[960,.52]],TARGET=180*1024;
+  const out=(c,q)=>new Promise(r=>c.toBlob(r,"image/jpeg",q));
+  const enc=async(src,w,h)=>{let best=null;
+    for(const [M,q] of LV){const k=Math.min(1,M/Math.max(w,h)),c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
+      const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);
+      const b=await out(c,q);c.width=c.height=0;if(b&&(!best||b.size<best.size))best=b;if(b&&b.size<=TARGET)break}
+    return best};
+  let b=null;
+  try{const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});try{b=await enc(bmp,bmp.width,bmp.height)}finally{if(bmp.close)bmp.close()}}catch(e){}
+  if(!b){const u=URL.createObjectURL(f);try{const im=new Image();im.src=u;await im.decode();b=await enc(im,im.naturalWidth,im.naturalHeight)}catch(e){}finally{URL.revokeObjectURL(u)}}
+  return b&&b.size<f.size?new File([b],"photo.jpg",{type:"image/jpeg"}):f;
 }
 const isNetErr=e=>/fetch|network|load failed|timeout|abort|offline/i.test(String((e&&e.message)||e));
 async function up(pid,f,quiet){
@@ -1112,6 +1117,10 @@ setInterval(()=>syncQ(),60000);setTimeout(()=>{qUpd();syncQ()},3000);
 async function addE(){
   const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
   if(!body&&!fs.length)return;
+  const isVid=f=>(f.type&&f.type.startsWith("video/"))||/\.(mp4|mov|m4v|avi|mkv|webm|3gp|wmv)$/i.test(f.name||"");
+  if(fs.some(isVid))return alert("رفع الفيديو غير متاح في الموقع للحفاظ على المساحة. صوّر لقطات من الفيديو، أو ارفعه في OneDrive وألصق رابطه في الملاحظة.");
+  const bigF=fs.find(f=>!(f.type&&f.type.startsWith("image/"))&&f.size>5*1024*1024);
+  if(bigF)return alert("حجم الملف "+(bigF.size/1048576).toFixed(1)+" ميجا والحد المسموح 5 ميجا. ارفعه في OneDrive وألصق رابطه في الملاحظة.");
   const bat=$("bat")?.value||"";
   if(bat){
     if(!fs.length)return alert("ارفع صورة لتحديد قبل / بعد");
