@@ -84,7 +84,7 @@ const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"]
 const TABS=[
 {k:"works",n:"متابعة الأعمال",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site"},
 {k:"notes",n:"ملاحظات الإدارة",see:"owner,pm,mgmt",add:"owner,pm,mgmt",ph:"اكتب ملاحظة..."},
-{k:"talks",n:"المناقشات",see:"owner,pm,contr,site",add:"owner,pm,contr,site",ph:"اكتب رسالة..."},
+{k:"coord",n:"التنسيق",see:"owner,pm,site",add:"owner,pm,site",ph:"اكتب ملاحظة أو خطوات التنسيق مع المالك..."},
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
 {k:"media",n:"الصور والفيديوهات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*,video/*",multi:1}];
@@ -345,7 +345,7 @@ function home(){
     const L=S.projects.filter(p=>p.status===k);
     return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm","mgmt"].includes(S.role)?`<button class="btn alt" onclick="exportX()">📊 تصدير Excel</button>`:""}${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm","mgmt"].includes(S.role)?`<button class="btn alt" onclick="xlPush()">📥 إضافة إلى ملف Excel</button>${window.showOpenFilePicker?`<button class="btn alt" onclick="xlPush(null,true)">📁 ملف آخر</button>`:""}`:""}${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
   S.q=value.trim().toLocaleLowerCase();
@@ -375,6 +375,7 @@ function proj(){
     ${["owner","pm","site"].includes(S.role)?tel("جوال المقاول",p.contractor_phone)+tel("جوال مدير المنطقة",p.area_phone):""}
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
     ${["owner","pm","contr"].includes(S.role)?tel("جوال مدير الموقع",p.site_phone):""}
+    ${["owner","pm","site"].includes(S.role)?`<div><span>موظف التنسيق مع المالك</span><b>${esc(p.coord_name)||"-"}</b></div>`+tel("جوال موظف التنسيق",p.coord_phone):""}
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
@@ -383,8 +384,9 @@ function proj(){
   const toCT=p.contractor_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
   const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
   const toSM=p.site_phone&&["owner","pm","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.site_phone,`السلام عليكم${p.site_manager?" "+p.site_manager:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير الموقع</a>`:"";
-  const talk=toPM||toCT||toAM||toSM?`<div class="acts">${toPM}${toSM}${toCT}${toAM}</div>`:"";
-  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="exportX(S.cur)">📊 تصدير Excel</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
+  const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
+  const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
+  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="xlPush(S.cur)">📥 إضافة إلى ملف Excel</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
@@ -1024,9 +1026,9 @@ async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
   const s=$("mb").value,d=$("md").value;
   if(s&&d&&d<s)return alert("تاريخ التسليم قبل تاريخ البداية");
-  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value),sp=normP($("msp").value);
-  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap)||($("msp").value.trim()&&!sp))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
-  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
+  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value),sp=normP($("msp").value),co=normP($("mcph").value);
+  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap)||($("msp").value.trim()&&!sp)||($("mcph").value.trim()&&!co))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
+  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,coord_name:$("mcn").value.trim()||null,coord_phone:co||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
   $("mbtn").disabled=true;$("mbtn").textContent="جاري الحفظ...";
   const q=S.modal==="edit"?sb.from("projects").update(row).eq("id",S.cur):sb.from("projects").insert(row);
   const {data,error}=await q.select().single();
@@ -1107,27 +1109,70 @@ async function syncQ(){
 addEventListener("online",()=>{qUpd();syncQ()});addEventListener("offline",qUpd);
 setInterval(()=>syncQ(),60000);setTimeout(()=>{qUpd();syncQ()},3000);
 
-/* ===== تصدير Excel ===== */
-function loadX(){return window.XLSX?Promise.resolve():new Promise((res,rej)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";e.onload=res;e.onerror=()=>rej(new Error("xlsx"));document.head.appendChild(e)})}
-async function exportX(pid){
-  const L=pid?S.projects.filter(p=>p.id===pid):S.projects;if(!L.length)return alert("لا توجد مشاريع للتصدير");
-  const ids=L.map(p=>p.id),pr=["owner","pm","mgmt"].includes(S.role),pn=Object.fromEntries(L.map(p=>[p.id,p]));
+/* ===== إضافة المشاريع إلى ملف Excel موجود ===== */
+const XH=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open("pm-xl",1);r.onupgradeneeded=()=>r.result.createObjectStore("h");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(m,f)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction("h",m),r=f(t.objectStore("h"));t.oncomplete=()=>res(r.result);t.onerror=()=>rej(t.error)})};
+  return{get:()=>tx("readonly",s=>s.get("f")),set:v=>tx("readwrite",s=>s.put(v,"f"))};
+})();
+function loadXL(){return window.ExcelJS?Promise.resolve():new Promise((res,rej)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";e.onload=res;e.onerror=()=>rej(new Error("exceljs"));document.head.appendChild(e)})}
+const xn=v=>String(v==null?"":v).replace(/[\u064B-\u065F\u0640]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/[^\u0621-\u064Aa-z0-9]/gi,"").toLowerCase();
+const XCOLS={name:["اسمالمشروع","المشروع","مشروع","اسم"],loc:["الموقع","المدينه","الموقعالمدينه","موقعالمشروع"],type:["النوع","نوعالمشروع"],status:["الحاله","حالهالمشروع"],progress:["الانجاز","نسبهالانجاز","نسبهالتقدم","التقدم"],start:["تاريخالبدايه","البدايه","تاريخالبدء","البدء","تاريخالمباشره"],due:["تاريخالتسليم","التسليم","موعدالتسليم","تاريخالانتهاء","الانتهاء"],timing:["الموعد","موقفالتسليم","التاخير"],pm:["مديرالمشروع","مديرمشروع"],contractor:["المقاول","اسمالمقاول"],site:["مديرالموقع","مشرفالموقع"],area:["مديرالمنطقه"],price:["السعر","قيمهالمشروع","قيمهالعقد","التكلفه"]};
+const xlInput=()=>new Promise(res=>{const i=document.createElement("input");i.type="file";i.accept=".xlsx";i.onchange=()=>res(i.files[0]||null);i.oncancel=()=>res(null);i.click()});
+async function xlPush(pid,pick){
+  if(!["owner","pm","mgmt"].includes(S.role))return;
+  const L=pid?S.projects.filter(p=>p.id===pid):S.projects;if(!L.length)return alert("لا توجد مشاريع");
+  const pr=true;let h=null,file=null;
+  try{
+    if(window.showOpenFilePicker){
+      if(!pick){try{const sh=await XH.get();if(sh&&(await sh.requestPermission({mode:"readwrite"}))==="granted"){file=await sh.getFile();h=sh}}catch(e){h=null;file=null}}
+      if(!h){
+        [h]=await showOpenFilePicker({types:[{description:"ملف Excel",accept:{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":[".xlsx"]}}]});
+        if(await h.requestPermission({mode:"readwrite"})!=="granted")return alert("لم يُسمح بالتعديل على الملف");
+        file=await h.getFile();try{await XH.set(h)}catch(e){}
+      }
+    }else{file=await xlInput();if(!file)return}
+  }catch(e){if(e&&e.name==="AbortError")return;return alert("تعذر فتح الملف: "+(e&&e.message||e))}
+  if(!/\.xlsx$/i.test(file.name))return alert("المدعوم ملفات xlsx فقط. احفظ ملفك بصيغة xlsx ثم أعد المحاولة");
   document.body.style.cursor="wait";
   try{
-    try{await loadX()}catch(e){return alert("تعذر تحميل مكتبة التصدير. تأكد من الاتصال بالإنترنت ثم أعد المحاولة")}
-    const all=async(tbl,ord)=>{const out=[];for(let f=0;;f+=1000){const {data,error}=await ord(sb.from(tbl).select("*").in("project_id",ids)).range(f,f+999);if(error)throw error;out.push(...data);if(data.length<1000)break}return out};
-    let W,E;
-    try{[W,E]=await Promise.all([all("work_items",q=>q.order("project_id").order("sort")),all("entries",q=>q.eq("kind","issues").order("created_at"))])}catch(e){return alert("تعذر جلب البيانات: "+e.message)}
-    const tp=p=>TYN[p.ptype]||"إنشاء",dt=v=>v?fmt(new Date(v)):"";
-    const R1=L.map(p=>({"المشروع":p.name||"","الموقع":p.loc||"","النوع":tp(p),"الحالة":ST[p.status][0],"الإنجاز %":clamp(p.progress),"تاريخ البداية":p.start_date||"","تاريخ التسليم":p.due||"","الموعد":(timing(p)||{}).t||"","مدير المشروع":p.pm_name||"","المقاول":p.contractor_name||"","مدير الموقع":p.site_manager||"","مدير المنطقة":p.area_name||"",...(pr?{"السعر":p.price==null?"":p.price}:{})}));
-    const R2=W.filter(w=>pn[w.project_id]).map(w=>({"المشروع":pn[w.project_id].name,"النوع":tp(pn[w.project_id]),"المرحلة / المكان":w.phase||"","البند":w.name||"","الوزن":w.weight,"الإنجاز %":w.pct,"الحالة":w.pct>=100?"تمّ":w.pct>0?"جاري":"لم يبدأ","آخر تحديث":w.pct?dt(w.updated_at):""}));
-    const R3=E.filter(e=>pn[e.project_id]).map(e=>({"المشروع":pn[e.project_id].name,"المعوق / الملاحظة":e.body||"","الحالة":e.resolved===true?"تم الحل":e.resolved===false?"مفتوح":"مسجّل","التاريخ":dt(e.created_at),"المسجّل":e.author_role||""}));
-    const wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};
-    const add=(n,rows)=>{if(!rows.length)return;const ws=XLSX.utils.json_to_sheet(rows);ws["!cols"]=Object.keys(rows[0]).map(k=>{let m=k.length+2;rows.forEach(r=>{const l=String(r[k]??"").length+2;if(l>m)m=l});return{wch:Math.min(45,m)}});XLSX.utils.book_append_sheet(wb,ws,n)};
-    add("المشاريع",R1);add("الأعمال",R2);add("المعوقات",R3);
-    const nm=pid?("مشروع-"+String(L[0].name||"").replace(/[\\\/:*?"<>|]/g,"").trim()):"المشاريع";
-    XLSX.writeFile(wb,nm+"-"+fmt(new Date())+".xlsx");
-  }finally{document.body.style.cursor=""}
+    try{await loadXL()}catch(e){return alert("تعذر تحميل مكتبة Excel. تأكد من الاتصال بالإنترنت ثم أعد المحاولة")}
+    const wb=new ExcelJS.Workbook();
+    try{await wb.xlsx.load(await file.arrayBuffer())}catch(e){return alert("تعذر قراءة الملف: "+(e&&e.message||e))}
+    const H=Object.entries(XCOLS);let best=null;
+    wb.worksheets.forEach(ws=>{if(ws.state&&ws.state!=="visible")return;
+      for(let r=1;r<=Math.min(ws.rowCount,20);r++){
+        const map={};let n=0;
+        ws.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const k=xn(c.text);if(!k)return;for(const [f,syn] of H){if(!map[f]&&syn.includes(k)){map[f]=ci;n++;break}}});
+        if(map.name&&(!best||n>best.n))best={ws,r,map,n};
+      }});
+    if(!best)return alert("ما لقيت عمود اسم المشروع في ملفك. تأكد أن في صف العناوين عموداً باسم «اسم المشروع».");
+    const {ws,r:hr,map}=best;let last=hr;
+    for(let r=ws.rowCount;r>hr;r--){if(xn(ws.getRow(r).getCell(map.name).text)){last=r;break}}
+    const idx={};for(let r=hr+1;r<=last;r++){const k=xn(ws.getRow(r).getCell(map.name).text);if(k&&!idx[k])idx[k]=r}
+    const upd=L.filter(p=>idx[xn(p.name)]),add=L.filter(p=>!idx[xn(p.name)]);
+    const known=new Set(Object.values(map)),other=[];
+    ws.getRow(hr).eachCell({includeEmpty:false},(c,ci)=>{if(!known.has(ci)&&String(c.text).trim())other.push(String(c.text).trim())});
+    if(!confirm(`الملف: ${file.name}\nالورقة: ${ws.name}\n\nتحديث ${upd.length} مشروع موجود، وإضافة ${add.length} مشروع جديد في آخر الجدول.\nالأعمدة المطابقة: ${Object.keys(map).length}${other.length?"\nأعمدة لن ألمسها: "+other.slice(0,8).join("، "):""}\n\nتنبيه: احتفظ بنسخة احتياطية من الملف. الرسوم البيانية والجداول المحورية داخل الملف قد لا تُحفظ.\n\nمتابعة؟`))return;
+    const tpl=last>hr?ws.getRow(last):null;
+    const put=(cell,f,v,sample)=>{
+      if(v==null||v==="")return;let val=v;
+      if(f==="start"||f==="due"){const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)val=(sample&&typeof sample.value==="string")?String(v):new Date(Date.UTC(+m[1],+m[2]-1,+m[3]))}
+      else if(f==="progress"&&sample&&/%/.test(sample.numFmt||""))val=v/100;
+      cell.value=val;if(val instanceof Date&&!cell.numFmt)cell.numFmt="yyyy-mm-dd";
+    };
+    const vals=p=>({loc:p.loc,type:TYN[p.ptype]||"إنشاء",status:ST[p.status][0],progress:clamp(p.progress),start:p.start_date,due:p.due,timing:(timing(p)||{}).t,pm:p.pm_name,contractor:p.contractor_name,site:p.site_manager,area:p.area_name,price:p.price});
+    const fill=(row,p,isNew)=>{const v=vals(p);if(isNew)row.getCell(map.name).value=p.name;
+      for(const f of Object.keys(map)){if(f==="name")continue;const c=row.getCell(map[f]),sm=(!isNew&&c.value!=null)?c:(tpl?tpl.getCell(map[f]):null);put(c,f,v[f],sm)}};
+    upd.forEach(p=>fill(ws.getRow(idx[xn(p.name)]),p,false));
+    add.forEach(p=>{const nr=ws.getRow(++last);
+      if(tpl){for(let c=1;c<=ws.columnCount;c++)nr.getCell(c).style=Object.assign({},tpl.getCell(c).style);if(tpl.height)nr.height=tpl.height}
+      fill(nr,p,true)});
+    const buf=await wb.xlsx.writeBuffer();let saved=false;
+    if(h){try{const w=await h.createWritable();await w.write(buf);await w.close();saved=true}catch(e){alert("تعذر الحفظ مباشرة في الملف ("+(e&&e.message||e)+"). سأنزّل نسخة محدّثة بدلاً من ذلك.")}}
+    if(!saved){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));a.download=file.name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+    alert(saved?`تم تحديث ملفك: ${upd.length} محدّث، ${add.length} مضاف.`:`نُزّلت نسخة محدّثة باسم ${file.name} (${upd.length} محدّث، ${add.length} مضاف). استبدل بها ملفك القديم.`);
+  }catch(e){alert("حدث خطأ: "+(e&&e.message||e))}
+  finally{document.body.style.cursor=""}
 }
 
 async function addE(){
@@ -1176,6 +1221,7 @@ function projForm(p){
   <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
   <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
+  <input id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
   <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${p.ptype!=="reno"&&p.ptype!=="maint"?"selected":""}>إنشاء</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option><option value="maint" ${p.ptype==="maint"?"selected":""}>صيانة</option></select>
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
