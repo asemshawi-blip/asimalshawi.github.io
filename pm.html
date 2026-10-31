@@ -1116,7 +1116,7 @@ const XH=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexe
 })();
 function loadXL(){return window.ExcelJS?Promise.resolve():new Promise((res,rej)=>{const e=document.createElement("script");e.src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";e.onload=res;e.onerror=()=>rej(new Error("exceljs"));document.head.appendChild(e)})}
 const xn=v=>String(v==null?"":v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[\u064B-\u065F\u0640]/g,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/[^\u0621-\u064Aa-z0-9]/gi,"").toLowerCase();
-const XCOLS={name:["اسمالمشروع","المشروع","مشروع","اسم","رقمالفرع","كودالفرع","رقم","كود","الرقم"],bname:["اسمالفرع","الفرع","فرع","اسمالموقع"],loc:["الموقع","المدينه","الموقعالمدينه","موقعالمشروع"],type:["النوع","نوعالمشروع"],status:["الحاله","حالهالمشروع"],progress:["الانجاز","نسبهالانجاز","نسبهالتقدم","التقدم"],start:["تاريخالبدايه","البدايه","تاريخالبدء","البدء","تاريخالمباشره"],due:["تاريخالتسليم","التسليم","موعدالتسليم","تاريخالانتهاء","الانتهاء"],timing:["الموعد","موقفالتسليم","التاخير"],pm:["مديرالمشروع","مديرمشروع"],contractor:["المقاول","اسمالمقاول"],site:["مديرالموقع","مشرفالموقع"],area:["مديرالمنطقه"],price:["السعر","قيمهالمشروع","قيمهالعقد","التكلفه"]};
+const XCOLS={name:["اسمالمشروع","المشروع","مشروع","اسم","رقمالفرع","كودالفرع","رقم","كود","الرقم"],bname:["اسمالفرع","الفرع","فرع","اسمالموقع"],summary:["ملخصالشغل","ملخصالاعمال","ملخصالعمل","ملخصالمشروع","الاعمال","الاعمالالمنفذه","الاعمالالمطلوبه","نطاقالعمل","وصفالعمل","الملخص","الشغل","تفاصيلالعمل"],loc:["الموقع","المدينه","الموقعالمدينه","موقعالمشروع"],type:["النوع","نوعالمشروع"],status:["الحاله","حالهالمشروع"],progress:["الانجاز","نسبهالانجاز","نسبهالتقدم","التقدم"],start:["تاريخالبدايه","البدايه","تاريخالبدء","البدء","تاريخالمباشره"],due:["تاريخالتسليم","التسليم","موعدالتسليم","تاريخالانتهاء","الانتهاء"],timing:["الموعد","موقفالتسليم","التاخير"],pm:["مديرالمشروع","مديرمشروع"],contractor:["المقاول","اسمالمقاول"],site:["مديرالموقع","مشرفالموقع"],area:["مديرالمنطقه"],price:["السعر","قيمهالمشروع","قيمهالعقد","التكلفه"]};
 const xlNums=t=>String(t==null?"":t).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).match(/\d{3,}/g)||[];
 /* ===== xl core start ===== */
 /* اسم المشروع «صيانة فرع 5377 - الرياض - الشويعية» ← رقم الفرع، المدينة، اسم الفرع */
@@ -1141,7 +1141,7 @@ function xlPlan(ws,hr,map,L){
   /* سطور نصية أضيفت سابقا بصيغة خاطئة («صيانة فرع ٥٣٧٧» وحدها): تُحذف وتُنقل لمكانها الصحيح */
   const stale=[];
   L.forEach(p=>{const r=hit.get(p.id);if(!r)return;const x=rws.find(y=>y.r===r);
-    if(x&&!/^[0-9٠-٩\s]+$/.test(x.txt)&&/فرع/.test(x.txt)){
+    if(x){
       let other=false;for(let k=1;k<=ws.columnCount;k++){if(k!==map.name&&String(ws.getRow(r).getCell(k).text||"").trim())other=true}
       if(!other){stale.push(r);hit.delete(p.id)}}});
   return{hit,stale,upd:L.filter(p=>hit.has(p.id)),add:L.filter(p=>!hit.has(p.id))};
@@ -1154,15 +1154,15 @@ function xlApply(ws,hr,map,pl){
     else if(f==="progress"&&sample&&/%/.test(sample.numFmt||""))val=v/100;
     cell.value=val;if(val instanceof Date&&!cell.numFmt)cell.numFmt="yyyy-mm-dd";
   };
-  const vals=p=>({loc:p.loc,type:TYN[p.ptype]||"إنشاء",status:ST[p.status][0],progress:clamp(p.progress),start:p.start_date,due:p.due,timing:(timing(p)||{}).t,pm:p.pm_name,contractor:p.contractor_name,site:p.site_manager,area:p.area_name,price:p.price});
-  const fill=(row,p,isNew,tpl)=>{const v=vals(p);for(const f of Object.keys(map)){if(f==="name"||f==="bname")continue;const c=row.getCell(map[f]),sm=(!isNew&&c.value!=null)?c:(tpl?tpl.getCell(map[f]):null);put(c,f,v[f],sm)}};
+  const vals=p=>({loc:p.loc,type:TYN[p.ptype]||"إنشاء",status:ST[p.status][0],progress:clamp(p.progress),start:p.start_date,due:p.due,timing:(timing(p)||{}).t,pm:p.pm_name,contractor:p.contractor_name,site:p.site_manager,area:p.area_name,price:p.price,summary:(pl.sums||{})[p.id]});
+  const fill=(row,p,isNew,tpl)=>{const v=vals(p);for(const f of Object.keys(map)){if(f==="name"||f==="bname")continue;const c=row.getCell(map[f]);if(!isNew&&f==="summary"&&c.value!=null&&String(c.text).trim())continue;const sm=(!isNew&&c.value!=null)?c:(tpl?tpl.getCell(map[f]):null);put(c,f,v[f],sm)}};
   const copyStyle=(src,dst)=>{for(let c=1;c<=ws.columnCount;c++)dst.getCell(c).style=Object.assign({},src.getCell(c).style);if(src.height)dst.height=src.height};
   const rescan=()=>{const L2=xlLast(ws,hr,map),hs=[],br=[];for(let r=hr+1;r<=L2;r++){if(xlIsHdr(ws,r,map))hs.push({r,k:xn(ws.getRow(r).getCell(map.name).text)});else if(xn(ws.getRow(r).getCell(map.name).text))br.push(r)}return{L2,hs,br}};
   const mrg=()=>{try{return ws.model.merges.slice()}catch(e){return []}};
   const shiftInsert=pos=>{const mg=mrg();mg.forEach(m=>ws.unMergeCells(m));ws.spliceRows(pos,0,[]);
     mg.forEach(m=>{const g=m.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);if(!g)return;let r1=+g[2],r2=+g[4];if(r1>=pos){r1++;r2++}else if(r2>=pos)r2++;ws.mergeCells(`${g[1]}${r1}:${g[3]}${r2}`)})};
   /* 1) تحديث السطور الموجودة (قبل أي إزاحة) */
-  upd.forEach(p=>fill(ws.getRow(hit.get(p.id)),p,false,null));
+  upd.forEach(p=>{const row=ws.getRow(hit.get(p.id));fill(row,p,false,null);if(map.bname){const bc=row.getCell(map.bname),bn=xlParse(p).bn;if(bn&&!String(bc.text||"").trim())bc.value=bn}});
   /* 2) حذف السطور الخاطئة */
   stale.slice().sort((a,b)=>b-a).forEach(r=>{if(r===ws.rowCount)ws.spliceRows(r,1);else ws.getRow(r).eachCell({includeEmpty:true},c=>{c.value=null})});
   /* 3) إضافة كل مشروع جديد تحت مدينته */
@@ -1195,7 +1195,7 @@ function xlApply(ws,hr,map,pl){
 const xlInput=()=>new Promise(res=>{const i=document.createElement("input");i.type="file";i.accept=".xlsx";i.onchange=()=>res(i.files[0]||null);i.oncancel=()=>res(null);i.click()});
 function xlAsk(cols,pre){
   return new Promise(res=>{
-    const F=[["name","رقم الفرع / اسم المشروع *"],["bname","اسم الفرع"],["status","الحالة"],["progress","نسبة الإنجاز"],["start","تاريخ البداية"],["due","تاريخ التسليم"],["type","النوع"],["loc","الموقع"],["pm","مدير المشروع"],["contractor","المقاول"],["site","مدير الموقع"],["area","مدير المنطقة"],["price","السعر"],["timing","الموعد"]];
+    const F=[["name","رقم الفرع / اسم المشروع *"],["bname","اسم الفرع"],["summary","ملخص الشغل"],["status","الحالة"],["progress","نسبة الإنجاز"],["start","تاريخ البداية"],["due","تاريخ التسليم"],["type","النوع"],["loc","الموقع"],["pm","مدير المشروع"],["contractor","المقاول"],["site","مدير الموقع"],["area","مدير المنطقة"],["price","السعر"],["timing","الموعد"]];
     const d=document.createElement("div");d.className="modal";
     d.innerHTML=`<div class="box" style="max-height:88vh;overflow:auto"><h3>ربط أعمدة ملفك</h3><p class="lbl">اختر العمود المقابل لكل بيان. اترك «—» لما لا تريد تعبئته. سأتذكر اختيارك لهذا الملف.</p>${F.map(([f,l])=>`<label class="lbl">${l}</label><select data-f="${f}"><option value="">—</option>${cols.map(c=>`<option value="${c.ci}" ${pre[f]===c.ci?"selected":""}>${esc(c.t)}</option>`).join("")}</select>`).join("")}<div class="acts"><button class="btn" id="xlok">متابعة</button><button class="btn alt" id="xlno">إلغاء</button></div></div>`;
     document.body.appendChild(d);
@@ -1225,29 +1225,37 @@ async function xlPush(pid,pick){
     const wb=new ExcelJS.Workbook();
     try{await wb.xlsx.load(await file.arrayBuffer())}catch(e){return alert("تعذر قراءة الملف: "+(e&&e.message||e))}
     const H=Object.entries(XCOLS),vis=wb.worksheets.filter(w=>!w.state||w.state==="visible");let best=null;
-    vis.forEach(ws=>{for(let r=1;r<=Math.min(ws.rowCount,30);r++){const map={};let n=0;
-      ws.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const k=xn(c.text);if(!k)return;for(const [f,syn] of H){if(!map[f]&&syn.includes(k)){map[f]=ci;n++;break}}});
-      if(map.name&&(!best||n>best.n))best={ws,r,map,n}}});
     let sv={};try{sv=JSON.parse(localStorage.getItem("xlmap")||"{}")[file.name]||{}}catch(e){}
-    if(!best&&sv.sheet){const w0=vis.find(w=>w.name===sv.sheet);
-      if(w0)for(let r=1;r<=Math.min(w0.rowCount,30)&&!best;r++){const map={};w0.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const k=xn(c.text);for(const f in sv.map)if(!map[f]&&xn(sv.map[f])===k)map[f]=ci});if(map.name)best={ws:w0,r,map,n:Object.keys(map).length}}}
+    if(!pick&&sv.v===2&&sv.sheet){const w0=vis.find(w=>w.name===sv.sheet);
+      if(w0)for(let r=1;r<=Math.min(w0.rowCount,30)&&!best;r++){const map={};w0.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const k=xn(c.text);for(const f in sv.map)if(!map[f]&&xn(sv.map[f])===k)map[f]=ci});if(map.name)best={ws:w0,r,map,n:Object.keys(map).length,explicit:true}}}
     if(!best){
-      let hb=null;vis.forEach(ws=>{for(let r=1;r<=Math.min(ws.rowCount,30);r++){const cols=[];ws.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const t=String(c.text).trim();if(t)cols.push({ci,t})});if(cols.length>=2&&(!hb||cols.length>hb.cols.length))hb={ws,r,cols}}});
+      let cand=null;
+      vis.forEach(ws=>{for(let r=1;r<=Math.min(ws.rowCount,30);r++){const map={};let n=0;
+        ws.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const k=xn(c.text);if(!k)return;for(const [f,syn] of H){if(!map[f]&&syn.includes(k)){map[f]=ci;n++;break}}});
+        if(map.name&&(!cand||n>cand.n))cand={ws,r,map,n}}});
+      let hb=null;
+      if(cand){const cols=[];cand.ws.getRow(cand.r).eachCell({includeEmpty:false},(c,ci)=>{const t=String(c.text).trim();if(t)cols.push({ci,t})});hb={ws:cand.ws,r:cand.r,cols}}
+      else vis.forEach(ws=>{for(let r=1;r<=Math.min(ws.rowCount,30);r++){const cols=[];ws.getRow(r).eachCell({includeEmpty:false},(c,ci)=>{const t=String(c.text).trim();if(t)cols.push({ci,t})});if(cols.length>=2&&(!hb||cols.length>hb.cols.length))hb={ws,r,cols}}});
       if(!hb)return alert("ما لقيت صف عناوين في الملف (يلزم عمودان على الأقل بعناوين).");
-      const pre={};hb.cols.forEach(c=>{const k=xn(c.t);for(const [f,syn] of H){if(!pre[f]&&syn.includes(k)){pre[f]=c.ci;break}}});
+      const pre=cand?Object.assign({},cand.map):{};
+      if(!cand)hb.cols.forEach(c=>{const k=xn(c.t);for(const [f,syn] of H){if(!pre[f]&&syn.includes(k)){pre[f]=c.ci;break}}});
       document.body.style.cursor="";
       const mp=await xlAsk(hb.cols,pre);if(!mp)return;
       document.body.style.cursor="wait";
       best={ws:hb.ws,r:hb.r,map:mp,n:Object.keys(mp).length,explicit:true};
-      try{const all=JSON.parse(localStorage.getItem("xlmap")||"{}"),m={};for(const f in mp){const c=hb.cols.find(x=>x.ci===mp[f]);if(c)m[f]=c.t}all[file.name]={sheet:hb.ws.name,map:m};localStorage.setItem("xlmap",JSON.stringify(all))}catch(e){}
+      try{const all=JSON.parse(localStorage.getItem("xlmap")||"{}"),m={};for(const f in mp){const c=hb.cols.find(x=>x.ci===mp[f]);if(c)m[f]=c.t}all[file.name]={v:2,sheet:hb.ws.name,map:m};localStorage.setItem("xlmap",JSON.stringify(all))}catch(e){}
     }
     const {ws,r:hr,map}=best;
-    if(!best.explicit){const uc=new Set(Object.values(map));ws.getRow(hr).eachCell({includeEmpty:false},(c,ci)=>{if(uc.has(ci))return;const k=xn(c.text);if(!k)return;for(const [f,syn] of H){if(!map[f]&&syn.includes(k)){map[f]=ci;uc.add(ci);break}}})}
-    const pl=xlPlan(ws,hr,map,L),{upd,add,stale}=pl;
+    /* ملخص الشغل: أسماء بنود الأعمال لمشاريع الصيانة */
+    const sums={};
+    try{const ids=L.filter(p=>p.ptype==="maint").map(p=>p.id),wm={};
+      if(ids.length)for(let f=0;;f+=1000){const {data,error}=await sb.from("work_items").select("project_id,name,sort").in("project_id",ids).order("project_id").order("sort").range(f,f+999);if(error)break;data.forEach(w=>{(wm[w.project_id]=wm[w.project_id]||[]).push(w.name)});if(data.length<1000)break}
+      for(const id in wm)sums[id]=wm[id].join("، ").slice(0,300)}catch(e){}
+    const pl=xlPlan(ws,hr,map,L),{upd,add,stale}=pl;pl.sums=sums;
     const known=new Set(Object.values(map)),other=[];
     ws.getRow(hr).eachCell({includeEmpty:false},(c,ci)=>{if(!known.has(ci)&&String(c.text).trim())other.push(String(c.text).trim())});
     const addTxt=add.slice(0,6).map(p=>{const q=xlParse(p);return `${q.num||p.name}${q.city?" ← قسم "+q.city:""}`}).join("، ")+(add.length>6?" ...":"");
-    if(!confirm(`(نسخة الإضافة 33)\nالملف: ${file.name}\nالورقة: ${ws.name}\n\nتحديث ${upd.length} مشروع موجود، وإضافة ${add.length} مشروع جديد.${add.length?"\nسيُضاف: "+addTxt:""}${stale.length?"\nسيُحذف السطر "+stale.join("، ")+" (إضافة سابقة بصيغة غير صحيحة) ويُعاد إدراجه في مكانه الصحيح":""}\nالأعمدة المطابقة: ${Object.keys(map).length}${other.length?"\nأعمدة لن ألمسها: "+other.slice(0,8).join("، "):""}\n\nتنبيه: احتفظ بنسخة احتياطية من الملف. الرسوم البيانية والجداول المحورية داخل الملف قد لا تُحفظ.\n\nمتابعة؟`))return;
+    if(!confirm(`(نسخة الإضافة 34)\nالملف: ${file.name}\nالورقة: ${ws.name}\n\nتحديث ${upd.length} مشروع موجود، وإضافة ${add.length} مشروع جديد.${add.length?"\nسيُضاف: "+addTxt:""}${stale.length?"\nسيُحذف السطر "+stale.join("، ")+" (سطر ناقص أضيف سابقا) ويُعاد إدراجه كاملا في مكانه الصحيح":""}\nالأعمدة المطابقة: ${Object.keys(map).length}${other.length?"\nأعمدة لن ألمسها: "+other.slice(0,8).join("، "):""}\n\nتنبيه: احتفظ بنسخة احتياطية من الملف. الرسوم البيانية والجداول المحورية داخل الملف قد لا تُحفظ.\n\nمتابعة؟`))return;
     xlApply(ws,hr,map,pl);
     const buf=await wb.xlsx.writeBuffer();let saved=false;
     if(h){try{const w=await h.createWritable();await w.write(buf);await w.close();saved=true}catch(e){alert("تعذر الحفظ مباشرة في الملف ("+(e&&e.message||e)+"). سأنزّل نسخة محدّثة بدلاً من ذلك.")}}
