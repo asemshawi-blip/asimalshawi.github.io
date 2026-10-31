@@ -1,4 +1,4 @@
-const CACHE="pm-v26",CDN="pm-cdn-v1";
+const CACHE="pm-v27",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
