@@ -1,4 +1,4 @@
-const CACHE="pm-v39",CDN="pm-cdn-v1";
+const CACHE="pm-v41",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -49,6 +49,6 @@ self.addEventListener("notificationclick",e=>{
     const cs=await self.clients.matchAll({type:"window",includeUncontrolled:true});
     const c=cs.find(x=>new URL(x.url).pathname.endsWith("pm.html"))||cs[0];
     if(c){await c.focus();c.postMessage({open:{p,t}});return}
-    await self.clients.openWindow("./pm.html"+(p?"?p="+encodeURIComponent(p)+"&t="+encodeURIComponent(t||""):""));
+    await self.clients.openWindow("./pm.html"+(p?"?p="+encodeURIComponent(p)+"&t="+encodeURIComponent(t||""):(t?"?t="+encodeURIComponent(t):"")));
   })());
 });
