@@ -333,7 +333,7 @@ navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -1057,6 +1057,63 @@ async function delProj(){
   if(error)return alert(error.message);
   S.cur=null;S.modal=null;await load();
 }
+
+/* ===== تنظيف الصور اليتيمة (ملفات في التخزين لا يشير إليها أي سجل) — للمدير فقط ===== */
+const ORPH_GRACE_H=24;   // لا نلمس الملفات الأحدث من 24 ساعة (قد تكون قيد الرفع)
+function fmtSz(n){n=+n||0;return n>=1048576?(n/1048576).toFixed(1)+" ميجا":Math.max(1,Math.round(n/1024))+" كيلوبايت"}
+function openOrph(){S.orph={st:"idle",list:[],bytes:0,total:0,msg:""};modal("orph")}
+async function listAllFiles(){
+  const bk=sb.storage.from("media"),files=[];
+  const page=async prefix=>{const out=[];for(let o=0;;o+=1000){
+    const {data,error}=await bk.list(prefix,{limit:1000,offset:o,sortBy:{column:"name",order:"asc"}});
+    if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break}return out};
+  const top=await page("");
+  for(const it of top){
+    if(it.id){files.push({path:it.name,size:it.metadata?.size||0,at:it.created_at||it.updated_at});continue}
+    for(const f of await page(it.name)){if(f.id)files.push({path:it.name+"/"+f.name,size:f.metadata?.size||0,at:f.created_at||f.updated_at})}
+  }
+  return files;
+}
+async function scanOrph(){
+  S.orph={st:"scan",list:[],bytes:0,total:0,msg:""};render();
+  try{
+    const refs=new Set();
+    for(let o=0;;o+=1000){
+      const {data,error}=await sb.from("entries").select("file_path").not("file_path","is",null).range(o,o+999);
+      if(error)throw error;(data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
+    const {data:pr,error:pe}=await sb.from("projects").select("cover_path");if(pe)throw pe;
+    (pr||[]).forEach(p=>{if(p.cover_path)refs.add(p.cover_path)});
+    const files=await listAllFiles(),now=Date.now();
+    const orph=files.filter(f=>!refs.has(f.path)&&(!f.at||now-new Date(f.at).getTime()>ORPH_GRACE_H*3600e3));
+    /* حماية: إذا ما وجدنا أي مرجع إطلاقا والتخزين فيه ملفات، غالبا الصلاحيات ناقصة، لا نعرض شيئا للحذف */
+    if(!refs.size&&files.length)throw new Error("لم تُقرأ سجلات الملفات (تحقق من الصلاحيات). تم إيقاف التنظيف للأمان.");
+    S.orph={st:"ready",list:orph,bytes:orph.reduce((s,f)=>s+f.size,0),total:files.length,msg:""};
+  }catch(e){S.orph={st:"idle",list:[],bytes:0,total:0,msg:"تعذر الفحص: "+(e.message||e)}}
+  render();
+}
+async function delOrph(){
+  const O=S.orph;if(!O.list.length)return;
+  if(!confirm(`حذف ${O.list.length} ملف يتيم (${fmtSz(O.bytes)}) نهائيا؟ لا يمكن التراجع.`))return;
+  S.orph={...O,st:"del"};render();
+  let ok=0,err="";
+  for(let i=0;i<O.list.length;i+=100){
+    const ch=O.list.slice(i,i+100).map(f=>f.path);
+    const {data,error}=await sb.storage.from("media").remove(ch);
+    if(error){err=error.message;break}ok+=(data||[]).length}
+  logA("entry",`تنظيف الصور اليتيمة: حُذف ${ok} ملف (${fmtSz(O.bytes)})`,null);
+  S.orph={st:"done",list:[],bytes:0,total:0,msg:err?`حُذف ${ok} ثم توقف: ${err}`:`تم حذف ${ok} ملف وتحرير ${fmtSz(O.bytes)} ✅`};
+  render();
+}
+function orphHtml(){
+  const O=S.orph||{st:"idle",list:[],bytes:0,msg:""};
+  let body;
+  if(O.st==="scan"||O.st==="del")body=`<p class="lbl">${O.st==="scan"?"جاري فحص التخزين...":"جاري الحذف..."}</p>`;
+  else if(O.st==="ready")body=O.list.length
+    ?`<p>وُجد <b>${O.list.length}</b> ملف يتيم (من أصل ${O.total}) بحجم <b>${fmtSz(O.bytes)}</b>.</p><p class="lbl">هذه ملفات لا يرتبط بها أي تقرير أو ملاحظة أو غلاف مشروع، ومرّ عليها أكثر من ${ORPH_GRACE_H} ساعة.</p><button class="btn danger" onclick="delOrph()">🗑 حذف الملفات اليتيمة</button>`
+    :`<p>لا توجد ملفات يتيمة 👌 (فُحص ${O.total} ملف).</p>`;
+  else body=`${O.msg?`<p>${esc(O.msg)}</p>`:`<p class="lbl">يفحص كل ملفات التخزين ويعرض ما لا يرتبط بأي سجل قبل الحذف.</p>`}<button class="btn" onclick="scanOrph()">${O.st==="done"?"فحص مرة أخرى":"فحص الآن"}</button>`;
+  return `<div class="modal"><div class="box"><h3>🧹 تنظيف المساحة</h3>${body}<div style="margin-top:14px"><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+}
 /* ===== سجل النشاط ===== */
 function logA(action,detail,pid){try{if(!S.user||!(pid||S.cur))return;sb.from("activity_log").insert({project_id:pid||S.cur,user_id:S.user.id,role:ROLES[S.role]||"",action,detail:String(detail||"").slice(0,300)}).then(()=>{},()=>{})}catch(e){}}
 async function openLog(){
@@ -1182,6 +1239,7 @@ function modalHtml(){
   if(m==="report")return reportHtml();
   if(m==="log")return logHtml();
   if(m==="users")return usersHtml();
+  if(m==="orph")return orphHtml();
   if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
   if(m==="edit")return projForm(p);
   if(S.cred)return `<div class="modal"><div class="box"><h3>تم إنشاء الحساب ✅</h3>
