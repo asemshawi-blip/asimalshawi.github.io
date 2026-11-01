@@ -217,18 +217,25 @@ const WTPLR=[
 ["التشطيبات",[["الأسقف والأرضيات والبلاط",8],["الدهانات والتكسيات",6],["الأبواب والنجارة",5],["الإنارة والقطع الصحية والتجهيزات",4]]],
 ["الواجهات والأعمال الخارجية",[["إصلاح الواجهات والأعمال الخارجية",4]]],
 ["التسليم",[["التنظيف واختبار الأنظمة",2],["قائمة الملاحظات والتسليم وتصوير بعد",2]]]];
-const WTPLS={new:WTPL,reno:WTPLR};
+const WTPLM=[
+["بلاغ",[["استلام البلاغ وتوثيق الطلب",1]]],
+["معاينة",[["معاينة الموقع وتحديد نطاق العمل",1]]],
+["تسعير",[["إعداد واعتماد عرض السعر",1]]],
+["تنفيذ",[["تنفيذ أعمال الصيانة ومتابعتها",1]]],
+["تسليم",[["فحص الأعمال وتسليمها وتوثيقها",1]]]];
+const WTPLS={new:WTPL,reno:WTPLR,maint:WTPLM};
 async function loadW(){
   const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
   if(error)alert(error.message);S.works=data||[];
 }
 const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.round(a.reduce((x,i)=>x+i.weight*i.pct,0)/w):0};
-function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
+function wSync(p){if(S.works.length)p.progress=wCalc(p&&p.ptype==="maint"?S.works.filter(i=>WTPLM.some(([ph])=>ph===i.phase)):S.works)}
 async function seedW(){
   const pj=S.projects.find(x=>x.id===S.cur),T=WTPLS[pj&&pj.ptype]||WTPL;
-  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":"تحميل قالب مراحل مشروع التشطيب؟"))return;
-  let n=0;const rows=[];
-  T.forEach(([ph,it])=>it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++})));
+  if(!confirm(pj&&pj.ptype==="maint"?"تحميل مسار متابعة الصيانة (بلاغ، معاينة، تسعير، تنفيذ، تسليم)؟":pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":"تحميل قالب مراحل مشروع التشطيب؟"))return;
+  let n=S.works.reduce((m,x)=>Math.max(m,Number(x.sort)||0),-1)+1;const rows=[];
+  T.forEach(([ph,it])=>{if(pj&&pj.ptype==="maint"&&S.works.some(x=>x.phase===ph))return;it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++}))});
+  if(!rows.length)return alert("مراحل مسار الصيانة موجودة بالفعل");
   const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
   await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
 }
@@ -268,10 +275,12 @@ async function addM(nm){
 function maintHtml(p){
   const ed=["owner","pm","contr","site"].includes(S.role),adm=["owner","pm"].includes(S.role),W=S.works;
   const pls=[...new Set(W.map(i=>i.phase))];
+  const flow=WTPLM.map(([ph])=>ph),missing=flow.some(ph=>!pls.includes(ph));
+  const flowBtn=adm&&missing?`<button class="btn" style="margin-bottom:12px" onclick="seedW()">${W.length?"إضافة المراحل الناقصة لمسار الصيانة":"تحميل مسار الصيانة: بلاغ ← معاينة ← تسعير ← تنفيذ ← تسليم"}</button>`:"";
   const add=adm?`<div class="box"><b>إضافة عمل</b><input id="mtn" placeholder="اسم العمل (دهان الصالة، نقل الشاشات...)" onkeydown="if(event.key==='Enter')addM()"><input id="mtp" list="mtpl" placeholder="المكان (اختياري) مثل: الدور الثاني"><datalist id="mtpl">${pls.filter(x=>x!=="عام").map(f=>`<option value="${esc(f)}">`).join("")}</datalist>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${MQ.map(q=>`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="addM('${q}')">+ ${q}</button>`).join("")}</div>
     <button class="btn" onclick="addM()">إضافة</button></div>`:"";
-  if(!W.length)return `<div class="empty">لا توجد أعمال مسجلة لهذا المشروع بعد</div>${add}`;
+  if(!W.length)return `${flowBtn}<div class="empty">لا توجد مراحل أو أعمال مسجلة لهذا المشروع بعد</div>${add}`;
   const dn=W.filter(i=>i.pct>=100).length,grouped=pls.length>1||pls[0]!=="عام";
   const stBtn=i=>{const b=mB(i.pct),bg=b===100?"var(--done)":b?"var(--run)":"#e2e8f0",fg=b?"#fff":"#1b2a3b",t=b===100?"✅ تمّ":b?"جاري":"لم يبدأ";
     return ed?`<button class="sm" style="background:${bg};color:${fg};min-width:84px;margin:0" onclick="setW('${i.id}',${mNext(i.pct)})">${t}</button>`:`<b>${t}</b>`};
@@ -279,7 +288,7 @@ function maintHtml(p){
   const blocks=grouped?pls.map(f=>{const it=W.filter(i=>i.phase===f);return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>📍 ${esc(f)}</span><span>${it.filter(i=>i.pct>=100).length} / ${it.length}</span></div>${it.map(item).join("")}</div>`}).join(""):`<div class="box" style="margin-bottom:12px">${W.map(item).join("")}</div>`;
   const sum=W.length>1?`<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>أعمال منجزة</span><b>${dn} / ${W.length}</b></div></div>`:"";
   const fin=dn===W.length&&p.status!=="done"?`<p class="lbl">✅ اكتملت جميع الأعمال، يمكنك تحديث حالة المشروع إلى مكتمل من تعديل المشروع، وإضافة صور «بعد».</p>`:"";
-  return `${sum}${blocks}${fin}${add}`;
+  return `${flowBtn}${sum}${blocks}${fin}${add}`;
 }
 function worksHtml(p){
   if(p&&p.ptype==="maint")return maintHtml(p);
