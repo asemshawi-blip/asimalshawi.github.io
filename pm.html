@@ -220,71 +220,7 @@ const WTPLR=[
 const WTPLS={new:WTPL,reno:WTPLR};
 async function loadW(){
   const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
-  if(error)alert(error.message);S.works=data||[];S.mworkEntries=[];
-  const p=S.projects.find(x=>x.id===S.cur);
-  if(p&&p.ptype==="maint"){const {data:e}=await sb.from("entries").select("*").eq("project_id",S.cur).eq("kind","reports").order("created_at",{ascending:true});S.mworkEntries=(e||[]).filter(isMFlowEntry);await sign(S.mworkEntries.map(x=>x.file_path))}
-}
-const MWFLOW=["بلاغ","معاينة","تسعير","تنفيذ","تسليم"];
-const MWNames={"بلاغ":"استلام البلاغ وتوثيقه","معاينة":"معاينة الموقع وتوثيق الحالة","تسعير":"رفع عرض السعر للاعتماد","تنفيذ":"تنفيذ أعمال الصيانة وتوثيقها","تسليم":"فحص الأعمال وتسليمها"};
-const MWTag=id=>`[[maintenance:${id}]]`;
-const isMFlowEntry=e=>String(e?.body||"").includes("[[maintenance:");
-const mFlowText=e=>String(e?.body||"").replace(/^\[\[maintenance:[^\]]+\]\]\s*/,"");
-async function seedMaintFlow(){
-  if(!["owner","pm"].includes(S.role))return;
-  const missing=MWFLOW.filter(ph=>!S.works.some(w=>w.phase===ph));if(!missing.length)return alert("مراحل الصيانة موجودة بالفعل");
-  if(!confirm("إضافة مراحل الصيانة الخمس إلى متابعة الأعمال؟"))return;
-  let sort=Math.max(-1,...S.works.map(w=>Number(w.sort)||0))+1;
-  const rows=missing.map(ph=>({project_id:S.cur,phase:ph,name:MWNames[ph],weight:1,sort:sort++}));
-  const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
-  logA("work","إضافة مسار الصيانة: "+missing.join("، "));await loadW();render();
-}
-function mFlowRows(){return MWFLOW.map(ph=>S.works.find(w=>w.phase===ph)||null)}
-function mFlowEvents(id){return (S.mworkEntries||[]).filter(e=>String(e.body||"").startsWith(MWTag(id)))}
-async function mFlowUpdate(id,pct){
-  if(!["owner","pm","site"].includes(S.role))return;
-  const row=S.works.find(w=>w.id===id);if(!row)return;
-  const ix=MWFLOW.indexOf(row.phase),rows=mFlowRows();
-  if(ix>0&&(!rows[ix-1]||Number(rows[ix-1].pct)<100))return alert("أكمل المرحلة السابقة أولاً");
-  if(row.phase==="تسعير")return alert("أرفق عرض السعر وأرسله للاعتماد من بطاقة التسعير");
-  if(pct===100&&Number(row.pct)<50)return alert("ابدأ المرحلة أولاً");
-  const {error}=await sb.from("work_items").update({pct}).eq("id",id);if(error)return alert(error.message);
-  row.pct=pct;row.updated_at=new Date().toISOString();const p=S.projects.find(x=>x.id===S.cur);if(p)p.progress=wCalc(S.works.filter(w=>MWFLOW.includes(w.phase)));
-  logA("work",`${row.phase}: ${pct===100?"اكتملت":"بدأت"}`);render();
-}
-async function mFlowApprove(id){
-  if(!["owner","pm"].includes(S.role))return;
-  const row=S.works.find(w=>w.id===id);if(!row||row.phase!=="تسعير"||Number(row.pct)!==50)return;
-  if(!mFlowEvents(id).some(e=>e.file_path))return alert("لا يوجد عرض سعر مرفق للاعتماد");
-  if(!confirm("اعتماد عرض السعر والسماح ببدء التنفيذ؟"))return;
-  const {error}=await sb.from("work_items").update({pct:100}).eq("id",id);if(error)return alert(error.message);
-  row.pct=100;row.updated_at=new Date().toISOString();const p=S.projects.find(x=>x.id===S.cur);if(p)p.progress=wCalc(S.works.filter(w=>MWFLOW.includes(w.phase)));
-  logA("work","اعتماد عرض السعر؛ أصبح التنفيذ متاحاً");render();
-}
-async function mFlowSubmitQuote(id){
-  if(!["owner","pm","site"].includes(S.role))return;
-  const row=S.works.find(w=>w.id===id),file=$("mwqf"+id)?.files?.[0];if(!row||!file)return alert("اختر ملف عرض السعر أولاً");
-  if(Number(row.pct)>=50)return alert("تم إرسال عرض السعر بالفعل");
-  const ix=MWFLOW.indexOf(row.phase),rows=mFlowRows();if(ix>0&&Number(rows[ix-1]?.pct)<100)return alert("أكمل المعاينة أولاً");
-  if(file.size>15*1024*1024)return alert("حجم الملف يتجاوز 15 ميجابايت");
-  const note=$("mwqn"+id)?.value.trim()||"عرض سعر الصيانة",btn=$("mwqb"+id);if(btn){btn.disabled=true;btn.textContent="جاري رفع العرض…"}
-  const path=await up(S.cur,file);if(!path){render();return}
-  const body=MWTag(id)+" "+note+" · الملف: "+file.name;
-  const {error}=await sb.from("entries").insert({project_id:S.cur,kind:"reports",author_role:ROLES[S.role]||"",body,file_path:path,file_type:file.type||"application/octet-stream"});
-  if(error){await sb.storage.from("media").remove([path]);return alert("تعذر إرسال عرض السعر: "+error.message)}
-  const {error:we}=await sb.from("work_items").update({pct:50}).eq("id",id);if(we)return alert("تم رفع العرض لكن تعذر تحديث حالة التسعير: "+we.message);
-  row.pct=50;await loadW();logA("work","إرسال عرض سعر الصيانة للاعتماد: "+file.name);render();
-}
-async function mFlowAddUpdate(id){
-  if(!["owner","pm","site"].includes(S.role))return;
-  const row=S.works.find(w=>w.id===id),file=$("mwu"+id)?.files?.[0],txt=$("mwt"+id)?.value.trim()||"";if(!row||(!file&&!txt))return alert("أضف ملاحظة أو مرفقاً");
-  const ix=MWFLOW.indexOf(row.phase),rows=mFlowRows();if(ix>0&&Number(rows[ix-1]?.pct)<100)return alert("أكمل المرحلة السابقة أولاً");
-  if(file&&file.size>15*1024*1024)return alert("حجم الملف يتجاوز 15 ميجابايت");
-  const btn=$("mwb"+id);if(btn){btn.disabled=true;btn.textContent="جاري الحفظ…"}
-  const path=file?await up(S.cur,file):null;if(file&&!path){render();return}
-  const body=MWTag(id)+" "+(txt||file.name);
-  const {error}=await sb.from("entries").insert({project_id:S.cur,kind:"reports",author_role:ROLES[S.role]||"",body,file_path:path,file_type:file?.type||null});
-  if(error){if(path)await sb.storage.from("media").remove([path]);return alert("تعذر حفظ التحديث: "+error.message)}
-  await loadW();logA("work",`تحديث مرحلة ${row.phase}: ${txt||file.name}`);render();
+  if(error)alert(error.message);S.works=data||[];
 }
 const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.round(a.reduce((x,i)=>x+i.weight*i.pct,0)/w):0};
 function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
@@ -330,27 +266,20 @@ async function addM(nm){
   if(error)return alert(error.message);logA("work","إضافة عمل: "+nm+(pl!=="عام"?" ("+pl+")":""));await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
 }
 function maintHtml(p){
-  const W=S.works,adm=["owner","pm"].includes(S.role),canEdit=["owner","pm","site"].includes(S.role),rows=mFlowRows(),hasFlow=rows.some(Boolean);
-  const missing=adm&&rows.some(x=>!x)?`<button class="btn" onclick="seedMaintFlow()">إضافة المراحل الناقصة لمسار الصيانة</button>`:"";
-  if(!hasFlow){const old=W.filter(w=>!MWFLOW.includes(w.phase));return `${adm?`<button class="btn" onclick="seedMaintFlow()">تحميل مسار الصيانة: بلاغ ← معاينة ← تسعير ← تنفيذ ← تسليم</button>`:"<div class=\"empty\">بانتظار إعداد مراحل متابعة الصيانة من مدير المشروع</div>"}${old.length?`<details><summary>أعمال مسجلة سابقاً (${old.length})</summary>${old.map(w=>`<div class="item">${esc(w.name)} · ${esc(w.phase)}</div>`).join("")}</details>`:""}`;}
-  const stages=MWFLOW.map((ph,i)=>{
-    const row=rows[i],pct=Number(row?.pct)||0,prevDone=i===0||Number(rows[i-1]?.pct)>=100,events=row?mFlowEvents(row.id):[];
-    const quote=ph==="تسعير",status=!row?"لم تُضف المرحلة":quote&&pct===50?"بانتظار اعتماد السعر":pct>=100?"مكتمل":pct>0?"جاري":"بانتظار البدء";
-    const color=pct>=100?"#16a34a":quote&&pct===50?"#d97706":pct>0?"#2563eb":"#748399",canAct=!!row&&canEdit&&prevDone;
-    const evHtml=events.map(e=>{const url=e.file_path?S.urls[e.file_path]:"",body=esc(mFlowText(e)),img=url&&(e.file_type||"").startsWith("image/");return `<div class="item" style="background:#f8fafc;border:1px solid #e7edf3;border-radius:12px;padding:10px 12px;margin-top:9px"><div style="font-size:14px">${body}</div>${url?(img?`<img src="${esc(url)}" loading="lazy" style="width:100%;max-height:280px;object-fit:cover;border-radius:10px;margin-top:8px">`:`<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px">📎 فتح المرفق</a>`):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleString("ar")}</small></div>`}).join("");
-    let actions="";
-    if(row&&canAct&&quote&&pct===0)actions=`<div style="display:grid;gap:6px;margin-top:12px"><input id="mwqn${row.id}" placeholder="ملاحظة مع عرض السعر (اختياري)"><input id="mwqf${row.id}" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"><button id="mwqb${row.id}" class="btn" onclick="mFlowSubmitQuote('${row.id}')">إرسال عرض السعر للاعتماد</button></div>`;
-    else if(row&&quote&&pct===50&&adm)actions=`<div class="acts"><button class="btn" onclick="mFlowApprove('${row.id}')">اعتماد السعر وفتح التنفيذ</button></div><div class="lbl">راجع عرض السعر المرفق قبل الاعتماد.</div>`;
-    else if(row&&canAct&&!quote&&pct<100)actions=`<div class="acts">${pct===0?`<button class="btn alt" onclick="mFlowUpdate('${row.id}',50)">بدء المرحلة</button>`:`<button class="btn" onclick="mFlowUpdate('${row.id}',100)">تم إنجاز هذه المرحلة</button>`}</div>`;
-    else if(row&&quote&&pct===50&&!adm)actions=`<div class="lbl" style="color:#b86800;font-weight:700;margin-top:10px">أُرسل عرض السعر وينتظر اعتماد مدير المشروع.</div>`;
-    else if(!prevDone)actions=`<div class="lbl" style="margin-top:10px">تبدأ هذه المرحلة بعد إكمال المرحلة السابقة.</div>`;
-    const input=canAct&&prevDone&&pct<100&&!(quote&&pct===50)?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid #e8edf2"><textarea id="mwt${row.id}" rows="2" placeholder="اكتب تحديثاً أو وصفاً للمرحلة..."></textarea><input id="mwu${row.id}" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"><button id="mwb${row.id}" class="sm" style="background:#e8eef5;color:#263b50" onclick="mFlowAddUpdate('${row.id}')">إضافة تحديث أو صورة</button></div>`:"";
-    return `<div style="position:relative;padding-right:48px;margin:0 0 16px"><span style="position:absolute;right:8px;top:22px;width:27px;height:27px;border-radius:50%;display:grid;place-items:center;background:${pct>=100?"#16a34a":quote&&pct===50?"#ed8700":pct>0?"#2563eb":"#e2e8f0"};color:${pct>0?"#fff":"#718096"};font-weight:700;z-index:1">${pct>=100?"✓":i+1}</span><div class="box" style="border:1px solid ${quote&&pct===50?"#f1d6a8":"#e2e8f0"};padding:16px;margin:0"><div class="row" style="align-items:center;gap:8px"><b style="font-size:17px;color:#102944">${i+1}. ${ph}${quote?" واعتماد السعر":""}</b><span style="background:${pct>=100?"#e0f8e9":quote&&pct===50?"#fff3df":"#eef2f6"};color:${color};padding:5px 12px;border-radius:20px;font-weight:700;font-size:13px">${status}</span></div><p class="lbl" style="line-height:1.8;margin:8px 0">${quote?"يرفع مدير الموقع عرض السعر، ثم يعتمد مدير المشروع العرض قبل إتاحة التنفيذ.":esc(MWNames[ph]+" — أضف وصفاً وصوراً توضح ما تم في هذه المرحلة.")}</p>${evHtml}${actions}${input}</div></div>`;
-  }).join("");
-  const extras=W.filter(w=>!MWFLOW.includes(w.phase));
-  const legacy=extras.length?`<details style="margin-top:16px"><summary style="cursor:pointer;color:#64748b">أعمال مسجلة سابقاً (${extras.length})</summary>${extras.map(i=>`<div class="item">${esc(i.name)} <small>${esc(i.phase)} · ${mB(i.pct)===100?"تمّ":mB(i.pct)?"جاري":"لم يبدأ"}</small></div>`).join("")}</details>`:"";
-  const done=rows.filter(x=>x&&Number(x.pct)>=100).length;
-  return `<div class="box det" style="margin-top:0"><div><span>إنجاز مراحل الصيانة</span><b>${Math.round(done/5*100)}%</b></div><div><span>المراحل المكتملة</span><b>${done} / 5</b></div></div><div style="position:relative;padding-top:8px"><div style="position:absolute;right:20px;top:25px;bottom:25px;border-right:3px solid #dfe7ee"></div>${stages}</div>${missing}${legacy}`;
+  const ed=["owner","pm","contr","site"].includes(S.role),adm=["owner","pm"].includes(S.role),W=S.works;
+  const pls=[...new Set(W.map(i=>i.phase))];
+  const add=adm?`<div class="box"><b>إضافة عمل</b><input id="mtn" placeholder="اسم العمل (دهان الصالة، نقل الشاشات...)" onkeydown="if(event.key==='Enter')addM()"><input id="mtp" list="mtpl" placeholder="المكان (اختياري) مثل: الدور الثاني"><datalist id="mtpl">${pls.filter(x=>x!=="عام").map(f=>`<option value="${esc(f)}">`).join("")}</datalist>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${MQ.map(q=>`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="addM('${q}')">+ ${q}</button>`).join("")}</div>
+    <button class="btn" onclick="addM()">إضافة</button></div>`:"";
+  if(!W.length)return `<div class="empty">لا توجد أعمال مسجلة لهذا المشروع بعد</div>${add}`;
+  const dn=W.filter(i=>i.pct>=100).length,grouped=pls.length>1||pls[0]!=="عام";
+  const stBtn=i=>{const b=mB(i.pct),bg=b===100?"var(--done)":b?"var(--run)":"#e2e8f0",fg=b?"#fff":"#1b2a3b",t=b===100?"✅ تمّ":b?"جاري":"لم يبدأ";
+    return ed?`<button class="sm" style="background:${bg};color:${fg};min-width:84px;margin:0" onclick="setW('${i.id}',${mNext(i.pct)})">${t}</button>`:`<b>${t}</b>`};
+  const item=i=>`<div class="item" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:180px">${esc(i.name)}${i.pct?`<small>آخر تحديث ${new Date(i.updated_at).toLocaleDateString("ar")}</small>`:""}</div>${stBtn(i)}${adm?`<button class="sm del" style="margin:0" onclick="delW('${i.id}')">حذف</button>`:""}</div>`;
+  const blocks=grouped?pls.map(f=>{const it=W.filter(i=>i.phase===f);return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>📍 ${esc(f)}</span><span>${it.filter(i=>i.pct>=100).length} / ${it.length}</span></div>${it.map(item).join("")}</div>`}).join(""):`<div class="box" style="margin-bottom:12px">${W.map(item).join("")}</div>`;
+  const sum=W.length>1?`<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>أعمال منجزة</span><b>${dn} / ${W.length}</b></div></div>`:"";
+  const fin=dn===W.length&&p.status!=="done"?`<p class="lbl">✅ اكتملت جميع الأعمال، يمكنك تحديث حالة المشروع إلى مكتمل من تعديل المشروع، وإضافة صور «بعد».</p>`:"";
+  return `${sum}${blocks}${fin}${add}`;
 }
 function worksHtml(p){
   if(p&&p.ptype==="maint")return maintHtml(p);
@@ -463,7 +392,7 @@ function proj(){
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
   const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
-  const items=S.entries.filter(e=>!isMFlowEntry(e)).map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
@@ -758,7 +687,7 @@ async function rpData(p,cfg){
   const f=cfg.full?new Date(0):new Date(cfg.from+"T00:00:00"),t=cfg.full?eod:new Date(cfg.to+"T23:59:59.999"),rows=[];
   for(let o=0;;o+=1000){
     const {data,error}=await sb.from("entries").select("*").eq("project_id",p.id).in("kind",["reports","media","issues"]).order("created_at",{ascending:true}).range(o,o+999);
-    if(error)throw error;rows.push(...data.filter(e=>!isMFlowEntry(e)));if(data.length<1000)break;
+    if(error)throw error;rows.push(...data);if(data.length<1000)break;
   }
   const d=rpClassify(rows,f,t);
   d.works=[];if(cfg.wrk){const {data:w}=await sb.from("work_items").select("*").eq("project_id",p.id).order("sort");d.works=w||[]}
