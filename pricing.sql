@@ -1,11 +1,14 @@
 -- عنوان القهوة | كتالوج تسعير صيانة الفروع - الأسعار قبل الضريبة
 -- مصدر البنود: مزيج من متوسطات GASTAT للمواد ومرجع أسعار تنفيذ الرياض؛ تقديرات التنفيذ غير ملزمة وتتغير بالمعاينة.
 create table if not exists public.price_catalog(code text primary key,category text not null,name text not null,spec text not null default '',unit text not null,material_cost numeric not null default 0,labor_cost numeric not null default 0,equipment_cost numeric not null default 0,market_low numeric not null default 0,market_fair numeric not null default 0,market_high numeric not null default 0,source text not null default 'تقدير استرشادي بالرياض؛ يراجع بعرض مقاول',checked_at date not null default current_date,is_active boolean not null default true);
+alter table public.price_catalog add column if not exists steel_kg_per_unit numeric not null default 0;
+alter table public.price_catalog add column if not exists steel_included_default boolean not null default false;
 create table if not exists public.price_quotes(id uuid primary key default gen_random_uuid(),title text not null default 'تسعيرة جديدة',branch text not null default '',overhead_pct numeric not null default 10,profit_pct numeric not null default 10,created_by uuid not null default auth.uid(),created_at timestamptz not null default now(),updated_at timestamptz not null default now());
 create table if not exists public.price_quote_items(id uuid primary key default gen_random_uuid(),quote_id uuid not null references public.price_quotes(id) on delete cascade,code text,category text not null,name text not null,spec text not null default '',unit text not null,quantity numeric not null default 1,length_m numeric,width_m numeric,depth_m numeric,material_cost numeric not null default 0,labor_cost numeric not null default 0,equipment_cost numeric not null default 0,market_low numeric not null default 0,market_fair numeric not null default 0,market_high numeric not null default 0,pricing_method text not null default 'market' check(pricing_method in ('market','analysis')),custom_unit_price numeric,checked_at date,source text not null default '',note text not null default '',created_at timestamptz not null default now());
 alter table public.price_quote_items add column if not exists source text not null default '';
 alter table public.price_quote_items add column if not exists checked_at date;
-
+alter table public.price_quote_items add column if not exists steel_kg_per_unit numeric not null default 0;
+alter table public.price_quote_items add column if not exists include_steel boolean not null default false;
 alter table public.price_catalog enable row level security; alter table public.price_quotes enable row level security; alter table public.price_quote_items enable row level security;
 drop policy if exists "owner pricing catalog" on public.price_catalog; drop policy if exists "owner pricing quotes" on public.price_quotes; drop policy if exists "owner pricing quote items" on public.price_quote_items;
 create policy "owner pricing catalog" on public.price_catalog for all to authenticated using(public.is_owner()) with check(public.is_owner());
@@ -27,3 +30,93 @@ insert into public.price_catalog(code,category,name,spec,unit,material_cost,labo
 ('GYP-CEIL','أسقف وقواطع','سقف جبس بورد توريد وتركيب','لوح 12.5مم وهيكل مجلفن؛ فتحات الخدمات منفصلة','م²',45,28,5,72,95,140,'مرجع تنفيذ الرياض 82.50 ريال/م² أكتوبر 2026'),('GYP-REPAIR','أسقف وقواطع','ترميم فتحة سقف جبس','حتى 0.5م²؛ الدهان منفصل','حبة',25,55,5,70,120,210,'تقدير خدمة الرياض'),('DRYWALL','أسقف وقواطع','قاطع جبس مزدوج','لوح على الوجهين؛ العزل منفصل','م²',35,25,5,55,75,110,'مرجع تنفيذ الرياض 65 ريال/م² أكتوبر 2026'),
 ('SIGN','لوحات وواجهات','لوحة أكريليك داخلية','المساحة؛ التصميم/الإضاءة تحدد السعر','م²',250,120,20,390,580,900,'تقدير؛ اعتماد التصميم قبل التصنيع'),('SIGN-REPAIR','لوحات وواجهات','صيانة حروف مضيئة/LED','المحول/الحروف قطع منفصلة','زيارة',15,220,20,260,420,700,'تقدير خدمة الرياض'),('FACADE','لوحات وواجهات','غسيل واجهة من الأرض','الرافعة/السقالات منفصلة','م²',3,8,4,14,22,38,'تقدير مقاول بالرياض'),('INTERLOCK','أعمال خارجية','إنترلوك 6سم توريد وتركيب','رمادي فوق رمل؛ تجهيز التربة والبردورة منفصلان','م²',23,18,4,40,55,80,'مرجع تنفيذ الرياض 45 ريال/م² أكتوبر 2026'),('ASPHALT','أعمال خارجية','ترميم رقعة أسفلت','حد أدنى 1م²؛ القص والدمك','م²',38,30,18,85,130,210,'تقدير؛ حد أدنى ونقل مؤثران'),('DRAIN-CLEAN','أعمال خارجية','تنظيف غرفة/مصيدة صرف','نقل الناتج؛ المخلفات الخاصة منفصلة','حبة',10,140,35,170,260,420,'تقدير خدمة الرياض'),('TANK','أعمال خارجية','تنظيف خزان حتى 5م³','تعقيم؛ تحليل المياه منفصل','خزان',35,180,25,220,340,520,'تقدير خدمة الرياض'),('PEST','نظافة ومكافحة','مكافحة حشرات للفرع','زيارة؛ نوع المادة والضمان حسب العقد','زيارة',45,100,15,150,240,380,'تقدير خدمة الرياض'),('POST-CLEAN','نظافة ومكافحة','تنظيف بعد الصيانة','مخلفات البناء الثقيلة منفصلة','م²',4,8,2,14,22,35,'تقدير مقاول بالرياض'),('CALL','زيارة وفحص','زيارة فني صيانة وتشخيص','الساعة الأولى؛ الإصلاح والقطع منفصلة','زيارة',0,150,20,160,230,350,'تقدير استرشادي'),('CALL-URGENT','زيارة وفحص','زيارة طارئة خارج الدوام','الساعة الأولى؛ الإصلاح/القطع منفصلة','زيارة',0,280,35,300,450,700,'تقدير استرشادي؛ يراجع وقت الاستجابة')
 on conflict(code) do nothing;
+-- بنود إضافية: البيارات الخرسانية، الإنشاءات المسلحة، الصرف والخدمات بالموقع
+insert into public.price_catalog(code,category,name,spec,unit,material_cost,labor_cost,equipment_cost,market_low,market_fair,market_high,source,steel_kg_per_unit) values
+('RC-SLAB','خرسانة مسلحة','صبة أرضية خرسانة مسلحة 20سم','يشمل خرسانة C30 وحديد تسليح تقديري 25كجم/م² وشدة الحواف؛ أدخل الطول والعرض. خيار الحديد قابل للإلغاء.','م²',53,35,8,180,245,340,'خرسانة وحديد حسب متوسطات GASTAT أغسطس 2026؛ الكمية التسليحية تقديرية وليست بديلاً عن المخطط',25),
+('RC-SLAB-NO-STEEL','خرسانة','صبة أرضية خرسانة 20سم بدون حديد','خرسانة C30 وصب وتسوية؛ أدخل الطول والعرض. خيار الحديد قابل للإضافة.','م²',45,28,6,125,170,240,'مرجع الخرسانة والأسعار التنفيذية؛ التسليح حسب التصميم',25),
+('RC-FOOTING','خرسانة مسلحة','قاعدة خرسانية مسلحة','C30 مع شدة وحديد تقديري 110كجم/م³؛ الحفر والدفان والعزل منفصلة. خيار الحديد قابل للإلغاء.','م³',310,180,55,1250,1550,1950,'تقدير تنفيذ بالرياض مع مرجع مواد GASTAT؛ الحديد حسب المخطط',110),
+('RC-BEAM','خرسانة مسلحة','ميدة/كمرة خرسانية مسلحة','C30 وشدات وحديد تقديري 150كجم/م³؛ أدخل طولاً وعرضاً وعمقاً. خيار الحديد قابل للإلغاء.','م³',330,240,75,1800,2250,2900,'تقدير تنفيذ بالرياض؛ التسليح حسب المخطط',150),
+('RC-COLUMN','خرسانة مسلحة','عمود خرسانة مسلحة','C30 وشدة وحديد تقديري 180كجم/م³؛ مقطع العمود × الارتفاع. خيار الحديد قابل للإلغاء.','م³',350,300,90,2200,2800,3600,'تقدير تنفيذ بالرياض؛ يلزم مخطط إنشائي',180),
+('RC-WALL','خرسانة مسلحة','جدار خزان/بيارة خرسانة مسلحة','C30 وشدة وحديد تقديري 140كجم/م³؛ العزل بند مستقل. خيار الحديد قابل للإلغاء.','م³',340,260,70,1800,2350,3100,'تقدير تنفيذ بالرياض؛ التسليح حسب التصميم',140),
+('RC-ROOF','خرسانة مسلحة','سقف خرسانة مسلحة 15سم','يشمل صب وشدة وحديد تقديري 18كجم/م²؛ التدعيم/الضخ حسب الموقع. خيار الحديد قابل للإلغاء.','م²',60,55,15,210,285,390,'تقدير تنفيذ بالرياض؛ لا يستخدم دون مخطط إنشائي',18),
+('RC-STAIR','خرسانة مسلحة','درج خرسانة مسلحة','حسب شكل الدرج وحجمه؛ حديد تقديري 160كجم/م³. خيار الحديد قابل للإلغاء.','م³',340,330,85,2200,2950,3900,'تقدير؛ التسليح والمقاس حسب المخطط',160),
+('RC-CHIPPING','خرسانة مسلحة','قص/تخريم فتحة خرسانة مسلحة','حتى فتحة 20×20سم؛ كشف الحديد واعتماد مهندس قبل القص','فتحة',35,180,90,260,420,700,'تقدير خدمة؛ يمنع قص عنصر إنشائي دون اعتماد',0),
+('SEPTIC-RC-3','بيارات وخزانات','بيارة خرسانية مصبوبة بالموقع سعة 3م³','حفر تربة عادية، قاعدة وجدران وسقف مسلح، عزل داخلي، غطاء، تهوية وتوصيلات قصيرة؛ لا يشمل الصخر أو نزح المياه. خيار الحديد متاح.','بيارة',2600,1700,850,5200,7200,10500,'تقدير مقاول بالرياض؛ يلزم تحديد الأبعاد والمناسيب والاشتراطات',390),
+('SEPTIC-RC-6','بيارات وخزانات','بيارة خرسانية مصبوبة بالموقع سعة 6م³','نطاق كامل: حفر عادي، قاعدة وجدران وسقف مسلح، عزل، غطاء، تهوية وتوصيلة قصيرة؛ تدعيم/نزح/صخر غير شامل. خيار الحديد متاح.','بيارة',4300,2600,1400,8500,11800,17000,'تقدير مقاول بالرياض؛ السعر النهائي بعد المعاينة والمخطط',720),
+('SEPTIC-RC-M3','بيارات وخزانات','بيارة خرسانية مصبوبة حسب الحجم','سعر للمتر المكعب سعة داخلية؛ يشمل هيكل مسلح وعزل وغطاء قياسي؛ حفر وترحيل منفصلان. خيار الحديد متاح.','م³',750,520,160,1250,1750,2450,'تقدير مقاول بالرياض؛ أدخل الأبعاد الداخلية/الخارجية بوضوح',130),
+('SEPTIC-PRECAST','بيارات وخزانات','خزان/بيارة خرسانية مسبقة الصب','توريد وتركيب وحدة/حلقات خرسانية؛ الحفر والرافعة والعزل والتوصيل تحسب كبنود مستقلة','م³',850,220,180,1150,1550,2200,'تقدير استرشادي؛ المورد والسعة والرفع مؤثرة',0),
+('SEPTIC-LID','بيارات وخزانات','غطاء بيارة خرسانة/حديد زهر','مقاس وتحمل حسب مرور المشاة/السيارات','حبة',250,90,25,350,520,850,'تقدير؛ تصنيف التحمل حسب الموقع',0),
+('SEPTIC-VENT','بيارات وخزانات','ماسورة تهوية بيارة 4 بوصة','توريد وتركيب حتى 3م؛ اختراق السقف/الواجهة وإغلاقه','م.ط',22,18,3,40,62,95,'تقدير مقاول بالرياض',0),
+('SEPTIC-INLET','بيارات وخزانات','توصيل مدخل/مخرج بيارة','ماسورة 110مم حتى 5م مع وصلات؛ الحفر/الترميم فوق الأرض منفصل','توصيلة',75,130,25,220,340,520,'تقدير؛ الطول والمناسيب تؤثر',0),
+('SEPTIC-PUMP','بيارات وخزانات','مضخة غاطسة للبيارة/الصرف','مضخة اقتصادية مع عوامة وتركيب؛ لوحة تحكم/تعديل كهرباء منفصل','حبة',750,240,45,1050,1550,2400,'تقدير؛ التدفق والرفع والماركة تؤثر',0),
+('SEPTIC-CLEAN','بيارات وخزانات','شفط وتنظيف بيارة','حمولة صهريج؛ يحدد الحجم والموقع والبعد','حمولة',0,100,380,450,700,1100,'تقدير خدمة الرياض؛ رسوم التخلص النظامي قد تختلف',0),
+('GREASE-TRAP','صرف ومصائد دهون','توريد وتركيب مصيدة دهون 100 لتر','وحدة جاهزة تجارية مع وصلات قصيرة؛ الحفر/التكسير والغطاء منفصلان','حبة',1250,350,80,1700,2450,3600,'تقدير سوقي؛ السعة والمادة مؤثرتان',0),
+('GREASE-TRAP-500','صرف ومصائد دهون','مصيدة دهون 500 لتر','وحدة جاهزة؛ الحفر والرفع والتوصيلات الطويلة منفصلة','حبة',3200,650,220,4200,5900,8500,'تقدير؛ يراجع اشتراط المالك والبلدية',0),
+('GREASE-CLEAN','صرف ومصائد دهون','تنظيف مصيدة دهون','تفريغ وغسيل وإعادة تشغيل؛ النقل حسب الاشتراط','زيارة',25,180,45,220,350,550,'تقدير خدمة بالرياض',0),
+('SUMP','صرف ومضخات','توريد وتركيب مضخة رفع صرف','مضخة واحدة مع عوامة؛ الحفرة واللوحة/الإنذار منفصلة','حبة',950,280,75,1350,1950,2900,'تقدير؛ الرفع والتدفق والماركة مؤثرة',0),
+('SUMP-ALARM','صرف ومضخات','إنذار منسوب مرتفع لحفرة تجميع','عوامة وإنذار محلي؛ الربط مع نظام المبنى منفصل','طقم',180,130,20,350,520,800,'تقدير مقاول بالرياض',0),
+('WATER-TANK-CONC','بيارات وخزانات','خزان مياه أرضي خرسانة مسلحة','يشمل صب الهيكل وعزل داخلي وغطاء؛ الحفر والردم والمضخة منفصلة. خيار الحديد قابل للإلغاء.','م³',760,480,120,1250,1700,2350,'مرجع سوقي لخزانات خرسانية + تحليل موارد؛ التصميم واجب',130),
+('WATER-TANK-CLEAN','بيارات وخزانات','تنظيف وتعقيم خزان أرضي','حتى 10م³؛ حجم أكبر يضاعف حسب الوصول','خزان',45,240,35,300,450,700,'تقدير خدمة بالرياض',0),
+('CONC-CORE','خرسانة مسلحة','تخريم كور خرسانة','قطر حتى 100مم وسمك 20سم؛ كشف الخدمات قبل التنفيذ','فتحة',35,100,60,180,280,450,'تقدير؛ القطر والسمك والوصول مؤثرة',0),
+('CONC-GROUT','خرسانة مسلحة','حقن/ملء فواصل خرسانية','سعر للمتر الطولي؛ نوع المادة حسب التسرب','م.ط',25,45,8,80,125,200,'تقدير؛ يلزم تحديد مادة الحقن',0),
+('CONC-JOINT','خرسانة مسلحة','معالجة فاصل تمدد أرضي','قص وتنظيف وحبل خلفي وسيلانت PU مقاس تقريبي 20×15مم','م.ط',12,14,3,22,32,48,'مرجع تنفيذ بالرياض؛ عرض/عمق الفاصل مؤثران',0),
+('PIT-MASONRY','بيارات وخزانات','غرفة تفتيش مباني 60×60','عمق حتى 1م؛ غطاء قياسي، الحفر والردم','حبة',360,290,70,650,900,1350,'تقدير مقاول بالرياض',0),
+('PIT-REBUILD','بيارات وخزانات','إعادة بناء جدار غرفة تفتيش','ترميم حتى ارتفاع 1م؛ العزل والغطاء منفصلان','حبة',180,240,45,450,700,1100,'تقدير مقاول بالرياض',0),
+('DRAIN-CHANNEL','صرف ومصائد دهون','قناة تصريف ستانلس مع غطاء','عرض 10سم؛ الطول بالمتر؛ الحفر والتوصيل منفصلان','م.ط',220,80,15,330,460,680,'تقدير؛ مقاس الستانلس والتصريف يؤثران',0),
+('WATERPROOF-INJECT','عزل','حقن تسرب بيارة/قبو','لكل نقطة حقن؛ بعد تحديد المسار وسبب التسرب','نقطة',45,110,25,190,300,500,'تقدير؛ المعاينة ضرورية',0),
+('TILE-STEP','بلاط وأرضيات','تركيب بلاط درج','درجة وقائمة؛ البلاط والقصات الخاصة حسب المواصفة','درجة',45,38,4,85,125,190,'تقدير مقاول بالرياض',0),
+('KERB','أعمال خارجية','توريد وتركيب بردورة خرسانية','متر طولي مع مونة تثبيت؛ الحفر والخرسانة الخلفية منفصلان','م.ط',22,18,3,40,58,85,'تقدير سوقي',0),
+('ASPH-CUT','أعمال خارجية','قص أسفلت حول حفرة خدمات','قص منتظم؛ إعادة السفلتة والترحيل منفصلان','م.ط',4,8,18,28,45,70,'تقدير مقاول بالرياض',0),
+('SAND-CEMENT','خرسانة','طبقة إحلال/دفان رملية','المتر المكعب توريد وفرش؛ الدمك يُختار كبند منفصل','م³',48,8,5,65,90,130,'مرجع أسعار مواد + نقل تقديري',0),
+('COMPACTION','حفر وردم','دمك تربة/دفان بالهراس','طبقات؛ مساحة صغيرة لها حد أدنى','م²',0,5,7,12,18,28,'تقدير مقاول بالرياض',0),
+('PAINT-CRACK','دهان','معالجة شروخ شعرية قبل الدهان','شبك ومعجون مرن؛ الشروخ الإنشائية لا تعالج بهذا البند','م.ط',5,10,1,17,28,45,'تقدير؛ تحديد سبب الشرخ أولاً',0),
+('WALL-PUTTY','دهان','معجون وصنفرة جدار','وجهين؛ الدهان النهائي منفصل','م²',4,7,1,12,18,28,'تقدير مقاول بالرياض',0),
+('CEILING-ACCESS','أسقف وقواطع','فتحة صيانة سقف مستعار','مقاس حتى 60×60 مع إطار وغطاء','حبة',45,60,5,110,175,280,'تقدير سوقي',0),
+('PL-VALVE','سباكة وتغذية','استبدال محبس مياه 1/2–1 بوصة','المحبس والتركيب؛ تفريغ الشبكة حسب الحاجة','حبة',25,55,5,75,125,210,'تقدير خدمة الرياض',0),
+('PL-FLEX','سباكة وتغذية','استبدال لي مرن/وصلة تغذية','وصلة قياسية؛ صمام/خلاط منفصل','حبة',12,35,2,45,75,125,'تقدير خدمة الرياض',0),
+('PL-BOOSTER','سباكة وتغذية','توريد وتركيب مضخة تقوية صغيرة','حتى 1 حصان؛ خزان ضغط/لوحة تحكم منفصلان','حبة',650,220,35,950,1400,2200,'تقدير؛ التدفق والضغط مطلوبان',0),
+('EL-ISOLATOR','كهرباء وإنارة','قاطع عزل جهاز 32–63A','توريد وتركيب بجوار الجهاز؛ مسار كابل منفصل','حبة',90,65,5,160,240,360,'تقدير سوقي',0),
+('EL-SENSOR','كهرباء وإنارة','استبدال حساس/مفتاح حركة','وحدة تجارية؛ تعديل تمديد منفصل','حبة',75,45,3,125,190,290,'تقدير سوقي',0),
+('EL-TRACK','كهرباء وإنارة','مسار إنارة تجاري','توريد وتركيب؛ وحدات الإنارة منفصلة','م.ط',38,18,3,60,85,125,'تقدير سوقي',0),
+('AC-FILTER','تكييف وتهوية','استبدال فلتر مكيف/وحدة مناولة','مقاس حسب الموقع؛ لا يشمل تنظيف المجرى','حبة',45,20,2,70,110,180,'تقدير سوقي',0),
+('AC-MOTOR','تكييف وتهوية','استبدال محرك مروحة شفط','قدرة صغيرة؛ القياس والموديل قبل الطلب','حبة',280,160,15,480,720,1150,'تقدير؛ يلزم مطابقة الموديل',0),
+('ROOF-DRAIN','عزل','استبدال مخرج تصريف سطح','مخرج ووصلة؛ العزل حوله يعاد كبند منفصل','حبة',65,100,12,180,280,450,'تقدير خدمة بالرياض',0),
+('FLOOR-DRAIN-PIPE','سباكة وصرف','تعديل ميل/مسار صرف أرضي','متر طولي؛ التكسير وإعادة البلاط بنود مستقلة','م.ط',18,28,8,55,85,140,'تقدير؛ المعاينة لازمة',0),
+('WATER-METER','سباكة وتغذية','استبدال عوامة خزان','عوامة تجارية؛ صيانة المضخة منفصلة','حبة',35,65,5,90,145,230,'تقدير خدمة الرياض',0),
+('SCAFFOLD','معدات ومناولة','سقالة/رافعة للوصول المرتفع','يومية؛ النقل والتركيب حسب الارتفاع','يوم',0,160,240,400,650,1000,'تقدير مقاول بالرياض',0),
+('PROTECT','تجهيز الموقع','تغطية وحماية موقع العمل','للمتر المربع؛ رفع المخلفات منفصل','م²',4,4,1,9,14,22,'تقدير مقاول بالرياض',0),
+('NIGHT-WORK','تجهيز الموقع','بدل عمل ليلي/خارج الدوام','نسبة تضاف على بند العمالة فقط؛ لا تكرر مع زيارة الطوارئ','%',0,0,0,10,20,35,'نسبة استرشادية تتفق مع المقاول',0),
+('CALL-DIAG-ELEC','زيارة وفحص','زيارة كهربائي وتشخيص عطل','الساعة الأولى؛ الإصلاح والقطع منفصلة','زيارة',0,200,20,210,300,450,'تقدير خدمة الرياض',0),
+('CALL-DIAG-PLUMB','زيارة وفحص','زيارة سباك وتشخيص تسرب/انسداد','الساعة الأولى؛ الإصلاح والقطع منفصلة','زيارة',0,180,20,190,280,420,'تقدير خدمة الرياض',0)
+on conflict(code) do nothing;
+update public.price_catalog set steel_kg_per_unit=25 where code='RC-SLAB';
+update public.price_catalog set steel_kg_per_unit=25 where code='RC-SLAB-NO-STEEL';
+update public.price_catalog set steel_kg_per_unit=110 where code='RC-FOOTING';
+update public.price_catalog set steel_kg_per_unit=150 where code='RC-BEAM';
+update public.price_catalog set steel_kg_per_unit=180 where code='RC-COLUMN';
+update public.price_catalog set steel_kg_per_unit=140 where code='RC-WALL';
+update public.price_catalog set steel_kg_per_unit=18 where code='RC-ROOF';
+update public.price_catalog set steel_kg_per_unit=160 where code='RC-STAIR';
+update public.price_catalog set steel_kg_per_unit=390 where code='SEPTIC-RC-3';
+update public.price_catalog set steel_kg_per_unit=720 where code='SEPTIC-RC-6';
+update public.price_catalog set steel_kg_per_unit=130 where code='SEPTIC-RC-M3';
+update public.price_catalog set steel_kg_per_unit=130 where code='WATER-TANK-CONC';
+
+update public.price_catalog set is_active=false where code='CONC-SLAB';
+update public.price_catalog set steel_kg_per_unit=25,steel_included_default=true where code='RC-SLAB';
+update public.price_catalog set steel_kg_per_unit=25 where code='RC-SLAB-NO-STEEL';
+update public.price_catalog set steel_included_default=true where steel_kg_per_unit>0 and code<>'RC-SLAB-NO-STEEL';
+update public.price_catalog set steel_kg_per_unit=25,steel_included_default=true where code='CONC-SLAB';
+update public.price_catalog set is_active=false where code='CONC-SLAB';
+update public.price_catalog set market_low=92.5,market_fair=132.5,market_high=177.5 where code='RC-SLAB';
+update public.price_catalog set market_low=37.5,market_fair=57.5,market_high=77.5 where code='RC-SLAB-NO-STEEL';
+update public.price_catalog set market_low=865,market_fair=1055,market_high=1235 where code='RC-FOOTING';
+update public.price_catalog set market_low=1275,market_fair=1575,market_high=1925 where code='RC-BEAM';
+update public.price_catalog set market_low=1570,market_fair=1990,market_high=2430 where code='RC-COLUMN';
+update public.price_catalog set market_low=1310,market_fair=1720,market_high=2190 where code='RC-WALL';
+update public.price_catalog set market_low=147,market_fair=204,market_high=273 where code='RC-ROOF';
+update public.price_catalog set market_low=1640,market_fair=2230,market_high=2860 where code='RC-STAIR';
+update public.price_catalog set market_low=3835,market_fair=5445,market_high=7965 where code='SEPTIC-RC-3';
+update public.price_catalog set market_low=5980,market_fair=8560,market_high=12320 where code='SEPTIC-RC-6';
+update public.price_catalog set market_low=795,market_fair=1165,market_high=1605 where code='SEPTIC-RC-M3';
+update public.price_catalog set market_low=795,market_fair=1115,market_high=1505 where code='WATER-TANK-CONC';
