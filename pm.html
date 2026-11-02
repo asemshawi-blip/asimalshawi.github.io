@@ -87,6 +87,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .hlq{background:#fffbeb;border-right:4px solid #f59e0b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
 .mout{border-radius:10px;padding:8px 12px;font-weight:700;margin-bottom:8px;background:#e2e8f0}.mout.done{background:#dcfce7;color:#166534}.mout.rejected{background:#fee2e2;color:#b91c1c}
 .mtl{max-height:300px;overflow:auto}.mev{border-right:3px solid #cbd5e1;padding:4px 10px;margin:6px 0;font-size:14px}.mev.stage{border-color:#2563eb}.mev.quote{border-color:#7c3aed}.mev small{display:block;color:var(--muted);font-size:12px}
+.sst{display:flex;gap:4px;margin:12px 0}.sst>div{flex:1;text-align:center;font-size:12px;color:var(--muted)}.sst i{display:grid;place-items:center;width:30px;height:30px;margin:0 auto 4px;border-radius:50%;background:#e3e9ef;color:#647589;font-style:normal;font-weight:700}.sst .dn i{background:#16a34a;color:#fff}.sst .cur{font-weight:700;color:var(--text,#182b3d)}.sst .cur i{background:#ed8700;color:#fff;box-shadow:0 0 0 4px #ed870033}.sinfo{background:#eff6ff;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px}.srow{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e3e9ef;border-radius:12px;padding:12px;margin:8px 0;background:#fff;cursor:pointer;text-align:right;width:100%;font:inherit;color:inherit}
 .mgal{margin:12px 0 0}.mgp{margin:8px 0}.mgp>b{display:block;font-size:13px;color:var(--muted)}.mdt{margin-top:14px}.mdt summary{cursor:pointer;font-weight:700;padding:6px 0}.mtl2{margin:6px 0 0;padding-right:14px;border-right:2px solid #e3e9ef}.mtv{position:relative;padding:0 12px 12px 0;font-size:14px}.mtv i{position:absolute;right:-21px;top:7px;width:10px;height:10px;border-radius:50%;background:#2e69ad;border:2px solid #fff}.mtv small{display:block;color:var(--muted);font-size:12px}
 .mth{width:120px!important;height:90px!important;max-height:none!important;object-fit:cover;border-radius:8px;margin:6px 6px 0 0!important;display:inline-block}
 @media(max-width:600px){.mqh,.mqr{grid-template-columns:1fr 54px 74px 74px 28px}.mqr.ro{grid-template-columns:1fr 54px 74px 74px}.mqh{grid-template-columns:1fr 54px 74px 102px}}
@@ -164,7 +165,7 @@ async function boot(){
   S.role=p?.role||"none";
   await load();
   const dl=await deepLink();
-  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}
+  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
   checkPush();
 }
 
@@ -330,7 +331,7 @@ navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${mSee()?`<button class="sm" onclick="openMaint()">🔧 الصيانة</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${mSee()?`<button class="sm" onclick="openMaint()">🔧 الصيانة${S.role==="site"&&MT.t.some(t=>!t.closed_at)?" ("+MT.t.filter(t=>!t.closed_at).length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():S.view==="maint"?maintPage():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -1123,6 +1124,7 @@ function mtBoard(p){
 /* ---------- صفحة الصيانة (مستقلة عن المشاريع) ---------- */
 async function openMaint(){S.view="maint";S.cur=null;S.modal=null;render();await loadM();render();scrollTo(0,0)}
 function maintPage(){
+  if(S.role==="site"&&!MT.err){const L=mSiteSorted(),D=MT.t.filter(t=>t.closed_at);return `<button class="back" onclick="S.view=null;render()">← المشاريع</button><div class="top"><h2>🔧 طلباتي</h2></div>${L.length?L.map(mSiteRow).join(""):'<div class="empty">لا توجد طلبات مسندة إليك حالياً</div>'}${D.length?`<details class="mdt"><summary>المنتهية (${D.length})</summary>${D.map(mSiteRow).join("")}</details>`:""}`}
   return `<button class="back" onclick="S.view=null;render()">← المشاريع</button><div class="top"><h2>🔧 صيانة الفروع</h2></div>${mtBoard()}`;
 }
 /* ---------- طلب صيانة جديد ---------- */
@@ -1222,9 +1224,9 @@ function mTicketHtml(){
   const rep=R&&R.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:R&&R.url?`<a class="btn" style="text-decoration:none;display:inline-block" href="${R.url}" download="${esc(R.name)}">⬇ تنزيل PDF</a> ${R.share?`<button class="btn alt" onclick="mRepShare()">مشاركة</button>`:""} <button class="btn alt" onclick="window.open(MT.rep.url,'_blank')">معاينة</button>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF للطلب</button>`;
   return `<div class="modal"><div class="box" style="max-width:720px"><div class="mh"><h3 style="margin:0">${mNo(t)} · ${esc(t.title)}</h3><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></div>
   <div class="lbl" style="margin:4px 0 10px">🏪 ${esc(t.branch||"")}${t.place?" · 📍 "+esc(t.place):""} · ${MCAT[t.category]||""} · ${esc(t.created_by_role||"")} · ${dfmt(t.created_at)}${t.assignee?" · 👤 "+esc(t.assignee):""}</div>${t.descr?`<div class="hlq" style="margin:0 0 10px"><b>وصف المشكلة</b><div style="white-space:pre-wrap;margin-top:4px">${esc(t.descr)}</div></div>`:""}
-  ${mSteps(t)}<div class="mpanel">${mStageHtml(t)}</div>
+  ${S.role==="site"?mSiteHtml(t):`${mSteps(t)}<div class="mpanel">${mStageHtml(t)}</div>`}
   ${mGallery(t.id)}<details class="mdt"><summary>مسار الطلب</summary>${mTL(t.id)}</details>
-  ${mWork()&&!t.closed_at&&t.stage!=="exec"&&t.stage!=="deliver"?`<div class="mpanel"><textarea id="mtx" rows="2" placeholder="إضافة ملاحظة أو صور"></textarea>${mFiles("")}<button class="btn alt" onclick="mAddUp('${t.id}',null)">إضافة</button></div>`:""}
+  ${S.role!=="site"&&mWork()&&!t.closed_at&&t.stage!=="exec"&&t.stage!=="deliver"?`<div class="mpanel"><textarea id="mtx" rows="2" placeholder="إضافة ملاحظة أو صور"></textarea>${mFiles("")}<button class="btn alt" onclick="mAddUp('${t.id}',null)">إضافة</button></div>`:""}
   <div class="acts">${rep}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف الطلب</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 /* ---------- إجراءات المراحل ---------- */
@@ -1238,7 +1240,7 @@ async function mAddUp(id,phase,keepRender){
 async function mToInspect(id){
   const sel=$("mas"),uid=sel.value,nm=(sel.selectedOptions[0]||{}).textContent||"",d=$("mvd").value;
   if(!uid)return alert("اختر مدير الموقع");
-  await mUpd(id,{stage:"inspect",assignee_id:uid,assignee:nm,visit_date:d||null},`أُسند الطلب إلى ${nm}${d?" · موعد المعاينة "+d:""}`,["site"],"طلب صيانة جديد مُسند إليك");
+  await mUpd(id,{stage:"inspect",assignee_id:uid,assignee:nm,visit_date:d||null,received_at:null},`أُسند الطلب إلى ${nm}${d?" · موعد المعاينة "+d:""}`,["site"],"طلب صيانة جديد مُسند إليك");
 }
 async function mReject(id){
   const r=prompt("سبب رفض الطلب؟");if(r===null)return;
@@ -1334,6 +1336,73 @@ async function mDel(id){
   const {error}=await sb.from("mnt_requests").delete().eq("id",id);if(error)return alert(error.message);
   S.modal=null;await mReload();
 }
+
+/* ===== واجهة مدير الموقع: خطوات واضحة، خطوة واحدة في كل مرة ===== */
+const MSN=["استلام الطلب","المعاينة","التسعيرة","التنفيذ","التسليم"],MPS={urgent:0,high:1,normal:2};
+function mSiteIdx(t){if(t.closed_at)return 5;if(t.stage==="inspect")return t.received_at?1:0;if(t.stage==="quote")return 2;if(t.stage==="exec")return 3;return 4}
+function mSiteLabel(t){
+  const i=mSiteIdx(t);
+  if(i===5)return t.outcome==="done"?"تم التسليم":(MOUT[t.outcome]||"مغلق");
+  if(i===2){const q=MT.q[t.id];if(q&&["review","pending"].includes(q.status))return "بانتظار الاعتماد";return q&&q.status==="returned"?"التسعيرة (معادة للتعديل)":"التسعيرة"}
+  return ["بانتظار استلامك","جاري المعاينة","","جاري التنفيذ","التسليم"][i];
+}
+const mSiteSorted=()=>MT.t.filter(t=>!t.closed_at).sort((a,b)=>(MPS[a.priority]??2)-(MPS[b.priority]??2)||new Date(a.created_at)-new Date(b.created_at));
+function mSiteRow(t){const pr=MPRI[t.priority]||MPRI.normal;return `<button class="srow" onclick="mSiteGo('${t.id}')"><div><div style="font-weight:700">${esc(t.branch||"")} · ${esc(t.title)}</div><small style="color:var(--muted)">${mNo(t)} · ${esc(mSiteLabel(t))} · ${mAge(t)}</small></div><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></button>`}
+function mSiteGo(id){S.view="maint";S.cur=null;S.modal=null;mOpen(id)}
+async function mSiteWelcome(){await loadM();if(MT.err)return;if(!mSiteSorted().length){render();return}S.modal="msite";render()}
+function mSiteWelcomeHtml(){const L=mSiteSorted();return `<div class="modal"><div class="box"><h3>🔧 عندك ${L.length} ${L.length===1?"طلب صيانة":"طلبات صيانة"}</h3><p class="lbl">اضغط على الطلب للدخول إليه</p>${L.map(mSiteRow).join("")}<button class="btn alt" onclick="modal(null)">لاحقاً</button></div></div>`}
+function mSiteHtml(t){
+  const id=t.id,i=mSiteIdx(t),q=MT.q[id];
+  const big=(label,fn)=>`<button class="btn" style="width:100%;font-size:17px;padding:14px;margin-top:12px" onclick="${fn}">${label}</button>`;
+  const cnt=ph=>MT.e.filter(e=>e.ticket_id===id&&e.phase===ph&&e.file_path).length;
+  const have=ph=>cnt(ph)?`<div class="lbl">✔ مرفوع سابقاً: ${cnt(ph)} صورة</div>`:"";
+  let p="";
+  if(i===5)p=`<div class="mout ${t.outcome}">${t.outcome==="done"?"✅ تم تسليم الطلب":esc(MOUT[t.outcome]||"مغلق")} · ${dfmt(t.closed_at)}</div>`;
+  else if(i===0)p=`<div class="sinfo">اقرأ وصف المشكلة أعلاه، ثم اضغط الزر لتأكيد استلامك للطلب وبدء المعاينة.</div>${big("✔ استلمت الطلب",`mRecv('${id}')`)}`;
+  else if(i===1)p=`<div class="sinfo">عاين الموقع ثم سجّل ما وجدته وارفع صور المعاينة.</div><label class="lbl">ماذا وجدت؟ (نتيجة المعاينة) *</label><textarea id="mdg" rows="3">${esc(t.diagnosis||"")}</textarea><label class="lbl">ما العمل المطلوب؟ *</label><textarea id="msc" rows="3">${esc(t.scope||"")}</textarea><label class="lbl">صور المعاينة (قبل) *</label><input id="mfl" type="file" accept="image/*" multiple>${have("before")}${big("إرسال تقرير المعاينة ←",`mSiteInsp('${id}','quote')`)}<button class="btn alt" style="width:100%;margin-top:8px" onclick="mSiteInsp('${id}','nowork')">الموقع لا يحتاج أي عمل</button>`;
+  else if(i===2){
+    const st=q?q.status:"draft";
+    if(["review","pending"].includes(st))p=`<div class="sinfo">✅ رُفعت التسعيرة وهي عند ${st==="pending"?"الإدارة":"مدير المشروع"} للاعتماد. سيصلك إشعار عند الاعتماد.</div>${mQRows(false)}`;
+    else p=`${st==="returned"&&q.note?`<div class="hlq"><b>ملاحظة للتعديل:</b> ${esc(q.note)}</div>`:""}<div class="sinfo">أضف بنود العمل بالكمية وسعر الوحدة، ويُحسب الإجمالي تلقائياً.</div>${mQRows(true)}${big("رفع التسعيرة للاعتماد ←",`mSaveQ('review')`)}`;
+  }
+  else if(i===3){
+    const amt=q&&q.total?`<div class="sinfo">✅ اعتُمدت التسعيرة: <b>${money(q.total)} ر.س</b></div>`:"";
+    p=t.exec_start?`${amt}<div class="sinfo">التنفيذ جارٍ منذ ${dfmt(t.exec_start+"T00:00:00")}. عند الانتهاء اضغط الزر، ويمكنك إرفاق صور أو ملاحظة.</div><textarea id="mtx" rows="2" placeholder="ملاحظة (اختياري)"></textarea><label class="lbl">صور أثناء التنفيذ (اختياري)</label><input id="mfl" type="file" accept="image/*" multiple>${big("✔ اكتمل التنفيذ ← التسليم",`mExecDone('${id}')`)}`:`${amt}${big("▶ بدأت التنفيذ",`mExecStart('${id}')`)}`;
+  }
+  else p=`<div class="sinfo">سلّم العمل لصاحب العلاقة، وارفع صور «بعد» التنفيذ.</div><label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple>${have("after")}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}"><textarea id="mtx" rows="2" placeholder="ملاحظات التسليم (اختياري)"></textarea>${big("✔ تسليم الطلب وإغلاقه",`mSiteClose('${id}')`)}`;
+  return `<div class="sst">${MSN.map((n,k)=>`<div class="${k<i?"dn":k===i?"cur":""}"><i>${k<i?"✓":k+1}</i>${n}</div>`).join("")}</div><div class="mpanel">${p}</div>`;
+}
+async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnce.b=0}}
+const mTn=id=>mNo(MT.t.find(x=>x.id===id)||{});
+async function mRecv(id){await mOnce(()=>mUpd(id,{received_at:new Date().toISOString()},"استلم مدير الموقع الطلب وبدأت المعاينة",["owner","pm"],"تم استلام الطلب "+mTn(id)))}
+async function mSiteInsp(id,act){await mOnce(async()=>{
+  const t=MT.t.find(x=>x.id===id),dg=$("mdg").value.trim(),sc=$("msc").value.trim(),fs=[...($("mfl")?.files||[])];
+  if(!dg)return alert("اكتب نتيجة المعاينة");
+  if(act==="quote"){
+    if(!sc)return alert("اكتب العمل المطلوب");
+    if(!fs.length&&!MT.e.some(e=>e.ticket_id===id&&e.phase==="before"&&e.file_path))return alert("ارفع صورة واحدة على الأقل للمعاينة");
+  }else if(!confirm("تأكيد: الموقع لا يحتاج أي عمل؟"))return;
+  if(!navigator.onLine)return alert("تحتاج اتصالاً بالإنترنت");
+  if(fs.length)await mUploadFiles(t,fs,"before",null);
+  const patch={diagnosis:dg,scope:sc||null};
+  if(act==="quote"){patch.stage="quote";await mUpd(id,patch,"اكتملت المعاينة وأُرسل التقرير: يحتاج تسعيراً",["owner","pm"],"تقرير معاينة جاهز "+mNo(t));return}
+  patch.closed_at=new Date().toISOString();patch.outcome="nowork";
+  await mUpd(id,patch,"اكتملت المعاينة: لا يحتاج عملاً",["owner","pm"],"معاينة بدون عمل "+mNo(t));
+})}
+async function mExecStart(id){await mOnce(()=>mUpd(id,{exec_start:new Date().toISOString().slice(0,10),exec_pct:50},"بدأ التنفيذ",["owner","pm"],"بدأ تنفيذ "+mTn(id)))}
+async function mExecDone(id){await mOnce(async()=>{
+  const t=MT.t.find(x=>x.id===id),note=($("mtx")?.value||"").trim(),fs=[...($("mfl")?.files||[])];
+  if(fs.length){if(!navigator.onLine)return alert("تحتاج اتصالاً بالإنترنت");await mUploadFiles(t,fs,"during",note||null)}else if(note)await mEvent(t,"note",note);
+  await mUpd(id,{stage:"deliver",exec_pct:100},"اكتمل التنفيذ وانتقل الطلب للتسليم",["owner","pm"],"اكتمل تنفيذ "+mNo(t));
+})}
+async function mSiteClose(id){await mOnce(async()=>{
+  const t=MT.t.find(x=>x.id===id),rc=$("mrc").value.trim(),note=($("mtx")?.value||"").trim(),fs=[...($("mfl")?.files||[])];
+  if(!fs.length&&!MT.e.some(e=>e.ticket_id===id&&e.phase==="after"&&e.file_path))return alert("ارفع صورة واحدة على الأقل بعد التنفيذ");
+  if(!rc)return alert("اكتب اسم المستلم");
+  if(!navigator.onLine)return alert("تحتاج اتصالاً بالإنترنت");
+  if(fs.length)await mUploadFiles(t,fs,"after",note||null);
+  await mUpd(id,{closed_at:new Date().toISOString(),outcome:"done",receiver:rc,close_note:note||null},`سُلّم العمل إلى ${rc} وأُغلق الطلب`,["owner","pm","mgmt"],"تم تسليم الطلب "+mNo(t));
+})}
 /* ---------- تقرير PDF للطلب ---------- */
 async function mPdf(id){
   const t=MT.t.find(x=>x.id===id);if(!t)return;const p={name:t.branch||"طلبات الصيانة"};
@@ -1574,6 +1643,7 @@ function modalHtml(){
   if(m==="users")return usersHtml();
   if(m==="orph")return orphHtml();
   if(m==="mtk")return mTicketHtml();
+  if(m==="msite")return mSiteWelcomeHtml();
   if(m==="mnew")return mNewHtml();
   if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
   if(m==="edit")return projForm(p);
