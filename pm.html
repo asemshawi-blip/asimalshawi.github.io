@@ -357,7 +357,7 @@ navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openPricing()">💰 التسعير</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -1231,7 +1231,7 @@ function mStageBody(t){
   }else if(s==="price"){
     h=back+rep+(can?`<label class="lbl">التكلفة (ر.س) *</label><input id="mcost" type="number" inputmode="decimal" min="0" step="any" value="${esc(t.cost_total??"")}" class="mcin" placeholder="0"><label class="lbl">ملاحظة (اختياري)</label><input id="msc" value="${esc(t.scope||"")}" placeholder="مثال: تشمل المواد والعمالة">${big("📤 إرسال التكلفة للاعتماد",`mPriceSend('${id}')`)}`:wait);
   }else if(s==="cost"){
-    const sum=`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div>${t.scope?`<div class="lbl">${esc(t.scope)}</div>`:""}`+rep+mPics(id,["before"]);
+    const sum=`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div>${t.scope?`<div class="lbl">${esc(t.scope)}</div>`:""}`+rep+mPics(id,["before"])+(typeof prPanel==="function"?prPanel(t):"");
     if(t.mgmt_status==="pending"){
       h=sum+`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
       if(["mgmt","owner"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mrs" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`mDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`mDecide('${id}',0)`,"#dc2626")}</div>`;
@@ -1769,6 +1769,7 @@ if(/iphone|ipad|ipod/i.test(navigator.userAgent))
 
 init();
 </script>
+<script src="pricing.js"></script>
 <script src="i18n.js"></script>
 </body>
 </html>
