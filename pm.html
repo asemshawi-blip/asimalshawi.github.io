@@ -87,6 +87,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .hlq{background:#fffbeb;border-right:4px solid #f59e0b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
 .mout{border-radius:10px;padding:8px 12px;font-weight:700;margin-bottom:8px;background:#e2e8f0}.mout.done{background:#dcfce7;color:#166534}.mout.rejected{background:#fee2e2;color:#b91c1c}
 .mtl{max-height:300px;overflow:auto}.mev{border-right:3px solid #cbd5e1;padding:4px 10px;margin:6px 0;font-size:14px}.mev.stage{border-color:#2563eb}.mev.quote{border-color:#7c3aed}.mev small{display:block;color:var(--muted);font-size:12px}
+.mgal{margin:12px 0 0}.mgp{margin:8px 0}.mgp>b{display:block;font-size:13px;color:var(--muted)}.mdt{margin-top:14px}.mdt summary{cursor:pointer;font-weight:700;padding:6px 0}.mtl2{margin:6px 0 0;padding-right:14px;border-right:2px solid #e3e9ef}.mtv{position:relative;padding:0 12px 12px 0;font-size:14px}.mtv i{position:absolute;right:-21px;top:7px;width:10px;height:10px;border-radius:50%;background:#2e69ad;border:2px solid #fff}.mtv small{display:block;color:var(--muted);font-size:12px}
 .mth{width:120px!important;height:90px!important;max-height:none!important;object-fit:cover;border-radius:8px;margin:6px 6px 0 0!important;display:inline-block}
 @media(max-width:600px){.mqh,.mqr{grid-template-columns:1fr 54px 74px 74px 28px}.mqr.ro{grid-template-columns:1fr 54px 74px 74px}.mqh{grid-template-columns:1fr 54px 74px 102px}}
 </style>
@@ -1164,10 +1165,16 @@ async function mCreate(){
 }
 /* ---------- تفاصيل الطلب ---------- */
 function mOpen(id){MT.id=id;MT.rep=null;const q=MT.q[id];MT.qi=q&&Array.isArray(q.items)&&q.items.length?q.items.map(x=>({...x})):[{d:"",q:1,u:""}];modal("mtk")}
-const mTL=(id)=>MT.e.filter(e=>e.ticket_id===id).map(e=>{
-  const ph={issue:"المشكلة",before:"قبل",during:"أثناء التنفيذ",after:"بعد"}[e.phase]||"";
-  const img=e.file_path&&S.urls[e.file_path]?`<img class="mth" src="${S.urls[e.file_path]}" loading="lazy" onclick="openImg(this.src)">`:"";
-  return `<div class="mev ${e.kind}"><div>${ph&&e.kind==="photo"?`<span class="mchip" style="background:#475569">${ph}</span> `:""}${esc(e.body||"")}${img}</div><small>${esc(ROLES[e.author_role]||e.author_role||"")} · ${dfmt(e.created_at)} ${tfmt(e.created_at)}</small></div>`}).join("")||'<div class="lbl">—</div>';
+const MPH={issue:"المشكلة",before:"قبل",during:"أثناء التنفيذ",after:"بعد",other:"صور"};
+function mGallery(id){
+  const ev=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&S.urls[e.file_path]);
+  if(!ev.length)return "";
+  return `<div class="mgal">${["issue","before","during","after","other"].map(k=>{const a=ev.filter(e=>(e.phase||"other")===k);return a.length?`<div class="mgp"><b>${MPH[k]}</b><div>${a.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" loading="lazy" alt="" onclick="openImg(this.src)">`).join("")}</div></div>`:""}).join("")}</div>`;
+}
+const mTL=id=>{
+  const L=MT.e.filter(e=>e.ticket_id===id&&e.body&&!(e.kind==="stage"&&/^(حُفظت|تحديث الإنجاز)/.test(e.body)));
+  return L.length?`<div class="mtl2">${L.map(e=>`<div class="mtv"><i></i>${esc(e.body)}<small>${esc(ROLES[e.author_role]||e.author_role||"")} · ${dfmt(e.created_at)}</small></div>`).join("")}</div>`:'<div class="lbl">لا توجد أحداث بعد</div>';
+};
 function mSteps(t){
   const i=MST.findIndex(s=>s[0]===t.stage);
   return `<div class="msteps">${MST.map((s,k)=>`<div class="${t.closed_at&&t.outcome==="done"||k<i?"dn":k===i?"cur":""}" style="--c:${s[2]}"><i>${k<i||t.closed_at&&t.outcome==="done"?"✓":k+1}</i><span>${s[1]}</span></div>`).join("")}</div>`;
@@ -1216,8 +1223,8 @@ function mTicketHtml(){
   return `<div class="modal"><div class="box" style="max-width:720px"><div class="mh"><h3 style="margin:0">${mNo(t)} · ${esc(t.title)}</h3><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></div>
   <div class="lbl" style="margin:4px 0 10px">🏪 ${esc(t.branch||"")}${t.place?" · 📍 "+esc(t.place):""} · ${MCAT[t.category]||""} · ${esc(t.created_by_role||"")} · ${dfmt(t.created_at)}${t.assignee?" · 👤 "+esc(t.assignee):""}</div>${t.descr?`<div class="hlq" style="margin:0 0 10px"><b>وصف المشكلة</b><div style="white-space:pre-wrap;margin-top:4px">${esc(t.descr)}</div></div>`:""}
   ${mSteps(t)}<div class="mpanel">${mStageHtml(t)}</div>
-  <h4 style="margin:16px 0 4px">سجل الطلب</h4><div class="mtl">${mTL(t.id)}</div>
-  ${mWork()&&!t.closed_at&&t.stage!=="exec"&&t.stage!=="deliver"?`<div class="mpanel"><textarea id="mtx" rows="2" placeholder="إضافة ملاحظة أو صور للسجل"></textarea>${mFiles("")}<button class="btn alt" onclick="mAddUp('${t.id}',null)">إضافة للسجل</button></div>`:""}
+  ${mGallery(t.id)}<details class="mdt"><summary>مسار الطلب</summary>${mTL(t.id)}</details>
+  ${mWork()&&!t.closed_at&&t.stage!=="exec"&&t.stage!=="deliver"?`<div class="mpanel"><textarea id="mtx" rows="2" placeholder="إضافة ملاحظة أو صور"></textarea>${mFiles("")}<button class="btn alt" onclick="mAddUp('${t.id}',null)">إضافة</button></div>`:""}
   <div class="acts">${rep}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف الطلب</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 /* ---------- إجراءات المراحل ---------- */
@@ -1336,7 +1343,7 @@ async function mPdf(id){
     await loadLib("html2canvas.min.js?v=22");await loadLib("jspdf.umd.min.js");
     if(document.fonts){await Promise.all(["400","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal","ابتثجحخدذرزسشصضطظعغفقكلمنهوىيءأإآؤئة٠١٢٣٤٥٦٧٨٩ Aa0").catch(()=>0)));await document.fonts.ready}
     if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
-    const evs=MT.e.filter(e=>e.ticket_id===id),pics=evs.filter(e=>e.file_path&&(e.file_type||"").startsWith("image"));
+    const evs=MT.e.filter(e=>e.ticket_id===id),pics=evs.filter(e=>e.file_path&&e.phase!=="during"&&(e.file_type||"").startsWith("image")).sort((a,b)=>["issue","before","other","after"].indexOf(a.phase||"other")-["issue","before","other","after"].indexOf(b.phase||"other"));
     const img={};
     if(pics.length){
       const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
@@ -1351,19 +1358,14 @@ async function mPdf(id){
     const sec=s=>{no++;return `<div class="rt"><span class="no">${no}</span><span>${s}</span><i class="l2"></i></div>`};
     const cell=(a,b)=>`<td class="a">${a}</td><td class="b">${esc(b||"—")}</td>`;
     fresh();
-    put(`<div>${sec(esc(ref)+" · "+esc(t.title))}<table class="info"><tr>${cell("الفرع",t.branch)}${cell("الموضع داخل الفرع",t.place)}</tr><tr>${cell("التصنيف",MCAT[t.category])}${cell("الأولوية",pr[0])}</tr><tr>${cell("مقدّم الطلب",t.created_by_role)}${cell("تاريخ الطلب",dfmt(t.created_at))}</tr><tr>${cell("مدير الموقع",t.assignee)}${cell("موعد المعاينة",t.visit_date?dfmt(t.visit_date+"T00:00:00"):"")}</tr><tr>${cell("المرحلة الحالية",t.closed_at?"مغلق — "+(MOUT[t.outcome]||""):(MST.find(s=>s[0]===t.stage)||[])[1])}${cell("المنفذ",t.exec_by)}</tr></table>${t.descr?`<div class="hl"><small>وصف المشكلة</small>${esc(t.descr)}</div>`:""}</div>`);
-    if(t.diagnosis||t.scope)put(`<div class="ab"><h4>نتيجة المعاينة</h4><table><tr><td>التشخيص / النتيجة</td><td>${esc(t.diagnosis||"—")}</td></tr><tr><td>العمل المطلوب والمواد</td><td>${esc(t.scope||"—")}</td></tr><tr><td>المدة المتوقعة</td><td>${t.est_days!=null?t.est_days+" يوم":"—"}</td></tr></table></div>`);
-    if(q&&Array.isArray(q.items)&&q.items.length){
-      const rows=q.items.map(r=>`<tr><td style="width:auto">${esc(r.d)}</td><td>${esc(r.q)}</td><td>${money(r.u)}</td><td>${money(r.q*r.u)}</td></tr>`).join("");
-      put(`<div class="ab"><h4>التسعيرة — ${esc(MQS[q.status]||"")}${q.decided_by_role?" ("+esc(q.decided_by_role)+" · "+esc(dfmt(q.decided_at))+")":""}</h4><table><tr style="color:#647589"><td style="width:auto">البند</td><td>الكمية</td><td>السعر</td><td>الإجمالي</td></tr>${rows}<tr><td colspan="3">المجموع</td><td>${money(q.subtotal)}</td></tr><tr><td colspan="3">ضريبة القيمة المضافة 15%</td><td>${money(q.vat)}</td></tr><tr><td colspan="3"><b>الإجمالي (ر.س)</b></td><td><b>${money(q.total)}</b></td></tr>${q.actual_total!=null?`<tr><td colspan="3">التكلفة الفعلية</td><td>${money(q.actual_total)}</td></tr>`:""}</table></div>`);
-    }
-    const sev=evs.filter(e=>e.kind!=="photo"&&e.body);
-    if(sev.length){let first=true;sev.forEach(e=>{const h=`<div class="hl"><small>${esc(dfmt(e.created_at))} ${esc(tfmt(e.created_at))} · ${esc(ROLES[e.author_role]||e.author_role||"")}</small>${esc(e.body)}</div>`;put(first?`<div>${sec("مسار الطلب")}${h}</div>`:h);first=false})}
+    put(`<div>${sec(esc(ref)+" · "+esc(t.title))}<table class="info"><tr>${cell("الفرع",t.branch)}${cell("تاريخ الطلب",dfmt(t.created_at))}</tr><tr>${cell("مدير الموقع",t.assignee)}${cell("الحالة",t.closed_at?"مغلق — "+(MOUT[t.outcome]||""):(MST.find(s=>s[0]===t.stage)||[])[1])}</tr></table>${t.descr?`<div class="hl"><small>وصف المشكلة</small>${esc(t.descr)}</div>`:""}</div>`);
+    if(t.diagnosis||t.scope)put(`<div class="ab"><h4>نتيجة المعاينة</h4><table>${t.diagnosis?`<tr><td>النتيجة</td><td>${esc(t.diagnosis)}</td></tr>`:""}${t.scope?`<tr><td>العمل المطلوب</td><td>${esc(t.scope)}</td></tr>`:""}</table></div>`);
+    if(q&&q.status==="approved"&&+q.total>0)put(`<div class="ab"><h4>التكلفة</h4><table><tr><td>المعتمدة (شاملة الضريبة)</td><td><b>${money(q.total)} ر.س</b></td></tr>${q.actual_total!=null?`<tr><td>الفعلية</td><td>${money(q.actual_total)} ر.س</td></tr>`:""}</table></div>`);
     const pp=pics.filter(e=>img[e.file_path]);
     if(pp.length){
-      const PH={issue:"المشكلة",before:"قبل",during:"أثناء التنفيذ",after:"بعد"};
-      const card=e=>`<div class="pf l2"><img src="${img[e.file_path]}" alt=""><div class="pc"><b>${esc(PH[e.phase]||"")}${e.body?" — "+esc(cut(cleanTxt(e.body).replace(/\n/g," "),60)):""}</b><small>${esc(dfmt(e.created_at))}</small></div></div>`;
-      for(let i=0;i<pp.length;i+=2){const row=`<div class="pr l2">${card(pp[i])}${pp[i+1]?card(pp[i+1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`;put(i?row:`<div>${sec("صور الطلب")}${row}</div>`)}
+      const PH={issue:"المشكلة",before:"قبل",after:"بعد"};
+      const card=e=>`<div class="pf l2"><img src="${img[e.file_path]}" alt=""><div class="pc"><b>${esc(PH[e.phase]||"صورة")}</b></div></div>`;
+      for(let i=0;i<pp.length;i+=2){const row=`<div class="pr l2">${card(pp[i])}${pp[i+1]?card(pp[i+1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`;put(i?row:`<div>${sec("الصور")}${row}</div>`)}
     }
     put(`<div class="sg"><div><b>أعدّه</b>${esc(t.created_by_role||"")}<div class="ln">التوقيع / التاريخ</div></div><div><b>المستلم</b>${esc(t.receiver||"")}<div class="ln">التوقيع / التاريخ</div></div><div><b>اعتمده</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div></div>`);
     try{Intl.Segmenter=undefined}catch(e){}
