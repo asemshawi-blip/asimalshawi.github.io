@@ -1181,7 +1181,7 @@ async function mCreate(){await mOnce(async()=>{
   if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");
   const b=$("nbt");b.disabled=true;b.textContent="جاري الإرسال...";
   const urgent=$("nur").checked;
-  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:mMeName()};
+  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by:S.user.id,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:mMeName()};
   const {data,error}=await sb.from("mnt_requests").insert(row).select().single();
   if(error){mErr(error);b.disabled=false;b.textContent="إرسال الطلب";return}
   await mEvent(data,"stage","رُفع الطلب "+mNo(data));
@@ -1771,6 +1771,7 @@ init();
 <script src="i18n.js"></script>
 </body>
 </html>
+
 
 
 
