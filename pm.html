@@ -1604,6 +1604,26 @@ async function delE(id){
   await sb.from("entries").delete().eq("id",id);await loadE();render();
 }
 
+/* ===== محرك التسعير ===== */
+async function openPricing(){
+  S.price={loading:true,error:"",resources:[],recipes:[],qty:1,recipe:""};modal("pricing");
+  const [a,b]=await Promise.all([sb.from("price_resources").select("code,kind,name,unit,price,src"),sb.from("price_recipes").select("code,section,name,unit,comps,pub").eq("pub",true).order("section").order("name")]);
+  S.price.loading=false;
+  if(a.error||b.error){S.price.error=(a.error||b.error).message;render();return}
+  S.price.resources=a.data||[];S.price.recipes=b.data||[];S.price.recipe=S.price.recipes[0]?.code||"";render();
+}
+function priceCost(code,qty=1,seen=[]){
+  const res=S.price?.resources.find(x=>x.code===code);if(res)return Number(res.price||0)*qty;
+  const r=S.price?.recipes.find(x=>x.code===code);if(!r||seen.includes(code))return 0;
+  return (r.comps||[]).reduce((n,c)=>n+priceCost(c.r,qty*Number(c.q||0),[...seen,code]),0);
+}
+function pricingHtml(){
+  const x=S.price||{};
+  if(x.loading)return '<div class="modal"><div class="box"><h3>💰 التسعير</h3><p class="note">جاري تحميل بنود التسعير...</p><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>';
+  if(x.error)return `<div class="modal"><div class="box"><h3>💰 التسعير</h3><div class="hlq">تعذر تحميل بيانات التسعير. شغّل ملف <b>pricing.sql</b> في محرر SQL داخل Supabase، ثم أعد المحاولة.<br><small dir="ltr">${esc(x.error)}</small></div><button class="btn" onclick="openPricing()">إعادة المحاولة</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+  const r=x.recipes.find(v=>v.code===$("prcode")?.value)||x.recipes.find(v=>v.code===x.recipe),q=Math.max(0,Number($("prqty")?.value??x.qty)||0),cost=r?priceCost(r.code,q):0;
+  return `<div class="modal"><div class="box" style="max-width:620px"><h3>💰 التسعير بالتحليل</h3><label class="lbl">بند التسعير</label><select id="prcode" onchange="S.price.recipe=this.value;render()">${x.recipes.map(v=>`<option value="${esc(v.code)}" ${v.code===(r?.code||x.recipe)?"selected":""}>${esc(v.section)} · ${esc(v.name)} (${esc(v.unit)})</option>`).join("")}</select>${r?`<label class="lbl">الكمية (${esc(r.unit)})</label><input id="prqty" type="number" min="0" step="any" value="${q}" onchange="S.price.qty=this.value;render()"><div class="box" style="background:#f4f6fa;margin:8px 0"><span>سعر الوحدة التقديري</span><b>${priceCost(r.code,1).toLocaleString("ar-SA",{maximumFractionDigits:2})} ر.س</b><br><span>الإجمالي التقديري</span><b style="font-size:22px">${cost.toLocaleString("ar-SA",{maximumFractionDigits:2})} ر.س</b></div>`:'<div class="empty">لا توجد وصفات تسعير متاحة.</div>'}<details><summary>الموارد والأسعار (${x.resources.length})</summary>${x.resources.map(v=>`<div class="item">${esc(v.name)} · ${Number(v.price).toLocaleString("ar-SA")} ر.س / ${esc(v.unit)} <small>${esc(v.src||"")}</small></div>`).join("")}</details><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+}
 /* ===== 7) النوافذ ===== */
 function modal(m){S.modal=m;S.link="";S.cred=null;render()}
 function projForm(p){
@@ -1629,6 +1649,7 @@ function projForm(p){
 }
 function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
+  if(m==="pricing")return pricingHtml();
   if(m==="welcome")return welcomeHtml();
   if(m==="report")return reportHtml();
   if(m==="log")return logHtml();
@@ -1769,7 +1790,7 @@ if(/iphone|ipad|ipod/i.test(navigator.userAgent))
 
 init();
 </script>
-<script src="pricing.js"></script>
+
 <script src="i18n.js"></script>
 </body>
 </html>
