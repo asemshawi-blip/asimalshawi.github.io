@@ -92,6 +92,26 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .mgal{margin:12px 0 0}.mgp{margin:8px 0}.mgp>b{display:block;font-size:13px;color:var(--muted)}.mdt{margin-top:14px}.mdt summary{cursor:pointer;font-weight:700;padding:6px 0}.mtl2{margin:6px 0 0;padding-right:14px;border-right:2px solid #e3e9ef}.mtv{position:relative;padding:0 12px 12px 0;font-size:14px}.mtv i{position:absolute;right:-21px;top:7px;width:10px;height:10px;border-radius:50%;background:#2e69ad;border:2px solid #fff}.mtv small{display:block;color:var(--muted);font-size:12px}
 .mth{width:120px!important;height:90px!important;max-height:none!important;object-fit:cover;border-radius:8px;margin:6px 6px 0 0!important;display:inline-block}
 @media(max-width:600px){.mqh,.mqr{grid-template-columns:1fr 54px 74px 74px 28px}.mqr.ro{grid-template-columns:1fr 54px 74px 74px}.mqh{grid-template-columns:1fr 54px 74px 102px}}
+/* الصيانة v2 */
+.mtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#102944;color:#fff;padding:11px 22px;border-radius:30px;z-index:200;font-weight:700;box-shadow:0 8px 24px #0004}
+.modal .box.mtk{max-width:560px}
+.mstt{display:inline-block;background:var(--c);color:#fff;border-radius:20px;padding:3px 16px;font-weight:800;font-size:15px;margin:0 0 10px}
+.mstage{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0}
+.mwait{background:#fffbeb;border:1px dashed #f59e0b;color:#92400e;border-radius:10px;padding:12px;text-align:center;font-weight:700;margin-top:10px}
+.btn.big{width:100%;padding:15px;font-size:17px;margin-top:10px}
+.mbtns{display:grid;gap:8px;margin-top:10px}.mbtns .btn{width:100%;margin:0;padding:13px}
+.mpre{white-space:pre-wrap}
+.mrep{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}.mrep>b{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.mcostbox{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}.mcostbox span{color:var(--muted)}.mcostbox b{font-size:24px;color:var(--navy)}
+.mcin{font-size:22px!important;font-weight:800;text-align:center}
+.mdur{display:flex;gap:8px}.mdur input{flex:1}.mdur select{width:110px}
+.mfile{padding:12px;border:2px dashed #cbd5e1;background:#fff}
+.mpics{margin:4px 0 8px}
+.mtb{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}.mtb td{padding:6px 4px;border-bottom:1px solid var(--line)}.mtb td:first-child{color:var(--muted);width:32%}
+.tfs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.tfs button{border:1px solid var(--line);background:#fff;border-radius:22px;padding:7px 16px;cursor:pointer;font-weight:600}.tfs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.dashStats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))!important}
+.img.mimg{display:grid;place-items:center;background:linear-gradient(135deg,#183b5c,#0f2742);height:120px}.mimg .mic{font-size:44px;opacity:.85}
+.card.mine{outline:3px solid #ed8700}
 </style>
 </head>
 <body>
@@ -136,6 +156,7 @@ const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
 
 /* ===== 3) الدخول ===== */
 async function init(){
+  const kk=new URLSearchParams(location.search).get("k");if(kk)return mgLink(kk);   /* رابط الإدارة: بدون تسجيل دخول */
   const {data}=await sb.auth.getSession();
   S.user=data.session?.user||null;
   S.user?boot():loginView();
@@ -165,6 +186,8 @@ async function boot(){
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
   await load();
+  try{await loadM()}catch(e){MT.err=String(e&&e.message||e)}
+  render();
   const dl=await deepLink();
   if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
   checkPush();
@@ -321,7 +344,9 @@ async function enablePush(){
 }
 async function deepLink(p,t){
   const q=new URLSearchParams(location.search);p=p||q.get("p");t=t||q.get("t");
-  if(!p&&t==="maint"&&mSee()){history.replaceState(null,"",location.pathname);await openMaint();return true}
+  const mq=q.get("m");
+  if(mq&&mSee()){history.replaceState(null,"",location.pathname);if(!MT.t.some(x=>x.id===mq))await loadM();if(MT.t.some(x=>x.id===mq)){S.cur=null;S.view=null;await mOpen(mq);return true}}
+  if(!p&&t==="maint"&&mSee()){history.replaceState(null,"",location.pathname);S.cur=null;S.view=null;S.modal=null;await loadM();render();scrollTo(0,0);return true}
   const pr=p&&S.projects.find(x=>String(x.id)===String(p));if(!pr)return false;
   S.modal=null;await openP(pr.id);
   if(t&&TABS.some(x=>x.k===t&&x.see.includes(S.role)))await setTab(t);
@@ -332,8 +357,8 @@ navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${mSee()?`<button class="sm" onclick="openMaint()">🔧 الصيانة${S.role==="site"&&MT.t.some(t=>!t.closed_at)?" ("+MT.t.filter(t=>!t.closed_at).length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
-  const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():S.view==="maint"?maintPage():home();
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
 function card(p){
@@ -344,12 +369,17 @@ function card(p){
 }
 function home(){
   const total=S.projects.length,active=S.projects.filter(p=>p.status==="plan"||p.status==="run").length,late=S.projects.filter(p=>timing(p)?.late).length,done=S.projects.filter(p=>p.status==="done").length;
-  const stats=`<div class="dashStats"><div class="dashStat"><span>إجمالي المشاريع</span><b>${total}</b></div><div class="dashStat"><span>قيد العمل</span><b>${active}</b></div><div class="dashStat"><span>متأخرة</span><b>${late}</b></div><div class="dashStat"><span>تم تسليمها</span><b>${done}</b></div></div>`;
+  const mOn=mSee()&&!MT.err,tf=S.tf||"",mOpenN=mOn?MT.t.filter(t=>!t.closed_at).length:0,mineN=mOn?MT.t.filter(mMine).length:0;
+  const stats=`<div class="dashStats"><div class="dashStat"><span>إجمالي المشاريع</span><b>${total}</b></div><div class="dashStat"><span>قيد العمل</span><b>${active}</b></div><div class="dashStat"><span>متأخرة</span><b>${late}</b></div><div class="dashStat"><span>تم تسليمها</span><b>${done}</b></div>${mOn?`<div class="dashStat"><span>🔧 صيانة مفتوحة</span><b>${mOpenN}</b></div>`:""}${mineN?`<div class="dashStat" style="border-color:#ed8700"><span>بانتظارك</span><b style="color:#ed8700">${mineN}</b></div>`:""}</div>`;
+  const P=S.projects.filter(p=>!tf||(tf!=="maint"&&(p.ptype||"new")===tf)).map(p=>({at:p.created_at,col:p.status,pri:0,h:card(p)}));
+  const M=mOn&&(!tf||tf==="maint")?MT.t.filter(mShow).map(t=>({at:t.created_at,col:mCol(t),pri:mMine(t)?1:0,h:mHomeCard(t)})):[];
+  const all=[...P,...M].sort((a,b)=>b.pri-a.pri||new Date(b.at)-new Date(a.at));
   const cols=Object.keys(ST).map(k=>{
-    const L=S.projects.filter(p=>p.status===k);
-    return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(card).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
+    const L=all.filter(x=>x.col===k);
+    return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(x=>x.h).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}</div>${stats}<div class="cols">${cols}</div>`;
+  const chips=[["","الكل"],["new","🏗 إنشاء"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}${mCreateOk()&&!MT.err?`<button class="btn" style="background:#d97706" onclick="modal('mnew')">＋ طلب صيانة</button>`:""}</div>${MT.err&&mSee()&&mAdm()?`<div class="hlq">الصيانة غير مفعّلة بعد: شغّل maintenance_v2.sql في Supabase.</div>`:""}<div class="tfs">${chips.map(([k,n])=>`<button class="${tf===k?"on":""}" onclick="S.tf='${k}';render();filterProjects(S.q||'')">${n}</button>`).join("")}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
   S.q=value.trim().toLocaleLowerCase();
@@ -1058,334 +1088,351 @@ async function delProj(){
 }
 
 
-/* ===== الصيانة: نظام مبسط 3 مراحل فقط (جديد → قيد العمل → التسليم) ===== */
-const MST=[["new","طلب جديد","#d97706"],["work","قيد العمل","#2563eb"],["deliver","التسليم","#16a34a"]];
-const OLD_STAGE_MAP={new:"new",inspect:"work",quote:"work",exec:"work",deliver:"deliver"};
-const MCAT={elec:"كهرباء",plumb:"سباكة",hvac:"تكييف",civil:"مدني",paint:"دهانات",carp:"نجارة",other:"أخرى"};
-const MPRI={urgent:["طارئ","#dc2626"],high:["عاجل","#ea580c"],normal:["عادي","#94a3b8"]};
-const MOUT={done:"مكتمل",nowork:"لا يحتاج عمل",rejected:"مرفوض"};
-let MT={t:[],e:[],q:{},sm:[],f:{plc:"",closed:false,search:""},id:null,err:"",rep:null};
+/* ===== الصيانة: مسار خفيف، مرحلة واحدة ظاهرة في كل وقت =====
+   طلب جديد ← معاينة ← اعتماد المعاينة ← تسعير ← اعتماد التكلفة (مدير المشروع أو الإدارة) ← تنفيذ ← تسليم */
+const MST=[["new","طلب جديد","#d97706","طلب"],["inspect","المعاينة","#7c3aed","معاينة"],["review","اعتماد المعاينة","#0891b2","اعتماد"],["price","التسعير","#ca8a04","تسعير"],["cost","اعتماد التكلفة","#db2777","تكلفة"],["exec","التنفيذ","#2563eb","تنفيذ"],["deliver","التسليم","#16a34a","تسليم"]];
+const MPRI={urgent:["مستعجل","#dc2626"],high:["عاجل","#ea580c"],normal:["عادي","#94a3b8"]};
+const MOUT={done:"تم التسليم",nowork:"لا يحتاج عمل",rejected:"أُلغي الطلب"};
+const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"الإدارة"};
+const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
+let MT={t:[],e:[],q:{},sm:[],id:null,err:"",rep:null};
 const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
-const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mWork=()=>["owner","pm","site"].includes(S.role),mMgr=()=>["owner","pm"].includes(S.role),mSeeQ=mSee;
+const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
+const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
+/* المرحلة الحالية (الطلبات القديمة بمرحلة "work" تُعرض كتنفيذ) */
+const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(MST.some(s=>s[0]===t.stage)?t.stage:"new"));
+/* من ينتظره الطلب الآن */
+const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_status==="pending")return"mgmt";return{new:"site",inspect:"site",review:"pm",price:"site",cost:"pm",exec:"site"}[s]||""};
+const mMine=t=>{const w=mWho(t);return !!w&&(w==="pm"?mAdm():S.role===w)};
+const mCan=t=>{const w=mWho(t);return !!w&&(mAdm()||S.role===w)};
+const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
+const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم"):"-";
+const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
 const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
+const mErr=e=>alert(/column|schema cache/i.test((e&&e.message)||"")?"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً.\n\n"+e.message:((e&&e.message)||e));
+const mCover=t=>{const e=MT.e.find(e=>e.ticket_id===t.id&&e.file_path&&(e.file_type||"").startsWith("image"));return e?e.file_path:null};
+const mShow=t=>!t.closed_at||(Date.now()-new Date(t.closed_at))<30*864e5;   /* المغلقة تظهر في الرئيسية 30 يوما */
+const mCol=t=>t.closed_at?"done":(mStg(t)==="exec"?"run":"plan");
+function mToast(m){const d=document.createElement("div");d.className="mtoast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnce.b=0}}
+
 async function loadM(){
-  const [a,b]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("*").order("created_at",{ascending:true}).limit(5000)]);
+  if(!mSee())return;
+  if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
+  const [a,b]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000)]);
   if(a.error||b.error){MT.err=(a.error||b.error).message;MT.t=[];MT.e=[];return}
-  MT.err=""; 
-  MT.t=(a.data||[]).map(t=>{
-    const ns=OLD_STAGE_MAP[t.stage];
-    if(ns && ns!==t.stage){
-      sb.from("mnt_requests").update({stage:ns, stage_at:new Date().toISOString()}).eq("id",t.id).then(()=>{},()=>{});
-      return {...t, stage:ns};
-    }
-    return t;
-  });
-  MT.e=b.data||[];MT.q={};
+  MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
   const {data:qs}=await sb.from("mnt_quotes").select("*");(qs||[]).forEach(q=>MT.q[q.ticket_id]=q);
   if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
-  await sign(MT.e.map(e=>e.file_path));
+  await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));   /* صورة الغلاف فقط، وباقي الصور تُحمّل عند فتح الطلب */
 }
-async function mReload(){await loadM();render()}
 function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
 async function mEvent(t,kind,body,phase,file){
   const row={ticket_id:t.id,kind,phase:phase||null,body:body||null,author_role:ROLES[S.role]};
   if(file){row.file_path=file.path;row.file_type=file.type}
   const {error}=await sb.from("mnt_events").insert(row);if(error)alert(error.message);return !error;
 }
-async function mUpd(id,patch,evText,roles,pushTitle){
-  const t=MT.t.find(x=>x.id===id);if(!t)return false;
-  if(patch.stage&&patch.stage!==t.stage)patch.stage_at=new Date().toISOString();
+/* تحديث الطلب: يحفظ، يشعر الأدوار المعنية، يعيد التحميل، ويغلق النافذة (إلا إذا keep) */
+async function mUpd(id,patch,ev,roles,pt,o){
+  o=o||{};const t=mT(id);if(!t)return false;
+  if(patch.stage&&patch.stage!==t.stage)patch.stage_at=mNow();
   const {error}=await sb.from("mnt_requests").update(patch).eq("id",id);
-  if(error){alert(error.message);return false}
-  if(evText)await mEvent(t,"stage",evText);
-  if(roles&&roles.length)mPush(t,pushTitle||("صيانة "+mNo(t)),evText,roles);
-  await mReload();return true;
+  if(error){mErr(error);return false}
+  if(ev)await mEvent(t,"stage",ev);
+  if(roles&&roles.length)mPush(t,pt||("صيانة "+mNo(t)),o.body||ev,roles);
+  await loadM();if(!o.keep)S.modal=null;render();if(o.toast)mToast(o.toast);return true;
 }
-function mCard(t){
-  const pr=MPRI[t.priority]||MPRI.normal;
-  const cost=MT.q[t.id]?.total||t.cost_total;
-  return `<div class="mc" style="border-right-color:${pr[1]}" onclick="mOpen('${t.id}')">
-    <div class="mh"><b>${mNo(t)}</b><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></div>
-    <div class="mt1">${esc(t.title)}</div>
-    <div class="mm">🏪 ${esc(t.branch||"")} ${t.assignee?`· 👤 ${esc(t.assignee)}`:""}</div>
-    ${cost?`<div style="margin-top:6px;font-weight:700;color:var(--navy)">${money(cost)} ر.س</div>`:""}
-    <div class="mf"><span>${MST.find(s=>s[0]===t.stage)?.[1]||t.stage}</span><span>${mAge(t)}</span></div>
-  </div>`;
-}
-function mtBoard(){
-  if(MT.err)return `<div class="note">لم تُفعَّل الصيانة بعد. شغّل ملف الصيانة في Supabase.<br><small dir="ltr">${esc(MT.err)}</small></div>`;
-  const f=MT.f;
-  const branches=[...new Set(MT.t.map(t=>t.branch).filter(Boolean))].sort();
-  const filtered=MT.t.filter(t=>{
-    if(f.plc && t.branch!==f.plc) return false;
-    if(f.search && !( (t.title+t.branch+t.assignee).toLowerCase().includes(f.search.toLowerCase()) )) return false;
-    return true;
-  });
-  const open=filtered.filter(t=>!t.closed_at), closed=filtered.filter(t=>t.closed_at);
-  const allOpen=MT.t.filter(t=>!t.closed_at);
-  const stats=`<div class="dashStats"><div class="dashStat"><span>مفتوحة</span><b>${allOpen.length}</b></div><div class="dashStat"><span>قيد العمل</span><b>${allOpen.filter(t=>t.stage==="work").length}</b></div><div class="dashStat"><span>بانتظار التسليم</span><b>${allOpen.filter(t=>t.stage==="deliver").length}</b></div><div class="dashStat"><span>مغلقة</span><b>${MT.t.length-allOpen.length}</b></div></div>`;
-  const bar=`<div class="mbar" style="background:#fff;padding:12px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px">
-    <input type="search" placeholder="ابحث: فرع أو عنوان أو مدير" value="${esc(f.search)}" oninput="MT.f.search=this.value;render()" style="flex:1;min-width:200px;margin:0">
-    <select onchange="MT.f.plc=this.value;render()" style="min-width:150px;margin:0"><option value="">كل الفروع</option>${branches.map(b=>`<option value="${esc(b)}" ${b===f.plc?"selected":""}>${esc(b)}</option>`).join("")}</select>
-    <label class="mtg"><input type="checkbox" ${f.closed?"checked":""} onchange="MT.f.closed=this.checked;render()"> المغلقة</label>
-    ${mCreateOk()?`<button class="btn" onclick="modal('mnew')">＋ طلب جديد</button>`:""}</div>`;
-  const cols=MST.map(([k,n,c])=>{
-    const a=open.filter(t=>t.stage===k);
-    return `<section class="mcol" style="--c:${c}"><h3>${n}<b>${a.length}</b></h3>${a.map(mCard).join("")||'<div class="empty" style="padding:16px">—</div>'}</section>`;
-  }).join("");
-  const cl=f.closed?`<h3 style="margin:22px 0 10px">المغلقة (${closed.length})</h3><div class="mgrid">${closed.map(t=>`<div class="mc" onclick="mOpen('${t.id}')"><div class="mh"><b>${mNo(t)}</b><span class="mchip" style="background:${t.outcome==="done"?"#16a34a":"#64748b"}">${MOUT[t.outcome]||"مغلق"}</span></div><div class="mt1">${esc(t.title)}</div><div class="mf"><span>${esc(t.branch||"")}</span><span>${dfmt(t.closed_at)}</span></div></div>`).join("")||'<div class="empty">لا يوجد</div>'}</div>`:"";
-  return stats+bar+`<div class="mboard">${cols}</div>`+cl;
-}
-async function openMaint(){S.view="maint";S.cur=null;S.modal=null;render();await loadM();render();scrollTo(0,0)}
-function maintPage(){
-  if(S.role==="site"&&!MT.err){
-    const L=MT.t.filter(t=>!t.closed_at).sort((a,b)=> (MPRI[a.priority]?.[1]==="#dc2626"?-1:0) - (MPRI[b.priority]?.[1]==="#dc2626"?-1:0) || new Date(a.created_at)-new Date(b.created_at));
-    const D=MT.t.filter(t=>t.closed_at);
-    return `<button class="back" onclick="S.view=null;render()">← المشاريع</button><div class="top"><h2>🔧 طلباتي (${L.length})</h2></div>
-    <div style="display:grid;gap:10px">${L.length?L.map(t=>`<button class="srow" onclick="mOpen('${t.id}')" style="border-right:5px solid ${MPRI[t.priority]?.[1]||'#cbd5e1'}"><div><div style="font-weight:800;font-size:16px">${esc(t.branch)} · ${esc(t.title)}</div><small style="color:var(--muted)">${mNo(t)} · ${MST.find(s=>s[0]===t.stage)?.[1]} · ${mAge(t)}</small></div><span class="mchip" style="background:${MPRI[t.priority]?.[1]}">${MPRI[t.priority]?.[0]}</span></button>`).join(""):'<div class="empty">لا توجد طلبات مفتوحة 🎉</div>'}</div>
-    ${D.length?`<details class="mdt"><summary>المنتهية (${D.length})</summary><div style="display:grid;gap:8px;margin-top:10px">${D.map(t=>`<button class="srow" onclick="mOpen('${t.id}')"><div>${esc(t.branch)} · ${esc(t.title)}</div></button>`).join("")}</div></details>`:""}`;
-  }
-  return `<button class="back" onclick="S.view=null;render()">← المشاريع</button><div class="top"><h2>🔧 صيانة الفروع</h2></div>${mtBoard()}`;
-}
-function mNewHtml(){
-  const BR=[...new Set(MT.t.map(t=>t.branch).filter(Boolean))].sort();
-  return `<div class="modal"><div class="box"><h3>طلب صيانة جديد</h3>
-  <label class="lbl">اسم الفرع *</label><input id="nbr" list="nbrl" placeholder="مثال: بريدة - طريق الملك"><datalist id="nbrl">${BR.map(b=>`<option value="${esc(b)}">`).join("")}</datalist>
-  <label class="lbl">وش المشكلة؟ (عنوان مختصر) *</label><input id="ntt" placeholder="مثال: تسريب ماء في المطبخ">
-  <label class="lbl">التفاصيل (اختياري)</label><textarea id="nds" rows="3" placeholder="اشرح باختصار: وين المشكلة ومتى بدت؟"></textarea>
-  <label class="lbl">الأولوية</label><select id="npri"><option value="normal">عادي</option><option value="high">عاجل</option><option value="urgent">طارئ 🚨</option></select>
-  <label class="lbl">صور المشكلة (اختياري)</label><input id="nfl" type="file" accept="image/*" multiple>
-  <button class="btn" id="nbt" onclick="mCreate()" style="width:100%;margin-top:12px;padding:14px;font-size:16px">رفع الطلب</button> <button class="btn alt" style="width:100%" onclick="modal(null)">إلغاء</button></div></div>`;
-}
-async function mUploadFiles(t,fs,phase,body){
+async function mUploadFiles(t,fs,phase){
   let n=0;
   for(const f of fs){
-    if((f.type||"").startsWith("video/")){alert("الفيديو غير متاح");continue}
+    if((f.type||"").startsWith("video/")){alert("الفيديو غير متاح في الصيانة");continue}
     const path=await up("maint",f);if(!path)continue;
-    if(await mEvent(t,"photo",body,phase,{path,type:f.type||"image/jpeg"}))n++;
+    if(await mEvent(t,"photo",null,phase,{path,type:f.type||"image/jpeg"}))n++;
   }
   return n;
 }
-async function mCreate(){
-  const br=$("nbr").value.trim(),title=$("ntt").value.trim(),ds=$("nds").value.trim();
-  if(!br)return alert("اكتب اسم الفرع");
-  if(!title)return alert("اكتب عنوان المشكلة");
-  const b=$("nbt");b.disabled=true;b.textContent="جاري الرفع...";
-  const row={branch:br,title,descr:ds||title,category:"other",priority:$("npri").value,place:null,created_by_role:ROLES[S.role],stage:"new"};
+const mHasPic=(id,ph)=>MT.e.some(e=>e.ticket_id===id&&e.phase===ph&&e.file_path);
+
+/* ---------- الرئيسية: بطاقة الصيانة بنفس شكل بطاقة المشروع ---------- */
+function mHomeCard(t){
+  const s=mStg(t),idx=MST.findIndex(x=>x[0]===s),col=mCol(t),pr=MPRI[t.priority]||MPRI.normal,mine=mMine(t),cp=mCover(t),u=cp&&S.urls[cp];
+  const pct=t.closed_at?100:Math.round(idx/(MST.length-1)*100),label=t.closed_at?(MOUT[t.outcome]||"مغلق"):MST[idx][1];
+  return `<div class="card ${ST[col][1]}${mine?" mine":""}" data-search="${esc((mNo(t)+" "+t.title+" "+(t.branch||"")+" "+(t.assignee||"")+" صيانة").toLocaleLowerCase())}" onclick="mOpen('${t.id}')">
+  <div class="img${u?"":" mimg"}" ${u?`style="background-image:url('${u}')"`:""}>${u?"":'<span class="mic">🔧</span>'}<div class="cw"><span class="chip ty">🔧 صيانة</span>${t.priority&&t.priority!=="normal"?`<span class="chip" style="background:${pr[1]}">${pr[0]}</span>`:""}${mine?'<span class="chip" style="background:#ed8700">بانتظارك</span>':""}</div></div>
+  <div class="body"><h4>${esc(t.title)}</h4><p>🏪 ${esc(t.branch||"")}${t.assignee?" · 👤 "+esc(t.assignee):""}</p><div class="bar"><i style="width:${pct}%"></i></div>
+  <div class="row"><span>${label}</span><span>${t.closed_at?dfmt(t.closed_at):mAge(t)}</span></div></div></div>`;
+}
+
+/* ---------- طلب جديد ---------- */
+function mNewHtml(){
+  const BR=[...new Set(MT.t.map(t=>t.branch).filter(Boolean))].sort();
+  return `<div class="modal"><div class="box"><h3>🔧 طلب صيانة جديد</h3>
+  <label class="lbl">الفرع *</label><input id="nbr" list="nbrl" placeholder="مثال: بريدة - طريق الملك"><datalist id="nbrl">${BR.map(b=>`<option value="${esc(b)}">`).join("")}</datalist>
+  <label class="lbl">وش المشكلة؟ *</label><input id="ntt" placeholder="مثال: تسريب ماء في المطبخ">
+  <label class="lbl">تفاصيل (اختياري)</label><textarea id="nds" rows="2" placeholder="وين المشكلة ومتى بدت؟"></textarea>
+  <label class="lbl">مدير الموقع (يوصله إشعار للمعاينة) *</label><select id="nas">${MT.sm.length===1?"":'<option value="">اختر مدير الموقع</option>'}${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
+  ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع. أنشئ حسابًا من «الحسابات».</div>'}
+  <label class="mck" style="margin:8px 0"><input id="nur" type="checkbox"> 🚨 مستعجل</label>
+  <label class="lbl">صور المشكلة (اختياري)</label><input id="nfl" type="file" accept="image/*" multiple class="mfile">
+  <button class="btn big" id="nbt" onclick="mCreate()">إرسال الطلب</button><button class="btn alt" style="width:100%" onclick="modal(null)">إلغاء</button></div></div>`;
+}
+async function mCreate(){await mOnce(async()=>{
+  const br=$("nbr").value.trim(),title=$("ntt").value.trim(),ds=$("nds").value.trim(),as=$("nas").value,site=MT.sm.find(x=>String(x.user_id)===String(as));
+  if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");
+  const b=$("nbt");b.disabled=true;b.textContent="جاري الإرسال...";
+  const urgent=$("nur").checked;
+  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:mMeName()};
   const {data,error}=await sb.from("mnt_requests").insert(row).select().single();
-  if(error){alert(error.message);b.disabled=false;b.textContent="رفع الطلب";return}
+  if(error){mErr(error);b.disabled=false;b.textContent="إرسال الطلب";return}
   await mEvent(data,"stage","رُفع الطلب "+mNo(data));
-  await mUploadFiles(data,[...($("nfl")?.files||[])],"issue",null);
-  mPush(data,(data.priority==="urgent"?"🚨 طارئ ":"")+mNo(data),br+" · "+title,["owner","pm"]);
-  S.modal=null;S.view="maint";await mReload();
+  await mUploadFiles(data,[...($("nfl")?.files||[])],"issue");
+  mPush(data,(urgent?"🚨 مستعجل · ":"")+"طلب صيانة جديد "+mNo(data),br+" · "+title,["site"].concat(S.role==="mgmt"?["owner","pm"]:[]));
+  S.modal=null;await loadM();render();mToast("أُرسل الطلب لـ "+site.name);
+})}
+
+/* ---------- نافذة الطلب: المرحلة الحالية فقط ---------- */
+async function mOpen(id){
+  MT.id=id;MT.rep=null;
+  await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));
+  modal("mtk");
 }
-function mOpen(id){MT.id=id;MT.rep=null;modal("mtk")}
-const MPH={issue:"صور المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
-function mGallery(id){
-  const ev=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&S.urls[e.file_path]);
-  if(!ev.length)return `<div class="lbl">لا توجد صور بعد</div>`;
-  const before=ev.filter(e=>["issue","before"].includes(e.phase)), after=ev.filter(e=>["after"].includes(e.phase)), during=ev.filter(e=>["during","other"].includes(e.phase));
-  let h=`<div class="mgal">`;
-  if(before.length) h+=`<div class="mgp"><b>قبل</b><div>${before.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)">`).join("")}</div></div>`;
-  if(during.length) h+=`<div class="mgp"><b>أثناء العمل</b><div>${during.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)">`).join("")}</div></div>`;
-  if(after.length) h+=`<div class="mgp"><b>بعد</b><div>${after.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)">`).join("")}</div></div>`;
-  h+=`</div>`;return h;
-}
-const mTL=id=>{
-  const L=MT.e.filter(e=>e.ticket_id===id&&e.body&&!e.body.startsWith("حُفظت"));
-  return L.length?`<div class="mtl2">${L.map(e=>`<div class="mtv"><i></i>${esc(e.body)}<small>${esc(e.author_role||"")} · ${dfmt(e.created_at)}</small></div>`).join("")}</div>`:'<div class="lbl">لا يوجد سجل</div>';
-};
+const mPics=(id,ph)=>{const L=MT.e.filter(e=>e.ticket_id===id&&ph.includes(e.phase)&&e.file_path&&S.urls[e.file_path]&&(e.file_type||"").startsWith("image"));return L.length?`<div class="mpics">${L.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("")}</div>`:""};
 function mSteps(t){
-  const idx=MST.findIndex(s=>s[0]===t.stage);
-  const closed=!!t.closed_at;
-  return `<div class="msteps">${MST.map((s,k)=>`<div class="${closed||k<idx?"dn":k===idx?"cur":""}" style="--c:${s[2]}"><i>${closed||k<idx?"✓":k+1}</i><span>${s[1]}</span></div>`).join("")}</div>`;
+  const idx=MST.findIndex(s=>s[0]===mStg(t)),all=t.closed_at&&t.outcome==="done";
+  return `<div class="msteps">${MST.map((s,k)=>`<div class="${all||k<idx?"dn":k===idx?"cur":""}" style="--c:${s[2]}"><i>${all||k<idx?"✓":k+1}</i><span>${s[3]}</span></div>`).join("")}</div>`;
 }
-const mFiles=(label)=>`<div style="margin:10px 0"><label class="lbl">${label||"صور"}</label><input id="mfl" type="file" accept="image/*" multiple style="padding:12px;border:2px dashed #cbd5e1"></div>`;
-function mSiteHtml(t){
-  const id=t.id, idx=MST.findIndex(s=>s[0]===t.stage), closed=!!t.closed_at, cost=MT.q[id]?.total||t.cost_total||"";
-  if(closed) return `<div class="mout ${t.outcome}">${t.outcome==="done"?"✅ تم التسليم":MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>`;
-  if(idx===0){
-    return `<div class="sinfo" style="background:#fffbeb;border:1px solid #fcd34d">اقرأ الوصف فوق، اذا تقدر تبدأ اضغط زر الاستلام.</div>
-    <button class="btn" style="width:100%;padding:16px;font-size:18px;margin-top:12px" onclick="mToWork('${id}')">✔ استلمت الطلب وببدأ العمل</button>`;
-  }
-  if(idx===1){
-    return `<div class="sinfo">صور قبل + وش لقيت + التكلفة.</div>
-    <label class="lbl">ماذا وجدت؟ *</label><textarea id="mdg" rows="2" placeholder="مثال: تهريب في ماسورة السخان">${esc(t.diagnosis||"")}</textarea>
-    <label class="lbl">ماذا عملت؟</label><textarea id="msc" rows="2" placeholder="مثال: غيرت اللي وتم الاختبار">${esc(t.scope||"")}</textarea>
-    <label class="lbl">التكلفة الإجمالية (ر.س) *</label><input id="mcost" type="number" min="0" step="any" value="${esc(cost)}" placeholder="450" style="font-size:18px;font-weight:700">
-    ${mFiles("صور قبل / أثناء العمل")}
-    <button class="btn" style="width:100%;padding:14px;font-size:16px" onclick="mSaveWork('${id}',false)">💾 حفظ</button>
-    <button class="btn" style="width:100%;padding:16px;font-size:18px;background:#16a34a;margin-top:8px" onclick="mSaveWork('${id}',true)">⬆ اكتمل العمل - جاهز للتسليم</button>`;
-  }
-  return `<div class="sinfo">باقي خطوة التسليم: صور بعد + اسم المستلم.</div>
-  ${mFiles("صور بعد التنفيذ *")}
-  <label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم">
-  <label class="lbl">ملاحظة (اختياري)</label><input id="mtx" value="${esc(t.close_note||"")}">
-  <button class="btn" style="width:100%;padding:16px;font-size:18px;background:#16a34a;margin-top:10px" onclick="mSiteClose('${id}')">✔ تأكيد التسليم وإغلاق الطلب</button>`;
+const mLink=t=>location.origin+location.pathname+"?k="+(t.mgmt_token||"");
+const mShareText=t=>`طلب اعتماد تكلفة صيانة ${mNo(t)}\n${t.branch} · ${t.title}\nالتكلفة: ${money(mCost(t))} ر.س\n${mLink(t)}`;
+async function mShare(id){
+  const t=mT(id),tx=mShareText(t);
+  if(navigator.share){try{await navigator.share({text:tx});return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(tx);mToast("نُسخ الرابط")}catch(e){prompt("انسخ الرابط",mLink(t))}
 }
-function mStageHtml(t){
-  const id=t.id, cost=MT.q[id]?.total||t.cost_total, closed=!!t.closed_at;
-  if(closed) return `<div class="mout ${t.outcome}">${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}${t.close_note?" · "+esc(t.close_note):""}</div>
-    ${cost?`<div class="lbl">التكلفة: <b>${money(cost)} ر.س</b> · المستلم: ${esc(t.receiver||"-")}</div>`:""}
-    ${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${id}')">إعادة فتح</button>`:""}`;
-  if(t.stage==="new"){
-    return `<div class="lbl">أسند الطلب لمدير موقع ليبدأ العمل مباشرة.</div>
-    <select id="mas"><option value="">اختر مدير الموقع</option>${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
-    ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع.</div>'}
-    <button class="btn" style="width:100%;padding:14px;margin-top:8px" onclick="mToWork('${id}')">إسناد وبدء العمل ←</button>
-    <button class="btn danger" onclick="mReject('${id}')">رفض الطلب</button>`;
+function mClosed(t){
+  const ok=t.outcome==="done";
+  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
+}
+function mStageBody(t){
+  if(t.closed_at)return mClosed(t);
+  const id=t.id,s=mStg(t),can=mCan(t),w=mWho(t),st=MST.find(x=>x[0]===s);
+  const head=`<div class="mstt" style="--c:${st[2]}">${st[1]}</div>`;
+  const back=t.back_note?`<div class="hlq"><b>ملاحظة:</b> ${esc(t.back_note)}</div>`:"";
+  const wait=`<div class="mwait">⏳ بانتظار ${MWN[w]}${s==="new"&&t.assignee?" · "+esc(t.assignee):""}</div>`;
+  const desc=t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:"";
+  const rep=t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:"";
+  const big=(label,fn,color)=>`<button class="btn big" ${color?`style="background:${color}"`:""} onclick="${fn}">${label}</button>`;
+  let h="";
+  if(s==="new"){
+    h=desc+mPics(id,["issue"])+(can?big("✔ استلمت الطلب",`mReceive('${id}')`):wait);
+  }else if(s==="inspect"){
+    h=back+desc+(can?`<label class="lbl">تقرير المعاينة *</label><textarea id="mdg" rows="3" placeholder="وش لقيت؟ وش المطلوب؟">${esc(t.diagnosis||"")}</textarea><label class="lbl">صور المعاينة</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["before"])}${big("📤 إرسال المعاينة للاعتماد",`mInspSend('${id}')`)}`:wait);
+  }else if(s==="review"){
+    h=desc+rep+mPics(id,["before"])+(can?`<div class="mbtns">${big("✔ اعتماد المعاينة",`mReviewOk('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
+  }else if(s==="price"){
+    h=back+rep+(can?`<label class="lbl">التكلفة (ر.س) *</label><input id="mcost" type="number" inputmode="decimal" min="0" step="any" value="${esc(t.cost_total??"")}" class="mcin" placeholder="0"><label class="lbl">ملاحظة (اختياري)</label><input id="msc" value="${esc(t.scope||"")}" placeholder="مثال: تشمل المواد والعمالة">${big("📤 إرسال التكلفة للاعتماد",`mPriceSend('${id}')`)}`:wait);
+  }else if(s==="cost"){
+    const sum=`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div>${t.scope?`<div class="lbl">${esc(t.scope)}</div>`:""}`+rep+mPics(id,["before"]);
+    if(t.mgmt_status==="pending"){
+      h=sum+`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
+      if(["mgmt","owner"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mrs" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`mDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`mDecide('${id}',0)`,"#dc2626")}</div>`;
+      if(mAdm())h+=`<div class="link">${esc(mLink(t))}</div><div class="acts"><button class="btn" onclick="mShare('${id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",mShareText(t))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`;
+    }else{
+      h=sum+(can?`<div class="mbtns">${big("✔ اعتماد التكلفة",`mCostOk('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`mCostUp('${id}')`,"#db2777")}<button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`:wait);
+    }
+  }else{   /* exec */
+    if(!t.started_at){
+      const CN=[...new Set(MT.t.map(x=>x.contractor).filter(Boolean))];
+      h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div><label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
+    }else{
+      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل">${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
+    }
   }
-  if(t.stage==="work"){
-    const diag=t.diagnosis||"", scope=t.scope||"";
-    return `${diag||scope?`<div class="hlq"><b>تشخيص:</b> ${esc(diag||"-")}<br><b>عمل:</b> ${esc(scope||"-")}${cost?`<br><b>تكلفة:</b> ${money(cost)} ر.س`:""}</div>`:"<div class='lbl'>بانتظار تحديث من مدير الموقع...</div>"}
-    <div class="mpanel" style="background:#f0fdf4;border:1px solid #bbf7d0">
-      <b>اعتماد سريع</b>
-      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn" style="background:#16a34a" onclick="mApprove('${id}')">✔ اعتماد وإرسال للتسليم</button>
-        <button class="btn alt" onclick="mReturn('${id}')">↩ إرجاع بملاحظة</button>
-      </div>
-    </div>`;
-  }
-  return `<div class="lbl">العمل مكتمل وجاهز للإغلاق.</div>
-  <label class="lbl">اسم المستلم</label><input id="mrc" value="${esc(t.receiver||"")}">
-  <label class="lbl">التكلفة النهائية</label><input id="mcost" type="number" value="${esc(cost||"")}">
-  <button class="btn" style="background:#16a34a;width:100%;padding:14px" onclick="mClose('${id}')">✔ إغلاق الطلب نهائياً</button>`;
+  return head+h;
+}
+function mGallery(id){
+  const g=ph=>mPics(id,ph),b=g(["issue","before"]),d=g(["during","other"]),a=g(["after"]);
+  if(!b&&!d&&!a)return "";
+  return `<div class="mgal">${b?`<div class="mgp"><b>قبل</b>${b}</div>`:""}${d?`<div class="mgp"><b>أثناء العمل</b>${d}</div>`:""}${a?`<div class="mgp"><b>بعد</b>${a}</div>`:""}</div>`;
+}
+function mDetails(t){
+  const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${mGallery(t.id)}`;
 }
 function mTicketHtml(){
-  const t=MT.t.find(x=>x.id===MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
-  const pr=MPRI[t.priority]||MPRI.normal, cost=MT.q[t.id]?.total||t.cost_total;
-  const rep=MT.rep;
-  const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ PDF</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 PDF</button>`;
-  return `<div class="modal"><div class="box" style="max-width:720px"><div class="mh"><h3 style="margin:0">${mNo(t)} · ${esc(t.title)}</h3><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></div>
-  <div class="lbl" style="margin:6px 0 12px">🏪 ${esc(t.branch||"")} · ${esc(t.created_by_role||"")} · ${dfmt(t.created_at)}${t.assignee?" · 👤 "+esc(t.assignee):""} ${cost?`· 💰 ${money(cost)} ر.س`:""}</div>
-  ${t.descr?`<div class="hlq" style="white-space:pre-wrap">${esc(t.descr)}</div>`:""}
-  <div style="margin:14px 0">${S.role==="site"?mSiteHtml(t):`${mSteps(t)}<div class="mpanel" style="margin-top:12px">${mStageHtml(t)}</div>`}</div>
-  ${mGallery(t.id)}
-  <details class="mdt"><summary>سجل الطلب</summary>${mTL(t.id)}</details>
-  ${S.role!=="site"&&mWork()&&!t.closed_at?`<div class="mpanel" style="margin-top:10px"><textarea id="mtx2" rows="2" placeholder="إضافة ملاحظة سريعة"></textarea><button class="btn alt" onclick="mAddNote('${t.id}')">إضافة ملاحظة</button></div>`:""}
-  <div class="acts" style="margin-top:14px">${repBtn}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div>
-  </div></div>`;
+  const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
+  const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
+  const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
+  return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
+  <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
+  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>
+  <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
+  <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
-async function mAddNote(id){
-  const txt=$("mtx2")?.value.trim();if(!txt)return;
-  const t=MT.t.find(x=>x.id===id);
-  await mEvent(t,"note",txt);$("mtx2").value="";await mReload();
-}
-async function mToWork(id){
-  const sel=$("mas"); let uid=null, nm="";
-  if(sel){ uid=sel.value; nm=(sel.selectedOptions[0]||{}).textContent||""; if(mCreateOk()&&!uid&&S.role!=="site") return alert("اختر مدير الموقع"); }
-  const t=MT.t.find(x=>x.id===id);
-  const assigneeId=uid||t.assignee_id, assigneeName=nm||t.assignee||"مدير الموقع";
-  await mUpd(id,{stage:"work",assignee_id:assigneeId,assignee:assigneeName,received_at:new Date().toISOString()},"أُسند الطلب وبدأ العمل: "+assigneeName,["site"],"طلب صيانة مُسند إليك: "+mNo(t));
-}
-async function mReject(id){
-  const r=prompt("سبب الرفض؟");if(r===null)return;
-  await mUpd(id,{closed_at:new Date().toISOString(),outcome:"rejected",close_note:r.trim()||null},"رُفض الطلب"+(r?": "+r:""),["site"]);
-}
-async function mSaveWork(id,goDeliver){
-  const t=MT.t.find(x=>x.id===id);
-  const dg=$("mdg")?.value.trim()||t.diagnosis||"", sc=$("msc")?.value.trim()||t.scope||"", costVal=$("mcost")?.value.trim();
-  if(!dg) return alert("اكتب ماذا وجدت؟");
-  if(goDeliver && !costVal) return alert("اكتب التكلفة الإجمالية");
-  const fs=[...($("mfl")?.files||[])];
-  if(fs.length) await mUploadFiles(t,fs,"before",null);
-  const patch={diagnosis:dg,scope:sc||null};
-  if(costVal){
-    patch.cost_total=+costVal;
-    const now=new Date().toISOString();
-    await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:+costVal}],subtotal:+costVal,vat:0,total:+costVal,updated_at:now,status:goDeliver?"approved":"draft",note:null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
-  }
-  if(goDeliver){
-    patch.stage="deliver"; patch.stage_at=new Date().toISOString();
-    await mUpd(id,patch,"اكتمل العمل وجاهز للتسليم - التكلفة "+money(costVal)+" ر.س",["owner","pm"],"عمل مكتمل جاهز للتسليم "+mNo(t));
+
+/* ---------- الإجراءات ---------- */
+async function mReceive(id){await mOnce(async()=>{
+  const t=mT(id),p={stage:"inspect",received_at:mNow()};
+  if(!t.assignee_id&&S.role==="site"){p.assignee_id=S.user.id;p.assignee=mMeName()}
+  await mUpd(id,p,"استُلم الطلب للمعاينة",null,null,{toast:"تم الاستلام ✔"});
+})}
+async function mInspSend(id){await mOnce(async()=>{
+  const t=mT(id),rep=$("mdg").value.trim(),fs=[...($("mfl")?.files||[])];
+  if(!rep)return alert("اكتب تقرير المعاينة");
+  if(!fs.length&&!mHasPic(id,"before")&&!confirm("ما رفعت صور للمعاينة. تبي ترسل بدونها؟"))return;
+  if(fs.length)await mUploadFiles(t,fs,"before");
+  await mUpd(id,{stage:"review",diagnosis:rep,insp_at:mNow(),back_note:null},"أُرسلت المعاينة للاعتماد",["owner","pm"],"معاينة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+t.title,toast:"أُرسلت المعاينة للاعتماد ✔"});
+})}
+async function mReviewOk(id){await mOnce(async()=>{
+  const t=mT(id);
+  await mUpd(id,{stage:"price",review_at:mNow(),back_note:null},"اعتُمدت المعاينة",["site"],"اعتُمدت المعاينة، حدّد التكلفة "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت المعاينة ✔"});
+})}
+async function mReviewBack(id){await mOnce(async()=>{
+  const n=prompt("ملاحظتك لمدير الموقع:");if(n===null||!n.trim())return;
+  const t=mT(id);
+  await mUpd(id,{stage:"inspect",back_note:n.trim()},"أُعيدت المعاينة: "+n.trim(),["site"],"أُعيدت المعاينة للتعديل "+mNo(t),{body:n.trim(),toast:"أُعيدت للمعاينة"});
+})}
+async function mNoWork(id){await mOnce(async()=>{
+  if(!confirm("إغلاق الطلب لأنه لا يحتاج عمل؟"))return;
+  const t=mT(id);
+  await mUpd(id,{closed_at:mNow(),outcome:"nowork"},"أُغلق: لا يحتاج عمل",["site"],"أُغلق الطلب "+mNo(t),{body:"لا يحتاج عمل",toast:"أُغلق الطلب"});
+})}
+async function mCancel(id){await mOnce(async()=>{
+  const r=prompt("سبب إلغاء الطلب؟");if(r===null)return;
+  const t=mT(id);
+  await mUpd(id,{closed_at:mNow(),outcome:"rejected",close_note:r.trim()||null},"أُلغي الطلب"+(r.trim()?": "+r.trim():""),["site"],"أُلغي الطلب "+mNo(t),{body:r.trim()||t.title,toast:"أُلغي الطلب"});
+})}
+async function mPriceSend(id){await mOnce(async()=>{
+  const t=mT(id),v=$("mcost").value.trim(),note=$("msc").value.trim();
+  if(!v||!(+v>0))return alert("اكتب التكلفة");
+  const now=mNow();
+  await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:+v}],subtotal:+v,vat:0,total:+v,updated_at:now,status:"pending",note:note||null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
+  await mUpd(id,{stage:"cost",cost_total:+v,scope:note||null,priced_at:now,mgmt_status:null,mgmt_note:null,back_note:null},"أُرسلت التكلفة "+money(v)+" ر.س",["owner","pm"],"تكلفة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+money(v)+" ر.س",toast:"أُرسلت التكلفة للاعتماد ✔"});
+})}
+async function mCostOk(id){await mOnce(async()=>{
+  const t=mT(id);
+  await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
+  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),mgmt_status:null,mgmt_token:null,back_note:null},"اعتُمدت التكلفة",["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
+})}
+async function mCostUp(id){await mOnce(async()=>{
+  const t=mT(id);
+  await mUpd(id,{mgmt_status:"pending",mgmt_note:null,mgmt_token:crypto.randomUUID()},"رُفعت التكلفة للإدارة",["mgmt"],"طلب اعتماد تكلفة صيانة "+mNo(t),{body:t.branch+" · "+t.title+" · "+money(mCost(t))+" ر.س",keep:true,toast:"رُفعت للإدارة. شارك الرابط"});
+})}
+async function mCostBack(id){await mOnce(async()=>{
+  const n=prompt("ملاحظتك لمدير الموقع (لإعادة التسعير):");if(n===null||!n.trim())return;
+  const t=mT(id);
+  await mUpd(id,{stage:"price",back_note:n.trim(),mgmt_status:null,mgmt_token:null},"أُعيدت للتسعير: "+n.trim(),["site"],"أُعيد الطلب للتسعير "+mNo(t),{body:n.trim(),toast:"أُعيدت للتسعير"});
+})}
+async function mDecide(id,ok){await mOnce(async()=>{
+  const t=mT(id),r=($("mrs")?.value||"").trim();
+  if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const now=mNow();
+  if(ok){
+    await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
+    await mUpd(id,{stage:"exec",mgmt_status:"approved",mgmt_at:now,cost_ok_at:now,mgmt_token:null,back_note:null},"وافقت الإدارة على التكلفة",["site","owner","pm"],"وافقت الإدارة "+mNo(t),{body:t.branch+" · "+money(mCost(t))+" ر.س",toast:"تمت الموافقة ✔"});
   }else{
-    await mUpd(id,patch,"تحديث: "+dg.slice(0,80));
+    await mUpd(id,{stage:"price",mgmt_status:"rejected",mgmt_note:r,mgmt_at:now,mgmt_token:null,back_note:"رفضت الإدارة التكلفة: "+r},"رفضت الإدارة التكلفة: "+r,["site","owner","pm"],"رفضت الإدارة التكلفة "+mNo(t),{body:r,toast:"تم الرفض"});
   }
-}
-async function mApprove(id){
-  if(!confirm("اعتماد الطلب وإرساله للتسليم؟"))return;
-  await mUpd(id,{stage:"deliver"},"اعتمدت الإدارة الطلب - بانتظار التسليم النهائي",["site"],"تم اعتماد طلبك "+mNo(MT.t.find(x=>x.id===id)));
-}
-async function mReturn(id){
-  const n=prompt("ملاحظة لمدير الموقع:");if(n===null||!n.trim())return;
-  const t=MT.t.find(x=>x.id===id);
-  await mEvent(t,"note","ملاحظة إرجاع: "+n.trim());mPush(t,"أُعيد طلبك للمراجعة "+mNo(t),n.trim(),["site"]);await mReload();
-}
-async function mSiteClose(id){
-  const t=MT.t.find(x=>x.id===id), rc=$("mrc").value.trim(), fs=[...($("mfl")?.files||[])];
-  if(!rc) return alert("اكتب اسم المستلم");
-  if(!fs.length && !MT.e.some(e=>e.ticket_id===id&&["after"].includes(e.phase)&&e.file_path)){
-    if(!confirm("لا توجد صور بعد. إغلاق بدونها؟")) return;
-  }
-  if(fs.length) await mUploadFiles(t,fs,"after",null);
-  const note=$("mtx")?.value.trim()||null;
-  await mUpd(id,{closed_at:new Date().toISOString(),outcome:"done",receiver:rc,close_note:note},`سُلّم العمل إلى ${rc} وأُغلق الطلب`,["owner","pm","mgmt"],"تم التسليم "+mNo(t));
-}
-async function mClose(id){
-  const t=MT.t.find(x=>x.id===id), rc=$("mrc")?.value.trim()||t.receiver||"";
-  if(!rc) return alert("اكتب اسم المستلم");
-  const cost=$("mcost")?.value.trim();
-  if(cost) await sb.from("mnt_requests").update({cost_total:+cost}).eq("id",id);
-  const fs=[...($("mfl")?.files||[])];
-  if(fs.length) await mUploadFiles(t,fs,"after",null);
-  await mUpd(id,{closed_at:new Date().toISOString(),outcome:"done",receiver:rc,close_note:($("mtx")?.value||"").trim()||null},`أُغلق الطلب - المستلم ${rc}`,["site","mgmt"],"أُغلق الطلب "+mNo(t));
-}
+})}
+async function mExecStart(id){await mOnce(async()=>{
+  const t=mT(id),c=$("mct").value.trim(),q=+$("mq").value;
+  if(!c)return alert("اكتب اسم المقاول");if(!(q>0))return alert("اكتب مدة العمل");
+  const u=$("mu").value;
+  await mUpd(id,{started_at:mNow(),contractor:c,work_qty:q,work_unit:u},"بدأ العمل: "+c+" · "+q+(u==="h"?" ساعة":" يوم"),["owner","pm"],"بدأ تنفيذ "+mNo(t),{body:c+" · "+q+(u==="h"?" ساعة":" يوم"),toast:"بدأ العمل ▶"});
+})}
+async function mDeliver(id){await mOnce(async()=>{
+  const t=mT(id),rc=$("mrc").value.trim(),fs=[...($("mfl")?.files||[])];
+  if(!rc)return alert("اكتب اسم المستلم");
+  if(!fs.length&&!mHasPic(id,"after")&&!confirm("ما رفعت صور بعد التنفيذ. تبي تسلّم بدونها؟"))return;
+  if(fs.length)await mUploadFiles(t,fs,"after");
+  await mUpd(id,{closed_at:mNow(),stage:"deliver",outcome:"done",receiver:rc,close_note:null},"سُلّم العمل إلى "+rc,["owner","pm"],"تم التسليم "+mNo(t),{body:t.branch+" · "+t.title,keep:true,toast:"تم التسليم ✔"});
+})}
 async function mReopen(id){
   if(!confirm("إعادة فتح الطلب؟"))return;
-  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"work"},"أُعيد فتح الطلب");
+  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"exec"},"أُعيد فتح الطلب",null,null,{keep:true});
 }
 async function mDel(id){
   if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
   const paths=MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path);
   if(paths.length)await sb.storage.from("media").remove(paths);
   const {error}=await sb.from("mnt_requests").delete().eq("id",id);if(error)return alert(error.message);
-  S.modal=null;await mReload();
+  S.modal=null;await loadM();render();
 }
-async function mToInspect(id){return mToWork(id)}
-async function mSaveInsp(id,act){
-  if(act==="nowork"){await mUpd(id,{closed_at:new Date().toISOString(),outcome:"nowork"},"لا يحتاج عمل");return}
-  if(act==="rejected"){return mReject(id)}
-  return mSaveWork(id, act==="quote");
+
+/* ---------- تنبيه مدير الموقع عند الدخول ---------- */
+async function mSiteWelcome(){if(MT.err||!MT.t.some(mMine)){render();return}S.modal="msite";render()}
+function mSiteWelcomeHtml(){
+  const L=MT.t.filter(mMine);
+  return `<div class="modal"><div class="box"><h3>🔧 بانتظارك ${L.length} ${L.length===1?"طلب":"طلبات"}</h3>${L.map(t=>{const pr=MPRI[t.priority]||MPRI.normal;return `<button class="srow" onclick="mOpen('${t.id}')"><div><div style="font-weight:700">${esc(t.branch||"")} · ${esc(t.title)}</div><small>${mNo(t)} · ${MST.find(s=>s[0]===mStg(t))[1]} · ${mAge(t)}</small></div>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</button>`}).join("")}<button class="btn alt" onclick="modal(null)">لاحقاً</button></div></div>`;
 }
-async function mSaveQ(){return alert("النظام الجديد: استخدم حقل التكلفة الإجمالية فقط")}
-async function mOwnerDecide(){return alert("الاعتماد صار بضغطة واحدة")}
-async function mDecide(d){ if(d==="approve") return mApprove(MT.id); return mReturn(MT.id); }
-async function mSaveExec(id,fin){ 
-  if(fin) return mUpd(id,{stage:"deliver"},"اكتمل التنفيذ");
-  const note=$("mtx")?.value.trim(); if(note){ const t=MT.t.find(x=>x.id===id); await mEvent(t,"note",note); await mReload(); }
+
+/* ===== صفحة قرار الإدارة (رابط بدون تسجيل دخول) ===== */
+let MG={k:"",d:null,urls:{}};
+const mgShell=b=>{$("app").innerHTML=`<header><h1>إدارة المشاريع</h1></header><div class="wrap" style="max-width:560px">${b}</div>`};
+async function mgLink(k){
+  MG.k=k;mgShell('<div class="note">جاري التحميل...</div>');
+  const {data,error}=await sb.rpc("mnt_mgmt_view",{p_token:k});
+  if(error||!data)return mgShell('<div class="box note">الرابط غير صالح أو سبق استخدامه.</div>');
+  MG.d=data;
+  const ps=(data.photos||[]).map(p=>p.path);
+  if(ps.length){const {data:u}=await sb.storage.from("media").createSignedUrls(ps,3600);(u||[]).forEach(x=>{if(x.signedUrl)MG.urls[x.path]=x.signedUrl})}
+  mgDraw();
 }
-async function mChange(){}
-async function mCk(){}
-async function mExecStart(id){return mToWork(id)}
-async function mExecDone(id){return mSaveWork(id,true)}
+function mgDraw(){
+  const d=MG.d,pr=MPRI[d.priority]||MPRI.normal,no="MNT-"+String(d.no||0).padStart(4,"0");
+  const pics=(d.photos||[]).filter(p=>MG.urls[p.path]).map(p=>`<img class="mth" src="${MG.urls[p.path]}" onclick="openImg(this.src)" alt="">`).join("");
+  mgShell(`<div class="box"><div class="mh"><h3 style="margin:0">${esc(d.title)}</h3>${d.priority&&d.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
+  <div class="lbl" style="margin:4px 0 10px">${no} · 🏪 ${esc(d.branch||"")}${d.pm_name?" · "+esc(d.pm_name):""}</div>
+  ${d.descr&&d.descr!==d.title?`<div class="hlq mpre">${esc(d.descr)}</div>`:""}
+  ${d.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(d.diagnosis)}</div></div>`:""}
+  ${pics?`<div class="mpics">${pics}</div>`:""}
+  <div class="mcostbox"><span>التكلفة المطلوب اعتمادها</span><b>${money(d.cost)} ر.س</b></div>${d.scope?`<div class="lbl">${esc(d.scope)}</div>`:""}
+  ${d.pending?`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mgr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns"><button class="btn big" style="background:#16a34a" onclick="mgDecide(1)">✔ موافقة</button><button class="btn big" style="background:#dc2626" onclick="mgDecide(0)">✖ رفض</button></div>`:`<div class="mwait">تم اتخاذ القرار على هذا الطلب.</div>`}</div>`);
+}
+async function mgDecide(ok){await mOnce(async()=>{
+  const r=($("mgr")?.value||"").trim();if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const {data,error}=await sb.rpc("mnt_mgmt_decide",{p_token:MG.k,p_ok:!!ok,p_reason:r});
+  if(error)return alert(error.message);
+  if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":"الرابط غير صالح");
+  mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التكلفة":"❌ تم رفض التكلفة"}<br><small>تم إبلاغ مدير المشروع ومدير الموقع. تقدر تقفل الصفحة.</small></div>`);
+})}
+
+/* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
+const MRCSS=`.rpg .pf.m1 img{height:200px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
-  const t=MT.t.find(x=>x.id===id);if(!t)return;
+  const t=mT(id);if(!t)return;
   MT.rep={busy:true};render();
   const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0";document.body.appendChild(root);
   try{
     await loadLib("html2canvas.min.js?v=22");await loadLib("jspdf.umd.min.js");
-    if(document.fonts) await document.fonts.ready;
+    if(document.fonts)await document.fonts.ready;
     if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
-    const evs=MT.e.filter(e=>e.ticket_id===id), pics=evs.filter(e=>e.file_path&&(e.file_type||"").startsWith("image")).slice(0,6);
-    const img={};
+    if(!document.getElementById("rpcss2")){const s=document.createElement("style");s.id="rpcss2";s.textContent=MRCSS;document.head.appendChild(s)}
+    const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
+    let bef=imgs.filter(e=>e.phase==="before");if(!bef.length)bef=imgs.filter(e=>e.phase==="issue");
+    bef=bef.slice(0,2);const aft=imgs.filter(e=>e.phase==="after").slice(0,2),pics=[...bef,...aft],img={};
     if(pics.length){
       const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
       const um={};(data||[]).forEach(d=>{if(d.signedUrl)um[d.path]=d.signedUrl});
-      for(const e of pics){if(um[e.file_path]&&!img[e.file_path]){try{img[e.file_path]=await rpPrep(um[e.file_path],"fit",{W:700,H:522})}catch{}}}
+      for(const e of pics){if(um[e.file_path]&&!img[e.file_path]){try{img[e.file_path]=await rpPrep(um[e.file_path],"fit",{W:700,H:400})}catch{}}}
     }
-    const ref=mNo(t), pages=[], mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
-    let box=null; const fresh=()=>{const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png"><span>إدارة المشاريع</span></div><div class="r"><b>تقرير صيانة</b><br>${esc(ref)}</div></div><div class="rpc"></div><div class="rpf"><span class="pnum"></span><span class="rf">${ref}</span><span>${esc(dfmt(new Date()))}</span></div></div>`);root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc")};
+    const ref=mNo(t),pages=[],mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
+    let box=null;const fresh=()=>{const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png"><span>إدارة المشاريع</span></div><div class="r"><b>تقرير صيانة</b><br>${esc(ref)}</div></div><div class="rpc"></div><div class="rpf"><span></span><span class="rf">${ref}</span><span>${esc(dfmt(new Date()))}</span></div></div>`);root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc")};
     const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
-    const sec=s=>`<div class="rt"><span class="no">1</span><span>${s}</span><i class="l2"></i></div>`;
+    const pr=MPRI[t.priority]||MPRI.normal,cost=mCost(t),done=t.closed_at&&t.outcome==="done";
     fresh();
-    put(`<div>${sec(ref+" · "+esc(t.title))}<table class="info"><tr><td class="a">الفرع</td><td class="b">${esc(t.branch)}</td><td class="a">التاريخ</td><td class="b">${esc(dfmt(t.created_at))}</td></tr><tr><td class="a">الحالة</td><td class="b">${t.closed_at?"مغلق":"مفتوح"} · ${esc(t.assignee||"")}</td><td class="a">التكلفة</td><td class="b">${esc(money(MT.q[id]?.total||t.cost_total||0))} ر.س</td></tr></table>${t.descr?`<div class="hl">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="ab"><h4>التشخيص والعمل</h4><p>${esc(t.diagnosis)}<br>${esc(t.scope||"")}</p></div>`:""}</div>`);
-    const pp=pics.filter(e=>img[e.file_path]);
-    if(pp.length){
-      for(let i=0;i<pp.length;i+=2){
-        const card=e=>`<div class="pf l2"><img src="${img[e.file_path]}"><div class="pc"><b>${esc(MPH[e.phase]||"صورة")}</b></div></div>`;
-        put(`<div class="pr l2">${card(pp[i])}${pp[i+1]?card(pp[i+1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`);
-      }
+    put(`<div><div class="rt"><span class="no">🔧</span><span>${esc(t.title)}</span><i class="l2"></i></div><table class="info"><tr><td class="a">الفرع</td><td class="b">${esc(t.branch||"")}</td><td class="a">رقم الطلب</td><td class="b">${esc(ref)}</td></tr><tr><td class="a">تاريخ الطلب</td><td class="b">${esc(dfmt(t.created_at))}</td><td class="a">${done?"تاريخ التسليم":"الحالة"}</td><td class="b">${done?esc(dfmt(t.closed_at)):t.closed_at?esc(MOUT[t.outcome]||"مغلق"):esc(MST.find(s=>s[0]===mStg(t))[1])}</td></tr></table></div>`);
+    put(`<div class="hl"><b>المشكلة${t.priority==="urgent"?" (مستعجل)":""}</b><br>${esc(t.descr&&t.descr!==t.title?t.descr:t.title)}</div>`);
+    if(t.diagnosis)put(`<div class="hl"><b>تقرير المعاينة</b>${t.insp_at?` <small style="display:inline">· ${esc(dfmt(t.insp_at))}</small>`:""}<br>${esc(t.diagnosis).replace(/\n/g,"<br>")}</div>`);
+    if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
+    if(cost!=null&&cost!==""){
+      const ap=t.mgmt_status==="approved"?"اعتماد الإدارة · "+dfmt(t.mgmt_at):t.cost_ok_at?"اعتماد مدير المشروع · "+dfmt(t.cost_ok_at):"";
+      put(`<div class="gh"><div><small>التكلفة الإجمالية</small><b>${esc(money(cost))} ر.س</b></div><div class="cn">${ap?`<span>${esc(ap)}</span>`:""}</div></div>`);
     }
+    put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
+    const row=(L,tag,cls)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
+      const card=e=>`<div class="pf m1"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
+      put(`<div class="pr">${card(P[0])}${P[1]?card(P[1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
+    row(bef,"قبل","bf");row(aft,"بعد","af");
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
     for(let i=0;i<pages.length;i++){
       const cv=await html2canvas(pages[i],{scale:1.6,backgroundColor:"#fff",useCORS:true});
@@ -1393,31 +1440,9 @@ async function mPdf(id){
     }
     const blob=doc.output("blob"),name=`${ref} ${iso(new Date())}.pdf`;
     if(MT.rep&&MT.rep.url)URL.revokeObjectURL(MT.rep.url);
-    MT.rep={url:URL.createObjectURL(blob),blob,name,share:false};
+    MT.rep={url:URL.createObjectURL(blob),blob,name};
   }catch(e){MT.rep=null;alert("تعذر: "+(e.message||e))}finally{root.remove();if(S.modal==="mtk")render()}
 }
-async function mRepShare(){try{await navigator.share({files:[new File([MT.rep.blob],MT.rep.name,{type:"application/pdf"})],title:MT.rep.name})}catch{}}
-const MSN=["استلام الطلب","قيد العمل","التسليم"],MPS={urgent:0,high:1,normal:2};
-function mSiteIdx(t){if(t.closed_at)return 3;if(t.stage==="new")return 0;if(t.stage==="work")return 1;return 2}
-function mSiteLabel(t){if(t.closed_at)return t.outcome==="done"?"تم التسليم":MOUT[t.outcome]||"مغلق";return ["بانتظار استلامك","قيد العمل","التسليم"][mSiteIdx(t)]}
-const mSiteSorted=()=>MT.t.filter(t=>!t.closed_at).sort((a,b)=>(MPS[a.priority]??2)-(MPS[b.priority]??2)||new Date(a.created_at)-new Date(b.created_at));
-function mSiteRow(t){const pr=MPRI[t.priority]||MPRI.normal;return `<button class="srow" onclick="mSiteGo('${t.id}')"><div><div style="font-weight:700">${esc(t.branch||"")} · ${esc(t.title)}</div><small>${mNo(t)} · ${esc(mSiteLabel(t))} · ${mAge(t)}</small></div><span class="mchip" style="background:${pr[1]}">${pr[0]}</span></button>`}
-function mSiteGo(id){S.view="maint";S.cur=null;S.modal=null;mOpen(id)}
-async function mSiteWelcome(){await loadM();if(MT.err)return;if(!mSiteSorted().length){render();return}S.modal="msite";render()}
-function mSiteWelcomeHtml(){const L=mSiteSorted();return `<div class="modal"><div class="box"><h3>🔧 عندك ${L.length} طلبات</h3>${L.map(mSiteRow).join("")}<button class="btn alt" onclick="modal(null)">لاحقاً</button></div></div>`}
-async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnce.b=0}}
-const mTn=id=>mNo(MT.t.find(x=>x.id===id)||{});
-async function mRecv(id){await mOnce(()=>mToWork(id))}
-async function mSiteInsp(id,act){await mOnce(()=>mSaveWork(id, act==="quote"))}
-async function mExecStart(id){await mOnce(()=>mToWork(id))}
-async function mExecDone(id){await mOnce(()=>mSaveWork(id,true))}
-async function mSiteClose(id){await mOnce(async()=>{
-  const t=MT.t.find(x=>x.id===id),rc=$("mrc").value.trim(),fs=[...($("mfl")?.files||[])];
-  if(!fs.length&&!MT.e.some(e=>e.ticket_id===id&&e.phase==="after"&&e.file_path))return alert("ارفع صورة بعد");
-  if(!rc)return alert("اكتب اسم المستلم");
-  if(fs.length)await mUploadFiles(t,fs,"after",null);
-  await mUpd(id,{closed_at:new Date().toISOString(),outcome:"done",receiver:rc,close_note:($("mtx")?.value||"").trim()||null},`سُلّم إلى ${rc}`,["owner","pm"],"تم التسليم "+mNo(t));
-})}
 
 /* ===== تنظيف الصور اليتيمة */
 
