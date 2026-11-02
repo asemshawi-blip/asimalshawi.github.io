@@ -1273,7 +1273,7 @@ function mTicketHtml(){
 async function mReceive(id){await mOnce(async()=>{
   const t=mT(id),p={stage:"inspect",received_at:mNow()};
   if(!t.assignee_id&&S.role==="site"){p.assignee_id=S.user.id;p.assignee=mMeName()}
-  await mUpd(id,p,"استُلم الطلب للمعاينة",null,null,{toast:"تم الاستلام ✔"});
+  await mUpd(id,p,"استُلم الطلب للمعاينة",["owner","pm"],"استلم مدير الموقع الطلب للمعاينة",{body:t.branch+" · "+t.title,toast:"تم الاستلام ✔"});
 })}
 async function mInspSend(id){await mOnce(async()=>{
   const t=mT(id),rep=$("mdg").value.trim(),fs=[...($("mfl")?.files||[])];
@@ -1348,7 +1348,8 @@ async function mDeliver(id){await mOnce(async()=>{
 })}
 async function mReopen(id){
   if(!confirm("إعادة فتح الطلب؟"))return;
-  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"exec"},"أُعيد فتح الطلب",null,null,{keep:true});
+  const t=mT(id);if(!t)return;
+  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"exec"},"أُعيد فتح الطلب",["site"],"أُعيد فتح الطلب "+mNo(t),{body:t.branch+" · "+t.title,keep:true});
 }
 async function mDel(id){
   if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
@@ -1771,6 +1772,7 @@ init();
 <script src="i18n.js"></script>
 </body>
 </html>
+
 
 
 
