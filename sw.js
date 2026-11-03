@@ -1,4 +1,4 @@
-const CACHE="pm-v48",CDN="pm-cdn-v1";
+const CACHE="pm-v49",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -29,12 +29,10 @@ self.addEventListener("fetch",event=>{
   const path=url.pathname;
   if(!APP_FILES.some(file=>new URL(file,self.location.href).pathname===path))return;
   event.respondWith((async()=>{
-    const cache=await caches.open(CACHE);
-    /* شبكة أولا؛ إذا تأخرت أكثر من 3 ثوان نعرض النسخة المخزنة */
-    const net=fetch(request).then(r=>{if(r.ok&&r.type==="basic")cache.put(request,r.clone());return r});
-    const slow=new Promise(res=>setTimeout(async()=>res(await cache.match(request)),3000));
-    try{return (await Promise.race([net,slow]))||await net}
-    catch{return (await cache.match(request))||Response.error()}
+    const cache=await caches.open(CACHE),hit=await cache.match(request);
+    const net=fetch(request).then(r=>{if(r.ok&&r.type==="basic")cache.put(request,r.clone());return r}).catch(()=>null);
+    if(hit){event.waitUntil(net.then(()=>{}));return hit}
+    return (await net)||Response.error();
   })());
 });
 
