@@ -1,4 +1,4 @@
-const CACHE="pm-v50",CDN="pm-cdn-v1";
+const CACHE="pm-v48",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -31,7 +31,7 @@ self.addEventListener("fetch",event=>{
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE),hit=await cache.match(request);
     const net=fetch(request).then(r=>{if(r.ok&&r.type==="basic")cache.put(request,r.clone());return r}).catch(()=>null);
-    if(hit){event.waitUntil(net.then(()=>{}));return hit}
+    if(hit){const timeout=new Promise(resolve=>setTimeout(()=>resolve(hit),3000));return (await Promise.race([net,timeout]))||hit}
     return (await net)||Response.error();
   })());
 });

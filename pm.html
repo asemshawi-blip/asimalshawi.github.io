@@ -186,13 +186,11 @@ async function signUp(){
 }
 async function out(){try{const r=await navigator.serviceWorker.ready,x=await r.pushManager.getSubscription();if(x)await sb.rpc("push_drop",{e:x.endpoint})}catch(e){}await sb.auth.signOut();location.href=location.pathname}
 async function boot(){
-  $("app").innerHTML="<div class=\"wrap\"><div class=\"box note\">جاري تحميل النظام...</div></div>";
   if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
-  const loads=[load()];
-  if(mSee())loads.push(loadM().catch(e=>{MT.err=String(e&&e.message||e)}));
-  await Promise.all(loads);
+  await load();
+  if(mSee())await loadM().catch(e=>{MT.err=String(e&&e.message||e)});
   render();
   const dl=await deepLink();
   if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
@@ -204,16 +202,14 @@ async function load(){
   const {data,error}=await sb.from("projects").select("*").order("created_at",{ascending:false});
   if(error)alert("تعذر تحميل المشاريع: "+error.message);
   S.projects=(data||[]).filter(p=>p.ptype!=="maint").map(p=>({...p,status:ST[p.status]?p.status:"run"}));   // حالة "متأخر" القديمة تتحول لقيد التنفيذ
-  render();
   await sign(S.projects.map(p=>p.cover_path));
   render();
 }
 async function sign(paths){
   const need=[...new Set(paths.filter(x=>x&&!S.urls[x]))];
   if(!need.length)return;
-  const batches=Array.from({length:Math.ceil(need.length/100)},(_,i)=>need.slice(i*100,(i+1)*100));
-  const results=await Promise.all(batches.map(batch=>sb.storage.from("media").createSignedUrls(batch,7200)));
-  results.forEach(({data})=>(data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl}));
+  const {data}=await sb.storage.from("media").createSignedUrls(need,7200);
+  (data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl});
 }
 async function shrink(f){
   if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<120*1024)return f;
@@ -401,7 +397,7 @@ async function setTab(k){S.tab=k;await loadE();render()}
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
   const t=e.file_type||"";
-  if(t.startsWith("image"))return `<img src="${u}" loading="lazy" decoding="async" onclick="openImg(this.src)">`;
+  if(t.startsWith("image"))return `<img src="${u}" onclick="openImg(this.src)">`;
   if(t.startsWith("video"))return `<video src="${u}" controls preload="none"></video>`;
   return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
 }
@@ -1127,10 +1123,12 @@ async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnc
 async function loadM(){
   if(!mSee())return;
   if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
-  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("id,ticket_id,kind,phase,body,file_path,file_type,author_role,created_at").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
-  if(a.error||b.error||quotes.error){MT.err=(a.error||b.error||quotes.error).message;MT.t=[];MT.e=[];return}
-  MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
-  (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
+  const {data:a,error:ae}=await sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000);
+  const {data:b,error:be}=await sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000);
+  if(ae||be){MT.err=(ae||be).message;MT.t=[];MT.e=[];return}
+  MT.err="";MT.t=a||[];MT.e=(b||[]).reverse();MT.q={};
+  const {data:quotes}=await sb.from("mnt_quotes").select("*").limit(1000);
+  (quotes||[]).forEach(q=>MT.q[q.ticket_id]=q);
   if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
   await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));   /* صورة الغلاف فقط، وباقي الصور تُحمّل عند فتح الطلب */
 }
@@ -1204,7 +1202,7 @@ async function mOpen(id){
   await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));
   modal("mtk");
 }
-const mPics=(id,ph)=>{const L=MT.e.filter(e=>e.ticket_id===id&&ph.includes(e.phase)&&e.file_path&&S.urls[e.file_path]&&(e.file_type||"").startsWith("image"));return L.length?`<div class="mpics">${L.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" loading="lazy" decoding="async" onclick="openImg(this.src)" alt="">`).join("")}</div>`:""};
+const mPics=(id,ph)=>{const L=MT.e.filter(e=>e.ticket_id===id&&ph.includes(e.phase)&&e.file_path&&S.urls[e.file_path]&&(e.file_type||"").startsWith("image"));return L.length?`<div class="mpics">${L.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("")}</div>`:""};
 function mSteps(t){
   const idx=MST.findIndex(s=>s[0]===mStg(t)),all=t.closed_at&&t.outcome==="done";
   return `<div class="msteps">${MST.map((s,k)=>`<div class="${all||k<idx?"dn":k===idx?"cur":""}" style="--c:${s[2]}"><i>${all||k<idx?"✓":k+1}</i><span>${s[3]}</span></div>`).join("")}</div>`;
@@ -1800,7 +1798,7 @@ addEventListener("beforeinstallprompt",e=>{
 if(/iphone|ipad|ipod/i.test(navigator.userAgent))
   installBar("للتثبيت: اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية»");
 
-document.addEventListener("DOMContentLoaded",init,{once:true});
+init();
 </script>
 
 <script src="i18n.js"></script>
