@@ -1120,7 +1120,7 @@ const MPRI={urgent:["مستعجل","#dc2626"],high:["عاجل","#ea580c"],normal
 const MOUT={done:"تم التسليم",nowork:"لا يحتاج عمل",rejected:"أُلغي الطلب"};
 const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"الإدارة"};
 const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
-let MT={t:[],e:[],q:{},sm:[],id:null,err:"",rep:null};
+let MT={t:[],e:[],q:{},sm:[],o:[],oerr:"",id:null,err:"",rep:null};
 const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
 const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
 const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
@@ -1149,7 +1149,8 @@ async function loadM(){
   MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
   (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
   if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
-  await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));
+  try{const ob=await sb.from("mnt_obstacles").select("*").order("created_at",{ascending:true}).limit(5000);MT.o=ob.error?[]:(ob.data||[]);MT.oerr=ob.error?ob.error.message:""}catch(e){MT.o=[];MT.oerr=String((e&&e.message)||e)}
+  await sign(MT.t.filter(mShow).map(mCover).concat(MT.o.map(o=>o.file_path)).filter(Boolean));
 }
 function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
 async function mEvent(t,kind,body,phase,file){
@@ -1185,7 +1186,7 @@ function mHomeCard(t){
   return `<div class="card ${ST[col][1]}${mine?" mine":""}" data-search="${esc((mNo(t)+" "+t.title+" "+(t.branch||"")+" "+(t.assignee||"")+" صيانة").toLocaleLowerCase())}" onclick="mOpen('${t.id}')">
   <div class="img${u?"":" mimg"}" ${u?`style="background-image:url('${u}')"`:""}>${u?"":'<span class="mic">🔧</span>'}<div class="cw"><span class="chip ty">🔧 صيانة</span>${t.priority&&t.priority!=="normal"?`<span class="chip" style="background:${pr[1]}">${pr[0]}</span>`:""}${mine?'<span class="chip" style="background:#ed8700">بانتظارك</span>':""}</div></div>
   <div class="body"><h4>${esc(t.title)}</h4><p>🏪 ${esc(t.branch||"")}${t.assignee?" · 👤 "+esc(t.assignee):""}</p><div class="bar"><i style="width:${pct}%"></i></div>
-  <div class="row"><span>${label}</span><span>${t.closed_at?dfmt(t.closed_at):mAge(t)}</span></div></div></div>`;
+  <div class="row"><span>${label}${mObsN(t.id)?" · 🚧 "+mObsN(t.id):""}</span><span>${t.closed_at?dfmt(t.closed_at):mAge(t)}</span></div></div></div>`;
 }
 
 /* ---------- طلب جديد ---------- */
@@ -1218,7 +1219,7 @@ async function mCreate(){await mOnce(async()=>{
 /* ---------- نافذة الطلب: المرحلة الحالية فقط ---------- */
 async function mOpen(id){
   MT.id=id;MT.rep=null;
-  await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));
+  await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path).concat((MT.o||[]).filter(o=>o.ticket_id===id&&o.file_path).map(o=>o.file_path)));
   modal("mtk");
 }
 const mPics=(id,ph)=>{const L=MT.e.filter(e=>e.ticket_id===id&&ph.includes(e.phase)&&e.file_path&&S.urls[e.file_path]&&(e.file_type||"").startsWith("image"));return L.length?`<div class="mpics">${L.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("")}</div>`:""};
@@ -1289,10 +1290,36 @@ function mTicketHtml(){
   const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
-  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>
+  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>${mObsHtml(t)}
   <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
   <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
+
+/* ---------- معوقات الطلب: أي عائق يؤخر الطلب ---------- */
+const mObsN=id=>(MT.o||[]).filter(o=>o.ticket_id===id&&!o.resolved).length;
+const mObsAddOk=()=>["owner","pm","mgmt","site"].includes(S.role),mObsResOk=()=>["owner","pm","site"].includes(S.role);
+function mObsHtml(t){
+  if(MT.oerr)return mAdm()?`<div class="hlq">المعوقات غير مفعّلة بعد: شغّل ملف migrate_maintenance_v3.sql في Supabase.</div>`:"";
+  const L=(MT.o||[]).filter(o=>o.ticket_id===t.id),n=L.filter(o=>!o.resolved).length;
+  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}</div></div>`).join("");
+  const add=mObsAddOk()&&!t.closed_at?`<label class="lbl">إضافة عائق</label><textarea id="mob" rows="2" placeholder="اكتب العائق الذي يؤخر الطلب..."></textarea><input id="mobf" type="file" accept="image/*" class="mfile"><button class="btn" style="width:100%" onclick="mObsAdd('${t.id}')">＋ إضافة العائق</button>`:"";
+  return `<details class="mdt" ${n?"open":""}><summary>🚧 المعوقات${L.length?` (${n?n+" مفتوح":"كلها محلولة"})`:""}</summary>${rows||'<div class="lbl">لا توجد معوقات</div>'}${add}</details>`;
+}
+async function mObsAdd(id){await mOnce(async()=>{
+  const t=mT(id),b=($("mob")?.value||"").trim(),f=($("mobf")?.files||[])[0];
+  if(!b)return alert("اكتب العائق");
+  const row={ticket_id:id,body:b,author_role:ROLES[S.role]};
+  if(f){if(!(f.type||"").startsWith("image/"))return alert("الصور فقط");const path=await up("maint",f);if(path){row.file_path=path;row.file_type=f.type||"image/jpeg"}}
+  const {error}=await sb.from("mnt_obstacles").insert(row);
+  if(error)return alert(/relation|schema cache|does not exist/i.test(error.message)?"شغّل ملف migrate_maintenance_v3.sql في Supabase أولاً.":error.message);
+  mPush(t,"🚧 عائق جديد "+mNo(t),t.branch+" · "+b,S.role==="site"?["owner","pm"]:["site"]);
+  await loadM();render();mToast("أُضيف العائق");
+})}
+async function mObsRes(id,v){await mOnce(async()=>{
+  const {error}=await sb.from("mnt_obstacles").update({resolved:v,resolved_at:v?mNow():null}).eq("id",id);
+  if(error)return alert(error.message);
+  await loadM();render();
+})}
 
 /* ---------- الإجراءات ---------- */
 async function mReceive(id){await mOnce(async()=>{
@@ -1378,7 +1405,7 @@ async function mReopen(id){
 }
 async function mDel(id){
   if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
-  const paths=MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path);
+  const paths=MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path).concat((MT.o||[]).filter(o=>o.ticket_id===id&&o.file_path).map(o=>o.file_path));
   if(paths.length)await sb.storage.from("media").remove(paths);
   const {error}=await sb.from("mnt_requests").delete().eq("id",id);if(error)return alert(error.message);
   S.modal=null;await loadM();render();
@@ -1497,7 +1524,7 @@ async function scanOrph(){
       const {data,error}=await sb.from("entries").select("file_path").not("file_path","is",null).range(o,o+999);
       if(error)throw error;(data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
     const {data:pr,error:pe}=await sb.from("projects").select("cover_path");if(pe)throw pe;
-    for(const tb of ["mnt_events","maint_events"])for(let o=0;;o+=1000){   /* صور الصيانة (الجديد + الأرشيف القديم): إذا الجدول غير موجود نتجاهله، وأي خطأ آخر يوقف الفحص */
+    for(const tb of ["mnt_events","maint_events","mnt_obstacles"])for(let o=0;;o+=1000){   /* صور الصيانة (الجديد + الأرشيف القديم): إذا الجدول غير موجود نتجاهله، وأي خطأ آخر يوقف الفحص */
       const {data,error}=await sb.from(tb).select("file_path").not("file_path","is",null).range(o,o+999);
       if(error){if(/does not exist|schema cache|PGRST205|42P01/i.test(error.message+(error.code||"")))break;throw error}
       (data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
