@@ -153,7 +153,7 @@ function timing(p){
   const d=Math.round((new Date(p.due+"T00:00:00")-new Date().setHours(0,0,0,0))/864e5);
   return d<0?{late:1,t:`متأخر ${-d} يوم`}:{late:0,t:d===0?"على الموعد · التسليم اليوم":`على الموعد · باقي ${d} يوم`};
 }
-const TYN={new:"إنشاء",reno:"ترميم"},TYE={new:"🏗",reno:"🛠"};
+const TYN={new:"إنشاء بالموقع",kiosk:"كشك جاهز",reno:"ترميم"},TYE={new:"🏗",kiosk:"☕",reno:"🛠"};
 const chip=p=>{const t=timing(p),y=TYN[p.ptype]?TYE[p.ptype]+" "+TYN[p.ptype]:"";return t||y?`<div class="cw">${t?`<span class="chip ${t.late?"late":"ok"}">${t.t}</span>`:""}${y?`<span class="chip ty">${y}</span>`:""}</div>`:""};
 const normP=v=>{const d=String(v).replace(/\D/g,"").replace(/^00/,"");return d.length>=10&&!d.startsWith("0")?d:""};
 const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
@@ -268,7 +268,15 @@ const WTPLR=[
 ["التشطيبات",[["الأسقف والأرضيات والبلاط",8],["الدهانات والتكسيات",6],["الأبواب والنجارة",5],["الإنارة والقطع الصحية والتجهيزات",4]]],
 ["الواجهات والأعمال الخارجية",[["إصلاح الواجهات والأعمال الخارجية",4]]],
 ["التسليم",[["التنظيف واختبار الأنظمة",2],["قائمة الملاحظات والتسليم وتصوير بعد",2]]]];
-const WTPLS={new:WTPL,reno:WTPLR};
+const WTPLK=[
+["معاينة الموقع",[["معاينة الموقع بالصور والتحقق من الماء والصرف والكهرباء",10]]],
+["تجهيز القاعدة والأرضية",[["تنفيذ الصبة والتسوية وتجهيز نقاط تثبيت الكشك",20]]],
+["النقل والاستلام",[["تنسيق نقل الكشك واستلامه وفحصه عند الوصول",10]]],
+["التركيب والتثبيت والإشراف",[["إنزال الكشك وتركيبه وتثبيته والإشراف على الأعمال",25]]],
+["تركيب المكائن",[["إنزال المكائن وتركيبها في مواقعها",10]]],
+["تركيب الكاميرات والسيت أب (IT)",[["تركيب الكاميرات وإكمال إعدادات وتقنيات المعلومات",10]]],
+["الاختبار والتشغيل والتسليم",[["اختبار الخدمات والمكائن والكاميرات وتشغيل الكشك وتسليمه",15]]]];
+const WTPLS={new:WTPL,kiosk:WTPLK,reno:WTPLR};
 async function loadW(){
   const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
   if(error)alert(error.message);S.works=data||[];
@@ -277,7 +285,7 @@ const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.roun
 function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
 async function seedW(){
   const pj=S.projects.find(x=>x.id===S.cur),T=WTPLS[pj&&pj.ptype]||WTPL;
-  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":"تحميل قالب مراحل مشروع التشطيب؟"))return;
+  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":pj&&pj.ptype==="kiosk"?"تحميل قالب مراحل الكشك الجاهز من المصنع؟":"تحميل قالب مراحل الإنشاء بالموقع؟"))return;
   let n=0;const rows=[];
   T.forEach(([ph,it])=>it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++})));
   const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
@@ -382,7 +390,7 @@ function home(){
     const L=all.filter(x=>x.col===k);
     return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(x=>x.h).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  const chips=[["","الكل"],["new","🏗 إنشاء"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
+  const chips=[["","الكل"],["new","🏗 إنشاء بالموقع"],["kiosk","☕ كشك جاهز"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
   return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}${mCreateOk()&&!MT.err?`<button class="btn" style="background:#d97706" onclick="modal('mnew')">＋ طلب صيانة</button>`:""}</div>${MT.err&&mSee()&&mAdm()?`<div class="hlq">الصيانة غير مفعّلة بعد: شغّل maintenance_v2.sql في Supabase.</div>`:""}<div class="tfs">${chips.map(([k,n])=>`<button class="${tf===k?"on":""}" onclick="S.tf='${k}';render();filterProjects(S.q||'')">${n}</button>`).join("")}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
@@ -1646,7 +1654,7 @@ function projForm(p){
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
   <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
   <input id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
-  <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${p.ptype!=="reno"?"selected":""}>إنشاء</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
+  <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${(!p.ptype||p.ptype==="new")?"selected":""}>إنشاء بالموقع</option><option value="kiosk" ${p.ptype==="kiosk"?"selected":""}>كشك جاهز من المصنع</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
   <label class="lbl">تاريخ البداية</label><input id="mb" type="date" value="${esc(p.start_date)}" onchange="calcDue()">
