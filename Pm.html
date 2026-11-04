@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إدارة المشاريع</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2742">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="المشاريع">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"></noscript>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;--run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Tajawal',Tahoma,sans-serif;background:var(--bg);color:var(--text)}
+input,select,textarea,button{font-family:inherit;font-size:15px}
+input,select,textarea{padding:10px;border:1px solid var(--line);border-radius:10px;width:100%;margin:4px 0 10px;background:#fff}
+:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.wrap{max-width:1200px;margin:auto;padding:20px}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.rl{font-size:13px;opacity:.85}
+.sm{background:#ffffff26;color:#fff;border:0;padding:6px 14px;border-radius:8px;cursor:pointer}
+.sm.del{background:#fee2e2;color:var(--late);margin-top:6px}
+.btn{background:var(--run);color:#fff;border:0;padding:11px 22px;border-radius:10px;cursor:pointer;font-weight:700;margin:4px 0}
+.btn:disabled{opacity:.6;cursor:wait}.btn.alt{background:#475569}.btn.danger{background:var(--late)}
+.back{background:none;border:0;color:var(--run);font-weight:700;cursor:pointer;padding:0 0 12px}
+.s-run{--c:var(--run)}.s-plan{--c:var(--plan)}.s-done{--c:var(--done)}
+.top{display:flex;justify-content:space-between;align-items:center;margin:6px 0 16px}.top h2{margin:0;font-size:22px}
+/* الأعمدة الثلاثة */
+.cols{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+.dashStats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 18px}.dashStat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px;box-shadow:0 3px 12px #0f274208}.dashStat span{display:block;color:var(--muted);font-size:13px}.dashStat b{display:block;font-size:24px;color:var(--navy)}.dashTools{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:8px 0 14px}.dashTools h2{margin:0}.dashSearch{max-width:360px;margin:0;background:#fff}@media(max-width:680px){.dashStats{grid-template-columns:repeat(2,1fr)}.dashTools{align-items:stretch;flex-direction:column}.dashSearch{max-width:none}}
+.col{background:#e9eef5;border-radius:18px;padding:12px;border-top:6px solid var(--c)}
+.col h3{margin:4px 4px 12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
+.col h3 b{background:var(--c);color:#fff;border-radius:20px;padding:0 12px;font-size:15px}
+.card{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px #0f274214;cursor:pointer;margin-bottom:12px}
+.img{height:170px;background:linear-gradient(135deg,#cbd5e1,#94a3b8) center/cover;position:relative}
+.cw{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;color:#fff}
+.chip.ty{background:#334155}
+.wa{background:#25d366;color:#fff;border-radius:10px;padding:11px 18px;text-decoration:none;font-weight:700;font-size:15px}
+.chip.ok{background:var(--done)}.chip.late{background:var(--late)}
+.body{padding:14px}.body h4{margin:0 0 2px;font-size:19px}.body p{margin:0;color:var(--muted)}
+.bar{height:8px;background:var(--line);border-radius:8px;margin:12px 0 6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--c)}
+.row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+/* صفحة المشروع */
+.banner{height:280px;border-radius:18px;background:linear-gradient(135deg,#cbd5e1,#94a3b8) center/cover;position:relative}
+.box{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 4px 14px #0f274210}
+.det{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin:14px 0}
+.det span{display:block;font-size:13px;color:var(--muted)}.det b{font-size:17px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin:18px 0}
+.tab{white-space:nowrap;background:var(--card);border:1px solid var(--line);padding:9px 18px;border-radius:24px;cursor:pointer;font-weight:500}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.lbl{font-size:13px;color:var(--muted)}
+.item{border-bottom:1px solid var(--line);padding:12px 0}.item small{color:var(--muted);display:block;margin-top:6px}
+.item img,.item video{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-top:8px}
+.item img{cursor:zoom-in}
+.lb{position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
+.lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+.lbx{position:absolute;top:14px;left:14px;background:#ffffff33;color:#fff;border:0;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer}
+.note,.empty{text-align:center;color:var(--muted);padding:22px}
+.login{max-width:380px;margin:50px auto}.msg{color:var(--late);font-size:14px;min-height:20px}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:9}
+.modal .box{width:100%;max-width:440px;max-height:92vh;overflow:auto}
+.link{white-space:pre-wrap;background:#eff6ff;padding:10px;border-radius:10px;word-break:break-all;font-size:13px;direction:ltr;text-align:left}
+@media(min-width:900px){.cols{grid-template-columns:repeat(3,1fr)}}
+/* الصيانة */
+.mbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}.mbar select{width:auto;margin:0;min-width:130px}.mbar .btn{margin:0 auto 0 0}.mtg{font-size:14px;display:flex;gap:6px;align-items:center}.mtg input{width:auto;margin:0}
+.mc{border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 2px 10px #0f274211;cursor:pointer;border-right:6px solid #cbd5e1;transition:.15s;background:#fff}.mc:hover{transform:translateY(-2px);box-shadow:0 6px 18px #0f27421a}.mc .mt1{font-size:15px;font-weight:700;margin:6px 0;line-height:1.4}
+.mboard{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(255px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px;align-items:start}
+.mcol{background:#e9eef5;border-radius:16px;padding:10px;border-top:5px solid var(--c);min-height:120px}.mcol h3{margin:2px 4px 10px;font-size:16px;display:flex;justify-content:space-between;align-items:center}.mcol h3 b{background:var(--c);color:#fff;border-radius:20px;padding:0 10px;font-size:14px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.mc{background:#fff;border-radius:12px;padding:11px 12px;margin-bottom:9px;box-shadow:0 2px 8px #0f274214;cursor:pointer;border-right:5px solid #cbd5e1}.mc:active{transform:scale(.99)}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:8px}.mh b{font-size:13px;color:var(--muted)}.mchip{color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;white-space:nowrap}
+.mt1{font-weight:700;margin:5px 0;line-height:1.5}.mm{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12.5px;color:var(--muted)}.mf{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px}
+.mpend{margin-top:7px;background:#ede9fe;color:#6d28d9;border-radius:8px;padding:3px 9px;font-size:12.5px;font-weight:700}
+.msteps{display:flex;gap:4px;margin:6px 0 12px}.msteps>div{flex:1;text-align:center;font-size:11.5px;color:#94a3b8;border-top:4px solid #e2e8f0;padding-top:6px}.msteps i{display:block;width:24px;height:24px;line-height:24px;margin:0 auto 2px;border-radius:50%;background:#e2e8f0;font-style:normal;font-weight:700;color:#64748b}
+.msteps .dn{border-color:#16a34a;color:#16a34a}.msteps .dn i{background:#16a34a;color:#fff}.msteps .cur{border-color:var(--c);color:var(--c);font-weight:700}.msteps .cur i{background:var(--c);color:#fff}
+.mpanel{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0}.mres{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.mck{display:flex;gap:8px;align-items:center;margin:6px 0}.mck input{width:auto;margin:0}
+.mqh,.mqr{display:grid;grid-template-columns:1fr 70px 90px 90px 32px;gap:6px;align-items:center}.mqh{font-size:12px;color:var(--muted);margin-bottom:2px}.mqh b{grid-column:4/6;font-weight:500}.mqr input{margin:0;padding:8px}.mqr.ro{grid-template-columns:1fr 70px 90px 90px;font-size:14px;padding:5px 0;border-bottom:1px solid var(--line)}.mqh{grid-template-columns:1fr 70px 90px 122px}
+.mtot{margin-top:10px;display:grid;gap:4px;max-width:320px;margin-right:auto}.mtot div{display:flex;justify-content:space-between;font-size:14px}.mtot .g{font-size:17px;font-weight:800;border-top:2px solid var(--navy);padding-top:5px}
+.mqs{display:inline-block;border-radius:20px;padding:3px 12px;font-size:13px;font-weight:700;margin-bottom:8px;background:#e2e8f0}.mqs.pending{background:#ede9fe;color:#6d28d9}.mqs.approved{background:#dcfce7;color:#166534}.mqs.returned,.mqs.rejected{background:#fee2e2;color:#b91c1c}
+.hlq{background:#fffbeb;border-right:4px solid #f59e0b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:14px}
+.mout{border-radius:10px;padding:8px 12px;font-weight:700;margin-bottom:8px;background:#e2e8f0}.mout.done{background:#dcfce7;color:#166534}.mout.rejected{background:#fee2e2;color:#b91c1c}
+.mtl{max-height:300px;overflow:auto}.mev{border-right:3px solid #cbd5e1;padding:4px 10px;margin:6px 0;font-size:14px}.mev.stage{border-color:#2563eb}.mev.quote{border-color:#7c3aed}.mev small{display:block;color:var(--muted);font-size:12px}
+.sst{display:flex;gap:4px;margin:12px 0}.sst>div{flex:1;text-align:center;font-size:12px;color:var(--muted)}.sst i{display:grid;place-items:center;width:30px;height:30px;margin:0 auto 4px;border-radius:50%;background:#e3e9ef;color:#647589;font-style:normal;font-weight:700}.sst .dn i{background:#16a34a;color:#fff}.sst .cur{font-weight:700;color:var(--text,#182b3d)}.sst .cur i{background:#ed8700;color:#fff;box-shadow:0 0 0 4px #ed870033}.sinfo{background:#eff6ff;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:14px}.srow{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e3e9ef;border-radius:12px;padding:12px;margin:8px 0;background:#fff;cursor:pointer;text-align:right;width:100%;font:inherit;color:inherit}
+.mgal{margin:12px 0 0}.mgp{margin:8px 0}.mgp>b{display:block;font-size:13px;color:var(--muted)}.mdt{margin-top:14px}.mdt summary{cursor:pointer;font-weight:700;padding:6px 0}.mtl2{margin:6px 0 0;padding-right:14px;border-right:2px solid #e3e9ef}.mtv{position:relative;padding:0 12px 12px 0;font-size:14px}.mtv i{position:absolute;right:-21px;top:7px;width:10px;height:10px;border-radius:50%;background:#2e69ad;border:2px solid #fff}.mtv small{display:block;color:var(--muted);font-size:12px}
+.mth{width:120px!important;height:90px!important;max-height:none!important;object-fit:cover;border-radius:8px;margin:6px 6px 0 0!important;display:inline-block}
+@media(max-width:600px){.mqh,.mqr{grid-template-columns:1fr 54px 74px 74px 28px}.mqr.ro{grid-template-columns:1fr 54px 74px 74px}.mqh{grid-template-columns:1fr 54px 74px 102px}}
+/* الصيانة v2 */
+.mtoast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#102944;color:#fff;padding:11px 22px;border-radius:30px;z-index:200;font-weight:700;box-shadow:0 8px 24px #0004}
+.modal .box.mtk{max-width:560px}
+.mstt{display:inline-block;background:var(--c);color:#fff;border-radius:20px;padding:3px 16px;font-weight:800;font-size:15px;margin:0 0 10px}
+.mstage{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:6px 0}
+.mwait{background:#fffbeb;border:1px dashed #f59e0b;color:#92400e;border-radius:10px;padding:12px;text-align:center;font-weight:700;margin-top:10px}
+.btn.big{width:100%;padding:15px;font-size:17px;margin-top:10px}
+.mbtns{display:grid;gap:8px;margin-top:10px}.mbtns .btn{width:100%;margin:0;padding:13px}
+.mpre{white-space:pre-wrap}
+.mrep{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}.mrep>b{display:block;font-size:13px;color:var(--muted);margin-bottom:2px}
+.mcostbox{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0}.mcostbox span{color:var(--muted)}.mcostbox b{font-size:24px;color:var(--navy)}
+.mcin{font-size:22px!important;font-weight:800;text-align:center}
+.mdur{display:flex;gap:8px}.mdur input{flex:1}.mdur select{width:110px}
+.mfile{padding:12px;border:2px dashed #cbd5e1;background:#fff}
+.mpics{margin:4px 0 8px}
+.mtb{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}.mtb td{padding:6px 4px;border-bottom:1px solid var(--line)}.mtb td:first-child{color:var(--muted);width:32%}
+.tfs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.tfs button{border:1px solid var(--line);background:#fff;border-radius:22px;padding:7px 16px;cursor:pointer;font-weight:600}.tfs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.dashStats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))!important}
+.img.mimg{display:grid;place-items:center;background:linear-gradient(135deg,#183b5c,#0f2742);height:120px}.mimg .mic{font-size:44px;opacity:.85}
+.card.mine{outline:3px solid #ed8700}
+/* التسعير التفصيلي */
+.modal .box.prApp{max-width:1180px;max-height:94vh;width:min(1180px,100%);overflow:auto}.prActions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.prActions h3{margin:4px 0}.prGrid{display:grid;grid-template-columns:minmax(250px,0.8fr) minmax(420px,1.5fr);gap:14px;margin-top:12px}.prGrid>section{min-width:0}.prGrid h4{margin:5px 0 10px}.priceList{max-height:38vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px}.prPick{display:flex;flex-direction:column;gap:3px;text-align:right;width:100%;padding:9px;border:0;border-bottom:1px solid var(--line);background:#fff;cursor:pointer;color:var(--text);font:inherit}.prPick:hover{background:#eff6ff}.prPick span,.prPick small{font-size:12px;color:var(--muted)}.prMeta{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px}.prMeta label,.prDims label{font-size:12px;color:var(--muted)}.prMeta input,.prDims input,.prDims select{margin:3px 0 6px;padding:7px}.prSaved{margin:8px 0}.prSaved summary,.prCustom summary{cursor:pointer;font-weight:700;padding:7px 0}.prCustom{margin-top:8px}.prCustom .prDims{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.prLine{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#fff}.prLineHead{display:flex;align-items:center;justify-content:space-between;gap:8px}.prLine small{color:var(--muted)}.prSteel{display:block;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:7px 10px;margin:7px 0;color:#9a3412;font-size:13px}.prSteel input{width:auto!important;margin:0 5px!important}.prDims{display:flex;gap:7px;flex-wrap:wrap}.prDims label{flex:1;min-width:110px}.prBreak{display:flex;gap:7px 12px;flex-wrap:wrap;background:#f4f6fa;border-radius:8px;padding:8px;margin:6px 0;font-size:12px}.prBreak b{width:100%;font-size:13px;color:var(--navy)}.prTotals{background:#eef5fb;border-radius:12px;padding:12px;margin:10px 0}.prTotals div{display:flex;justify-content:space-between;padding:4px}.prTotals b{font-size:18px}.prTotals small,.prFoot{color:var(--muted);font-size:12px}.prFoot{display:block;margin-top:12px}.pricePrint{min-width:0}
+@media(max-width:850px){.prGrid{grid-template-columns:1fr}.priceList{max-height:26vh}.prMeta{grid-template-columns:repeat(2,minmax(110px,1fr))}.modal .box.prApp{padding:12px}}
+@media print{body *{visibility:hidden!important}.pricePrint,.pricePrint *{visibility:visible!important}.pricePrint{position:absolute!important;inset:0!important;width:100%!important}.pricePrint .prActions,.pricePrint input,.pricePrint select,.pricePrint button{display:none!important}.prLine{break-inside:avoid}.prTotals{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div id="app"><div class="note">جاري التحميل...</div></div>
+<script>
+/* ===== 1) الإعدادات ===== */
+const SBU="https://wmavitpimbcjohcjgqhz.supabase.co",SBK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndtYXZpdHBpbWJjam9oY2pncWh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzODg4MDQsImV4cCI6MjEwNjk2NDgwNH0.sR6dTymzM2TgclddArsdMfuxEZ3rTADB2Ti796X8d5Y";
+const sb=supabase.createClient(SBU,SBK);
+const sb2=supabase.createClient(SBU,SBK,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});   // لإنشاء حسابات الآخرين
+const UD="asemshawi-blip.github.io";   // نطاق داخلي لاسم المستخدم
+const ROLES={owner:"مدير المشروع",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول",site:"مدير الموقع"};
+const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
+/* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
+const TABS=[
+{k:"works",n:"متابعة الأعمال",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site"},
+{k:"notes",n:"ملاحظات الإدارة",see:"owner,pm,mgmt",add:"owner,pm,mgmt",ph:"اكتب ملاحظة..."},
+{k:"coord",n:"التنسيق",see:"owner,pm,site",add:"owner,pm,site",ph:"اكتب ملاحظة أو خطوات التنسيق مع المالك..."},
+{k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
+{k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
+{k:"media",n:"الصور",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*",multi:1}];
+let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],siteErr:"",q:""};
+
+/* ===== 2) مساعدات ===== */
+const $=id=>document.getElementById(id);
+const clamp=v=>Math.max(0,Math.min(100,parseInt(v)||0));
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const stOpts=v=>Object.keys(ST).map(k=>`<option value="${k}" ${k===v?"selected":""}>${ST[k][0]}</option>`).join("");
+const fmt=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const daysBetween=(a,b)=>a&&b?Math.round((new Date(b+"T00:00:00")-new Date(a+"T00:00:00"))/864e5):"";
+const inv=()=>new URLSearchParams(location.search).get("invite");
+const money=v=>v==null||v===""?"-":Number(v).toLocaleString("en-US");
+/* متأخر / على الموعد + عداد الأيام (لا يظهر بعد التسليم) */
+function timing(p){
+  if(p.status==="done"||!p.due)return null;
+  const d=Math.round((new Date(p.due+"T00:00:00")-new Date().setHours(0,0,0,0))/864e5);
+  return d<0?{late:1,t:`متأخر ${-d} يوم`}:{late:0,t:d===0?"على الموعد · التسليم اليوم":`على الموعد · باقي ${d} يوم`};
+}
+const TYN={new:"إنشاء بالموقع",kiosk:"كشك جاهز",reno:"ترميم"},TYE={new:"🏗",kiosk:"☕",reno:"🛠"};
+const chip=p=>{const t=timing(p),y=TYN[p.ptype]?TYE[p.ptype]+" "+TYN[p.ptype]:"";return t||y?`<div class="cw">${t?`<span class="chip ${t.late?"late":"ok"}">${t.t}</span>`:""}${y?`<span class="chip ty">${y}</span>`:""}</div>`:""};
+const normP=v=>{const d=String(v).replace(/\D/g,"").replace(/^00/,"");return d.length>=10&&!d.startsWith("0")?d:""};
+const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
+
+/* ===== 3) الدخول ===== */
+async function init(){
+  const kk=new URLSearchParams(location.search).get("k");if(kk)return mgLink(kk);   /* رابط الإدارة: بدون تسجيل دخول */
+  const {data}=await sb.auth.getSession();
+  S.user=data.session?.user||null;
+  S.user?boot():loginView();
+}
+function loginView(msg=""){
+  $("app").innerHTML=`<div class="login box"><h2>${inv()?"قبول الدعوة":"تسجيل الدخول"}</h2>
+  <input id="em" type="text" placeholder="اسم المستخدم أو البريد الإلكتروني" autocomplete="username" autocapitalize="none" dir="ltr">
+  <input id="pw" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)" onkeydown="if(event.key==='Enter')signIn()">
+  <div class="msg">${msg}</div><button class="btn" onclick="signIn()">دخول</button>
+  ${inv()?'<button class="btn alt" onclick="signUp()">إنشاء حساب جديد</button>':""}</div>`;
+}
+async function signIn(){
+  let em=$("em").value.trim();if(!em.includes("@"))em=em.toLowerCase()+"@"+UD;
+  const {data,error}=await sb.auth.signInWithPassword({email:em,password:$("pw").value});
+  if(error)return loginView("البريد أو كلمة المرور غير صحيحة");
+  S.user=data.user;boot();
+}
+async function signUp(){
+  const {data,error}=await sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value});
+  if(error)return loginView(esc(error.message));
+  if(!data.session)return loginView("تم إنشاء الحساب. أكّد بريدك ثم افتح رابط الدعوة مرة ثانية وسجّل دخول.");
+  S.user=data.user;boot();
+}
+async function out(){try{const r=await navigator.serviceWorker.ready,x=await r.pushManager.getSubscription();if(x)await sb.rpc("push_drop",{e:x.endpoint})}catch(e){}await sb.auth.signOut();location.href=location.pathname}
+async function boot(){
+  if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
+  const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
+  S.role=p?.role||"none";
+  const loads=[load()];
+  if(mSee())loads.push(loadM().catch(e=>{MT.err=String(e&&e.message||e)}));
+  await Promise.all(loads);
+  render();
+  const dl=await deepLink();
+  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
+  checkPush();
+}
+
+/* ===== 4) البيانات والملفات ===== */
+async function load(){
+  const {data,error}=await sb.from("projects").select("*").order("created_at",{ascending:false});
+  if(error)alert("تعذر تحميل المشاريع: "+error.message);
+  S.projects=(data||[]).filter(p=>p.ptype!=="maint").map(p=>({...p,status:ST[p.status]?p.status:"run"}));   // حالة "متأخر" القديمة تتحول لقيد التنفيذ
+  render();
+  await sign(S.projects.map(p=>p.cover_path));
+  render();
+}
+async function sign(paths){
+  const need=[...new Set(paths.filter(x=>x&&!S.urls[x]))];
+  if(!need.length)return;
+  const batches=Array.from({length:Math.ceil(need.length/100)},(_,i)=>need.slice(i*100,(i+1)*100));
+  const results=await Promise.all(batches.map(batch=>sb.storage.from("media").createSignedUrls(batch,7200)));
+  results.forEach(({data})=>(data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl}));
+}
+async function shrink(f){
+  if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<120*1024)return f;
+  /* يجرب 3 مستويات ويقف عند أول ناتج ≤ 180 كيلوبايت */
+  const LV=[[1280,.72],[1100,.62],[960,.52]],TARGET=180*1024;
+  const out=(c,q)=>new Promise(r=>c.toBlob(r,"image/jpeg",q));
+  const enc=async(src,w,h)=>{let best=null;
+    for(const [M,q] of LV){const k=Math.min(1,M/Math.max(w,h)),c=document.createElement("canvas");c.width=Math.round(w*k);c.height=Math.round(h*k);
+      const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(src,0,0,c.width,c.height);
+      const b=await out(c,q);c.width=c.height=0;if(b&&(!best||b.size<best.size))best=b;if(b&&b.size<=TARGET)break}
+    return best};
+  let b=null;
+  try{const bmp=await createImageBitmap(f,{imageOrientation:"from-image"});try{b=await enc(bmp,bmp.width,bmp.height)}finally{if(bmp.close)bmp.close()}}catch(e){}
+  if(!b){const u=URL.createObjectURL(f);try{const im=new Image();im.src=u;await im.decode();b=await enc(im,im.naturalWidth,im.naturalHeight)}catch(e){}finally{URL.revokeObjectURL(u)}}
+  return b&&b.size<f.size?new File([b],"photo.jpg",{type:"image/jpeg"}):f;
+}
+const isNetErr=e=>/fetch|network|load failed|timeout|abort|offline/i.test(String((e&&e.message)||e));
+async function up(pid,f,quiet){
+  f=await shrink(f);
+  const ext=(f.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"")||"bin";
+  const path=`${pid}/${crypto.randomUUID()}.${ext}`;
+  let error;try{({error}=await sb.storage.from("media").upload(path,f,{contentType:f.type||"application/octet-stream"}))}catch(e){error=e}
+  if(error){if(quiet&&(!navigator.onLine||isNetErr(error)))return "NET";alert("فشل الرفع: "+error.message);return null}
+  return path;
+}
+async function loadE(){
+  if(S.tab==="works")return loadW();
+  const {data}=await sb.from("entries").select("*").eq("project_id",S.cur).eq("kind",S.tab).order("created_at",{ascending:false});
+  S.entries=data||[];await sign(S.entries.map(e=>e.file_path));
+}
+
+
+/* ===== متابعة الأعمال: مراحل المشروع مرتبطة بنسبة الإنجاز ===== */
+const WTPL=[
+["التسلّم والتجهيز",[["استلام الموقع ورفع المقاسات",2],["تجهيز الموقع",2]]],
+["الجدران والفواصل",[["بناء الجدران والفواصل",5],["فتحات الأبواب والنوافذ",3]]],
+["السباكة والصرف",[["تأسيس السباكة والصرف",6]]],
+["الكهرباء والتكييف والتيار الخفيف",[["تأسيس الكهرباء",4],["تأسيس التكييف والتهوية",4],["تأسيس البيانات والتيار الخفيف",2]]],
+["الأسقف",[["الأسقف المستعارة",6],["تشطيب الأسقف وتجهيز الإنارة",3]]],
+["الأرضيات",[["تركيب الأرضيات",9]]],
+["الدهانات والتشطيبات",[["تجهيز الأسطح والدهان",5],["تكسيات الجدران",3]]],
+["دورات المياه",[["تشطيب الدورات",3],["تركيب القطع الصحية والإكسسوارات",2]]],
+["الواجهات والزجاج",[["تشطيب الواجهة",6],["تركيب الزجاج والألمنيوم",6]]],
+["الأبواب",[["تركيب الأبواب",3]]],
+["النجارة والأثاث الثابت",[["أعمال النجارة",6],["الأثاث الثابت",4]]],
+["الإنارة",[["تركيب وحدات الإنارة",3]]],
+["المعدات والتجهيزات",[["توريد وتركيب المعدات",3]]],
+["اللوحات والشعارات",[["تركيب اللوحات والشعارات",3]]],
+["الأعمال الخارجية",[["أعمال الموقع الخارجية",3],["التشجير والتجهيزات الخارجية",2]]],
+["التسليم",[["التنظيف واختبار الأنظمة",1],["قائمة الملاحظات والتسليم",1]]]];
+const WTPLR=[
+["المعاينة والتوثيق",[["معاينة الموقع وحصر الأعمال وتصويره قبل البدء",3],["رفع المقاسات وتجهيز الموقع وحمايته",3]]],
+["الهدم والإزالة",[["فك الأبواب والأسقف والأرضيات والتجهيزات القديمة",6],["إزالة الأجزاء المتضررة ونقل المخلفات",5]]],
+["الإصلاحات والمعالجات",[["إصلاحات إنشائية وترميم الأسطح والجدران",8],["معالجة العزل والرطوبة",6]]],
+["التأسيسات",[["تعديل أو استبدال السباكة والصرف",6],["تعديل أو استبدال الكهرباء والتكييف",6]]],
+["التشطيبات",[["الأسقف والأرضيات والبلاط",8],["الدهانات والتكسيات",6],["الأبواب والنجارة",5],["الإنارة والقطع الصحية والتجهيزات",4]]],
+["الواجهات والأعمال الخارجية",[["إصلاح الواجهات والأعمال الخارجية",4]]],
+["التسليم",[["التنظيف واختبار الأنظمة",2],["قائمة الملاحظات والتسليم وتصوير بعد",2]]]];
+const WTPLK=[
+["معاينة الموقع",[["معاينة الموقع بالصور والتحقق من الماء والصرف والكهرباء",10]]],
+["تجهيز القاعدة والأرضية",[["تنفيذ الصبة والتسوية وتجهيز نقاط تثبيت الكشك",20]]],
+["النقل والاستلام",[["تنسيق نقل الكشك واستلامه وفحصه عند الوصول",10]]],
+["التركيب والتثبيت والإشراف",[["إنزال الكشك وتركيبه وتثبيته والإشراف على الأعمال",25]]],
+["تركيب المكائن",[["إنزال المكائن وتركيبها في مواقعها",10]]],
+["تركيب الكاميرات والسيت أب (IT)",[["تركيب الكاميرات وإكمال إعدادات وتقنيات المعلومات",10]]],
+["الاختبار والتشغيل والتسليم",[["اختبار الخدمات والمكائن والكاميرات وتشغيل الكشك وتسليمه",15]]]];
+const WTPLS={new:WTPL,kiosk:WTPLK,reno:WTPLR};
+async function loadW(){
+  const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
+  if(error)alert(error.message);S.works=data||[];
+}
+const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.round(a.reduce((x,i)=>x+i.weight*i.pct,0)/w):0};
+function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
+async function seedW(){
+  const pj=S.projects.find(x=>x.id===S.cur),T=WTPLS[pj&&pj.ptype]||WTPL;
+  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":pj&&pj.ptype==="kiosk"?"تحميل قالب مراحل الكشك الجاهز من المصنع؟":"تحميل قالب مراحل الإنشاء بالموقع؟"))return;
+  let n=0;const rows=[];
+  T.forEach(([ph,it])=>it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++})));
+  const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
+  await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function setW(id,v){
+  const {error}=await sb.from("work_items").update({pct:+v}).eq("id",id);if(error)return alert(error.message);
+  const i=S.works.find(x=>x.id===id);logA("work",`${i.name}: ${i.pct}% ← ${+v}%`);i.pct=+v;i.updated_at=new Date().toISOString();
+  wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function addW(){
+  const ph=$("wph").value.trim(),nm=$("wnm").value.trim(),w=parseFloat($("wwt").value)||1;
+  if(!ph||!nm)return alert("اكتب المرحلة واسم البند");
+  const {error}=await sb.from("work_items").insert({project_id:S.cur,phase:ph,name:nm,weight:w,sort:S.works.length+1000});
+  if(error)return alert(error.message);logA("work","إضافة بند: "+nm+" ("+ph+")");await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function delW(id){
+  if(!confirm("حذف البند؟"))return;
+  logA("work","حذف بند: "+((S.works.find(x=>x.id===id)||{}).name||""));
+  await sb.from("work_items").delete().eq("id",id);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+}
+async function moveP(i,d){
+  const ph=[...new Set(S.works.map(x=>x.phase))],j=i+d;if(j<0||j>=ph.length)return;
+  [ph[i],ph[j]]=[ph[j],ph[i]];let n=0;const ch=[];
+  ph.forEach(f=>S.works.filter(x=>x.phase===f).forEach(x=>{if(x.sort!==n)ch.push([x,n]);n++}));
+  const r=await Promise.all(ch.map(([x,k])=>sb.from("work_items").update({sort:k}).eq("id",x.id)));
+  const er=r.find(q=>q.error);if(er)return alert(er.error.message);
+  ch.forEach(([x,k])=>x.sort=k);S.works.sort((a,b)=>a.sort-b.sort);render();
+}
+function worksHtml(p){
+  const ed=["owner","pm","contr","site"].includes(S.role),adm=["owner","pm"].includes(S.role),W=S.works;
+  if(!W.length)return `<div class="empty">لم تُحدد مراحل الأعمال لهذا المشروع بعد</div>${adm?`<button class="btn" onclick="seedW()">تحميل مراحل المشروع الجاهزة</button>`:""}`;
+  const ph=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0),dn=W.filter(i=>i.pct===100).length;
+  const opts=v=>[0,10,20,30,40,50,60,70,80,90,100].map(n=>`<option ${n===v?"selected":""} value="${n}">${n}%</option>`).join("");
+  const blocks=ph.map(f=>{
+    const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0);
+    return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>${esc(f)} <small style="font-weight:500;color:${pc===100?"var(--done)":pc>0?"var(--run)":"var(--muted)"}">· ${pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ"}</small></span><span>${ed?`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},-1)" aria-label="أعلى">▲</button> <button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},1)" aria-label="أسفل">▼</button> `:""}${pc}%</span></div>
+    <div class="bar ${pc===100?"s-done":"s-run"}"><i style="width:${pc}%"></i></div><div class="lbl">وزن المرحلة ${Math.round(w/tot*1000)/10}% من المشروع</div>
+    ${it.map(i=>`<div class="item" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:200px">${i.pct===100?"✅ ":""}${esc(i.name)}<small>الوزن ${i.weight}${i.pct?" · آخر تحديث "+new Date(i.updated_at).toLocaleDateString("ar"):""}</small></div>
+    ${ed?`<select style="width:90px;margin:0" onchange="setW('${i.id}',this.value)">${opts(i.pct)}</select>`:`<b>${i.pct}%</b>`}${adm?`<button class="sm del" style="margin:0" onclick="delW('${i.id}')">حذف</button>`:""}</div>`).join("")}</div>`}).join("");
+  return `<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>بنود مكتملة</span><b>${dn} / ${W.length}</b></div><div><span>المراحل</span><b>${ph.length}</b></div></div>${blocks}
+  ${adm?`<div class="box"><b>إضافة بند</b><input id="wph" list="wphl" placeholder="المرحلة"><datalist id="wphl">${ph.map(f=>`<option value="${esc(f)}">`).join("")}</datalist><input id="wnm" placeholder="اسم البند"><input id="wwt" type="number" min="0.5" step="0.5" value="1" placeholder="الوزن"><button class="btn" onclick="addW()">إضافة</button></div>`:""}`;
+}
+
+/* ===== الإشعارات ===== */
+const VAPID_PUBLIC="BO0Nn0gRZtyZmGyf_kTbN_r70ucgvAOcPkS8HFIlh_AcsezhqC21Qu3uKhRSO5JwLJrImuHyzUMpdA_XNw3Go8U";
+const b64=s=>{s=(s+"=".repeat((4-s.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+const isMob=()=>/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+const pushBtn=()=>("PushManager" in window&&isMob()&&!S.pushOn)?'<button class="sm" onclick="enablePush()">🔔 تفعيل الإشعارات</button>':"";
+const pushSave=sub=>{const j=sub.toJSON();return sb.rpc("push_save",{e:j.endpoint,k:j.keys.p256dh,a:j.keys.auth})};
+async function checkPush(){
+  try{if(!("PushManager" in window)||Notification.permission!=="granted")return;
+    const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+    if(sub){await pushSave(sub);S.pushOn=true;render()}}catch(e){}
+}
+async function enablePush(){
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),st=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  if(ios&&!st)return alert("في الآيفون: افتح الموقع من Safari ← مشاركة ← إضافة إلى الشاشة الرئيسية، ثم افتح التطبيق من الشاشة الرئيسية وفعّل الإشعارات");
+  if(!("PushManager" in window))return alert("هذا المتصفح لا يدعم الإشعارات");
+  if(VAPID_PUBLIC.startsWith("PUT_"))return alert("مفتاح الإشعارات غير مضبوط بعد");
+  try{
+    if(await Notification.requestPermission()!=="granted")return alert("لم يتم السماح بالإشعارات. فعّلها من إعدادات الموقع في المتصفح");
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(VAPID_PUBLIC)});
+    const {error}=await pushSave(sub);if(error)throw error;
+    S.pushOn=true;render();alert("تم تفعيل الإشعارات على هذا الجهاز")
+  }catch(e){alert("تعذر تفعيل الإشعارات: "+(e.message||e))}
+}
+async function deepLink(p,t){
+  const q=new URLSearchParams(location.search);p=p||q.get("p");t=t||q.get("t");
+  const mq=q.get("m");
+  if(mq&&mSee()){history.replaceState(null,"",location.pathname);if(!MT.t.some(x=>x.id===mq))await loadM();if(MT.t.some(x=>x.id===mq)){S.cur=null;S.view=null;await mOpen(mq);return true}}
+  if(!p&&t==="maint"&&mSee()){history.replaceState(null,"",location.pathname);S.cur=null;S.view=null;S.modal=null;await loadM();render();scrollTo(0,0);return true}
+  const pr=p&&S.projects.find(x=>String(x.id)===String(p));if(!pr)return false;
+  S.modal=null;await openP(pr.id);
+  if(t&&TABS.some(x=>x.k===t&&x.see.includes(S.role)))await setTab(t);
+  history.replaceState(null,"",location.pathname);return true;
+}
+navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&S.user)deepLink(e.data.open.p,e.data.open.t)});
+
+/* ===== 5) العرض ===== */
+function render(){
+  const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openPricing()">💰 التسعير</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
+  $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
+}
+function card(p){
+  const u=S.urls[p.cover_path];
+  return `<div class="card ${ST[p.status][1]}" data-search="${esc((String(p.name||"")+" "+String(p.loc||"")).toLocaleLowerCase())}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
+  <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p><div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
+  <div class="row"><span>الإنجاز ${clamp(p.progress)}%</span><span>التسليم ${esc(p.due)||"-"}</span></div></div></div>`;
+}
+function home(){
+  const total=S.projects.length,active=S.projects.filter(p=>p.status==="plan"||p.status==="run").length,late=S.projects.filter(p=>timing(p)?.late).length,done=S.projects.filter(p=>p.status==="done").length;
+  const mOn=mSee()&&!MT.err,tf=S.tf||"",mOpenN=mOn?MT.t.filter(t=>!t.closed_at).length:0,mineN=mOn?MT.t.filter(mMine).length:0;
+  const stats=`<div class="dashStats"><div class="dashStat"><span>إجمالي المشاريع</span><b>${total}</b></div><div class="dashStat"><span>قيد العمل</span><b>${active}</b></div><div class="dashStat"><span>متأخرة</span><b>${late}</b></div><div class="dashStat"><span>تم تسليمها</span><b>${done}</b></div>${mOn?`<div class="dashStat"><span>🔧 صيانة مفتوحة</span><b>${mOpenN}</b></div>`:""}${mineN?`<div class="dashStat" style="border-color:#ed8700"><span>بانتظارك</span><b style="color:#ed8700">${mineN}</b></div>`:""}</div>`;
+  const P=S.projects.filter(p=>!tf||(tf!=="maint"&&(p.ptype||"new")===tf)).map(p=>({at:p.created_at,col:p.status,pri:0,h:card(p)}));
+  const M=mOn&&(!tf||tf==="maint")?MT.t.filter(mShow).map(t=>({at:t.created_at,col:mCol(t),pri:mMine(t)?1:0,h:mHomeCard(t)})):[];
+  const all=[...P,...M].sort((a,b)=>b.pri-a.pri||new Date(b.at)-new Date(a.at));
+  const cols=Object.keys(ST).map(k=>{
+    const L=all.filter(x=>x.col===k);
+    return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(x=>x.h).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
+  }).join("");
+  const chips=[["","الكل"],["new","🏗 إنشاء بالموقع"],["kiosk","☕ كشك جاهز"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
+  return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}${mCreateOk()&&!MT.err?`<button class="btn" style="background:#d97706" onclick="modal('mnew')">＋ طلب صيانة</button>`:""}</div>${MT.err&&mSee()&&mAdm()?`<div class="hlq">الصيانة غير مفعّلة بعد: شغّل maintenance_v2.sql في Supabase.</div>`:""}<div class="tfs">${chips.map(([k,n])=>`<button class="${tf===k?"on":""}" onclick="S.tf='${k}';render();filterProjects(S.q||'')">${n}</button>`).join("")}</div>${stats}<div class="cols">${cols}</div>`;
+}
+function filterProjects(value){
+  S.q=value.trim().toLocaleLowerCase();
+  document.querySelectorAll(".col").forEach(col=>{let count=0;col.querySelectorAll(".card[data-search]").forEach(c=>{const show=c.dataset.search.includes(S.q);c.style.display=show?"":"none";if(show)count++});const empty=col.querySelector(".empty");if(empty){empty.style.display=count?"none":"block";empty.textContent=S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}});
+}
+function defTab(id){
+  try{
+    const vis = TABS.filter(t=>t.see.includes(S.role));
+    if(vis.some(t=>t.k==="works")) return "works";
+    if(vis.length) return vis[0].k;
+  }catch(e){}
+  return "works";
+}
+async function openP(id){
+  S.cur=id;S.view=null;S.tab=defTab(id);S.entries=[];
+  render();scrollTo(0,0);
+  await Promise.allSettled([loadE(),loadPS()]);
+  if(S.cur===id)render();
+}
+async function setTab(k){S.tab=k;await loadE();render()}
+function fileHtml(e){
+  const u=S.urls[e.file_path];if(!u)return"";
+  const t=e.file_type||"";
+  if(t.startsWith("image"))return `<img src="${u}" loading="lazy" decoding="async" onclick="openImg(this.src)">`;
+  if(t.startsWith("video"))return `<video src="${u}" controls preload="none"></video>`;
+  return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
+}
+function proj(){
+  const p=S.projects.find(x=>x.id===S.cur);if(!p){S.cur=null;return home()}
+  const T=TABS.filter(t=>t.see.includes(S.role)),t=TABS.find(x=>x.k===S.tab),own=S.role==="owner",ed=own||S.role==="pm",u=S.urls[p.cover_path];
+  const det=`<div class="box det">
+    <div><span>الحالة</span><b>${ST[p.status][0]}</b></div>
+    <div><span>نوع المشروع</span><b>${TYN[p.ptype]||"-"}</b></div>
+    <div><span>مدير المشروع</span><b>${esc(p.pm_name)||"-"}</b></div>
+    <div><span>المقاول</span><b>${esc(p.contractor_name)||"-"}</b></div>
+    <div><span>مدير المنطقة</span><b>${esc(p.area_name)||"-"}</b></div>
+    ${["owner","pm","site"].includes(S.role)?tel("جوال المقاول",p.contractor_phone)+tel("جوال مدير المنطقة",p.area_phone):""}
+    <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
+    ${["owner","pm","contr"].includes(S.role)?tel("جوال مدير الموقع",p.site_phone):""}
+    ${["owner","pm","site"].includes(S.role)?`<div><span>موظف التنسيق مع المالك</span><b>${esc(p.coord_name)||"-"}</b></div>`+tel("جوال موظف التنسيق",p.coord_phone):""}
+    <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
+    <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
+    ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
+  const cm=`بخصوص مشروع «${p.name}»${p.loc?" ("+p.loc+")":""}`;
+  const toPM=p.pm_phone&&["owner","mgmt","contr","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
+  const toCT=p.contractor_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
+  const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
+  const toSM=p.site_phone&&["owner","pm","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.site_phone,`السلام عليكم${p.site_manager?" "+p.site_manager:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير الموقع</a>`:"";
+  const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
+  const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
+  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
+  const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
+  const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
+  return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
+  <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
+  <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
+  <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
+  ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>${ed?siteBox():""}
+  <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
+  <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
+}
+
+/* ===== 6) عمليات المشروع والمدخلات ===== */
+/* ===== 6.1) نظام التقارير الاحترافي (PDF) ===== */
+const RP={cancel:false,url:"",blob:null};
+const NLOC="ar-u-ca-gregory-nu-latn";
+const dfmt=(d,o={day:"numeric",month:"long",year:"numeric"})=>new Date(d).toLocaleDateString(NLOC,o);
+const tfmt=d=>new Date(d).toLocaleTimeString(NLOC,{hour:"numeric",minute:"2-digit"});
+const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const day0=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const cleanTxt=v=>String(v??"").replace(/\r\n?/g,"\n").split("\n").map(l=>l.replace(/[ \t]+/g," ").trim()).filter(Boolean).join("\n");
+const cut=(s,n)=>s.length>n?s.slice(0,n).trimEnd()+"…":s;
+const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
+const loadLib=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("تعذر تحميل "+src));document.head.appendChild(s)});
+const RPCSS=`
+.rpg{width:794px;height:1123px;background:#fff;position:relative;overflow:hidden;direction:rtl;text-align:right;font-family:'Tajawal',Tahoma,sans-serif;color:#182b3d;line-height:1.7;box-sizing:border-box;font-size:13px}
+.rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;box-sizing:border-box;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal;font-feature-settings:normal}
+.rpg .rph{height:58px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #ed8700;background:#fff}
+.rpg .rph .l{display:flex;align-items:center;gap:10px;font-weight:800;color:#102944;font-size:14px}
+.rpg .rph img{width:32px;height:32px;border-radius:8px;display:block}
+.rpg .rph .r{font-size:11px;color:#647589;text-align:left;line-height:1.5}
+.rpg .rph .r b{color:#102944;font-size:12px}
+.rpg .rpc{height:1005px;padding:22px 40px 0;overflow:hidden;display:flow-root}
+.rpg .rpf{position:absolute;bottom:0;right:0;left:0;height:60px;padding:0 40px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e3e9ef;font-size:11px;color:#8996a5}
+.rpg .rpf .rf{direction:ltr;font-size:10.5px;color:#aab4bf}
+.rpg .rt{display:flex;align-items:center;gap:12px;font-size:21px;font-weight:800;color:#102944;margin:0 0 14px;line-height:1.4}
+.rpg .rt .no{flex:none;min-width:32px;height:32px;border-radius:9px;background:#102944;color:#fff;font-size:15px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.rpg .rt .l2{flex:1;height:2px;background:#e3e9ef}
+.rpg .st{font-size:14px;font-weight:700;color:#2e69ad;margin:4px 0 9px}
+.rpg .toc{font-size:11.5px;height:48px;border:1px solid #e3e9ef;background:#f8fafc;border-radius:10px;padding:5px 14px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:0 18px;align-content:center;color:#52667b;overflow:hidden}
+.rpg .toc span{display:block}
+.rpg .toc b{color:#102944;font-weight:700}
+.rpg .toc u{display:inline-block;text-decoration:none;margin-left:5px}
+.rpg .toc em{font-style:normal;color:#d17a08;font-weight:800;margin-right:5px}
+.rpg .kp{display:flex;gap:10px;margin-bottom:14px}
+.rpg .k{flex:1;border:1px solid #e3e9ef;border-radius:12px;padding:12px 8px;text-align:center;background:#fff}
+.rpg .k b{display:block;font-size:22px;color:#102944;line-height:1.35;font-weight:800}
+.rpg .k span{display:block;font-size:11px;color:#647589;margin-top:2px}
+.rpg .k .mb{height:6px;border-radius:4px;background:#e6ebf1;overflow:hidden;margin-top:8px}
+.rpg .k .mb i{display:block;height:100%;background:#ed8700}
+.rpg .rag{display:flex;align-items:center;gap:14px;border-radius:12px;padding:11px 16px;margin-bottom:14px;border:1px solid}
+.rpg .rag .dt{flex:none;width:18px;height:18px;border-radius:50%}
+.rpg .rag b{display:block;font-size:15px;font-weight:800}
+.rpg .rag span{font-size:12px;color:#33475b}
+.rpg .rag.g{background:#eaf6ef;border-color:#bfe3cd}.rpg .rag.g .dt{background:#1d7a4d}.rpg .rag.g b{color:#1d7a4d}
+.rpg .rag.a{background:#fff5e5;border-color:#f6d9a6}.rpg .rag.a .dt{background:#e08a00}.rpg .rag.a b{color:#b86800}
+.rpg .rag.r{background:#fdeceb;border-color:#f3c3bf}.rpg .rag.r .dt{background:#c0392b}.rpg .rag.r b{color:#b3332b}
+.rpg .cmp .rw{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:12px}
+.rpg .cmp .rw span{width:112px;color:#52667b}
+.rpg .cmp .tr{flex:1;height:10px;border-radius:6px;background:#e3e9ef;overflow:hidden}
+.rpg .cmp .tr i{display:block;height:100%}
+.rpg .cmp .rw b{width:42px;text-align:left;color:#102944}
+.rpg table.info{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12px}
+.rpg table.info td{border:1px solid #e3e9ef;padding:7px 10px;vertical-align:top}
+.rpg table.info td.a{background:#f2f5f9;color:#52667b;width:17%;font-weight:600}
+.rpg table.info td.b{width:33%;color:#102944;font-weight:600}
+.rpg .bl{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;line-height:1.95;color:#33475b;margin:3px 0}
+.rpg .bl i{flex:none;width:7px;height:7px;border-radius:50%;background:#ed8700;margin-top:11px}
+.rpg .hl{border-right:4px solid #2e69ad;background:#f6f9fc;border-radius:8px;padding:9px 13px;margin-bottom:8px;font-size:12px;line-height:1.85}
+.rpg .hl small{display:block;color:#8996a5;font-size:10.5px}
+.rpg .ab{border:1px solid #e3e9ef;border-radius:12px;padding:13px 16px;margin-bottom:13px;background:#fff}
+.rpg .ab h4{margin:0 0 9px;font-size:14px;color:#102944;font-weight:800}
+.rpg .ab table{width:100%;border-collapse:collapse;font-size:12px}
+.rpg .ab td{padding:5px 8px;border-bottom:1px solid #eef1f5}
+.rpg .ab td:first-child{color:#52667b;width:46%}
+.rpg .ab td b{color:#102944}
+.rpg .ab tr:last-child td{border-bottom:0}
+.rpg .ab p{margin:8px 0 0;font-size:12px;color:#52667b;line-height:1.8}
+.rpg .ch{display:flex;align-items:flex-end;gap:7px;height:124px;padding:4px 4px 0;border-bottom:2px solid #dfe5ec;margin-bottom:0}
+.rpg .ch .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.rpg .ch .c .v{font-size:10px;color:#52667b;line-height:1.2;margin-bottom:2px}
+.rpg .ch .c .s1{width:68%;max-width:28px;background:#2e69ad;border-radius:3px 3px 0 0}
+.rpg .ch .c .s2{width:68%;max-width:28px;background:#ed8700}
+.rpg .cl{display:flex;gap:7px;padding:4px 4px 0}
+.rpg .cl div{flex:1;text-align:center;font-size:9.5px;color:#52667b;line-height:1.3;overflow:hidden;white-space:nowrap}
+.rpg .lg2{display:flex;gap:16px;font-size:11px;color:#52667b;margin:8px 0 10px}
+.rpg .lg2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-left:5px}
+.rpg .sb{display:flex;height:16px;border-radius:8px;overflow:hidden;background:#eef1f5;margin:2px 0 10px}
+.rpg .sb i{display:block;height:100%}
+.rpg .rk{display:flex;gap:11px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #eef1f5;font-size:12.5px;line-height:1.8}
+.rpg .rk:last-child{border-bottom:0}
+.rpg .rk .pl{flex:0 0 56px;text-align:center;border-radius:20px;font-size:10.5px;font-weight:700;padding:1px 0;margin-top:3px}
+.rpg .rk .pl.h{background:#fdeceb;color:#b3332b}.rpg .rk .pl.m{background:#fff2dc;color:#b86800}.rpg .rk .pl.l{background:#eef1f5;color:#52667b}.rpg .rk .pl.g{background:#e6f4ec;color:#1d7a4d}
+.rpg .wh{font-size:15px;font-weight:800;color:#2e69ad;margin:12px 0 5px}
+.rpg .wp{margin:0 0 8px;font-size:13px;line-height:2;color:#182b3d;white-space:pre-wrap;overflow-wrap:normal}
+
+.rpg .k .sub{display:block;font-size:11px;margin-top:3px;color:#647589;font-style:normal;line-height:1.5}
+.rpg .k.gd .sub{color:#1d7a4d;font-weight:600}.rpg .k.bd .sub{color:#b3332b;font-weight:600}.rpg .k.bd b{color:#b3332b}.rpg .k.gd b{color:#1d7a4d}
+.rpg .pbar{margin:0 0 16px}
+.rpg .pbar .trk{position:relative;height:16px;border-radius:9px;background:#e6ebf1}
+.rpg .pbar .trk i{display:block;height:100%;border-radius:9px;background:#ed8700}
+.rpg .pbar .trk b{position:absolute;top:-5px;bottom:-5px;width:3px;background:#102944;border-radius:2px}
+.rpg .pbar .lg3{display:flex;justify-content:space-between;font-size:11.5px;color:#52667b;margin-top:8px}
+.rpg .at2{display:flex;gap:11px;align-items:flex-start;border:1px solid #e3e9ef;border-right:4px solid #9aa8b6;border-radius:9px;padding:8px 12px;margin-bottom:7px;background:#fff}
+.rpg .at2.h{border-right-color:#c0392b;background:#fffafa}.rpg .at2.m{border-right-color:#e08a00;background:#fffdf8}.rpg .at2.ok{border-right-color:#1d7a4d;background:#f6fbf8}
+.rpg .at2 .tt{flex:1;font-size:12.5px;line-height:1.8;font-weight:600;color:#182b3d}
+.rpg .at2 .tt small{display:block;font-weight:400;color:#647589;font-size:11px;line-height:1.6}
+.rpg .at2 .pl2{flex:0 0 auto;font-size:10.5px;font-weight:700;border-radius:20px;padding:1px 11px;margin-top:3px}
+.rpg .at2 .pl2.h{background:#fdeceb;color:#b3332b}.rpg .at2 .pl2.m{background:#fff2dc;color:#b86800}.rpg .at2 .pl2.l{background:#eef1f5;color:#52667b}
+.rpg .ac{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5;font-size:12.5px;line-height:1.85}
+.rpg .ac:last-child{border-bottom:0}
+.rpg .ac .d{flex:0 0 58px;color:#d17a08;font-weight:700;font-size:11.5px}
+.rpg .bagap{text-align:center;font-size:11px;color:#8996a5;margin:0 0 14px}
+.rpg .more{font-size:11px;color:#8996a5;margin:4px 0 12px}
+.rpg .team{display:flex;gap:8px;margin:0 0 14px}
+.rpg .team div{flex:1;border:1px solid #e3e9ef;border-radius:9px;padding:7px 10px;background:#fff;min-width:0}
+.rpg .team small{display:block;color:#8996a5;font-size:10.5px}
+.rpg .team b{font-size:12px;color:#102944;font-weight:700;line-height:1.5}
+.rpg .ab .cmp{margin:0 0 8px}
+.rpg .ab p b{color:#102944}
+.rpg .gh{background:#102944;color:#fff;border-radius:12px;padding:11px 16px;margin:4px 0 12px;display:flex;justify-content:space-between;align-items:center;border-right:6px solid #ed8700}
+.rpg .gh small{display:block;color:#f6b44c;font-size:10.5px;font-weight:700}
+.rpg .gh b{font-size:16px;font-weight:700}
+.rpg .gh .cn{display:flex;gap:7px}
+.rpg .gh .cn span{background:#ffffff1f;border-radius:20px;padding:2px 11px;font-size:11px}
+.rpg .uc{border:1px solid #e3e9ef;border-right:4px solid #2e69ad;border-radius:10px;padding:10px 14px;margin-bottom:9px;background:#fff}
+.rpg .uc .mt{display:flex;align-items:center;gap:8px;font-size:11px;color:#8996a5;margin-bottom:3px}
+.rpg .uc .mt i{font-style:normal;color:#d17a08;font-weight:800}
+.rpg .uc .mt b{color:#52667b;font-weight:600}
+.rpg .uc p{margin:0;white-space:pre-wrap;overflow-wrap:normal;font-size:13px;line-height:1.95;color:#182b3d}
+.rpg .uc .at{margin-top:5px;font-size:11px;color:#647589}
+.rpg .pr{display:flex;gap:14px;margin-bottom:14px}
+.rpg .pr.l3{gap:12px}
+.rpg .pf{flex:1;width:0;border:1px solid #e3e9ef;border-radius:10px;overflow:hidden;background:#fff}
+.rpg .pf img{display:block;width:100%}
+.rpg .pf.l1 img{height:440px}.rpg .pf.l2 img{height:261px}.rpg .pf.l3 img{height:171px}
+.rpg .pf .pc{padding:8px 11px 9px;font-size:11.5px;line-height:1.7;min-height:52px}
+.rpg .pf.l3 .pc{padding:6px 8px 7px;font-size:10.5px;min-height:46px}
+.rpg .pf.l1 .pc{min-height:0;font-size:12.5px}
+.rpg .pf .pc b{display:block;color:#182b3d;font-weight:600}
+.rpg .pf .pc small{color:#8996a5;font-size:10.5px}
+.rpg .pf .pc i{font-style:normal;color:#d17a08;font-weight:800;margin-left:6px}
+.rpg .pf .tg{padding:5px 11px;font-size:11px;font-weight:800;color:#fff}
+.rpg .pf .tg.bf{background:#6b7a8c}.rpg .pf .tg.af{background:#ed8700}
+.rpg .oc{display:flex;gap:12px;border:1px solid #e3e9ef;border-radius:10px;padding:10px 14px;margin-bottom:9px;background:#fff;align-items:flex-start}
+.rpg .oc .bd{flex:0 0 78px;text-align:center;border-radius:8px;padding:5px 4px;font-size:11.5px;font-weight:700}
+.rpg .oc .bd.op{background:#fdeceb;color:#b3332b}
+.rpg .oc .bd.ok{background:#e6f4ec;color:#1d7a4d}
+.rpg .oc .bd.un{background:#eef1f5;color:#52667b}
+.rpg .oc .tx{flex:1}
+.rpg .oc .tx p{margin:0;white-space:pre-wrap;overflow-wrap:normal;font-size:12.5px;line-height:1.9}
+.rpg .oc .tx small{color:#8996a5;font-size:10.5px}
+.rpg .em{padding:16px;background:#f5f7f9;color:#77879a;border-radius:10px;font-size:12px;text-align:center;margin-bottom:12px}
+.rpg .sg{display:flex;gap:14px;margin-top:18px}
+.rpg .sg>div{flex:1;border:1px solid #e3e9ef;border-radius:10px;padding:9px 12px;height:96px;font-size:11.5px;color:#52667b}
+.rpg .sg>div>b{display:block;color:#102944;margin-bottom:2px}
+.rpg .sg .ln{margin-top:34px;border-top:1px solid #aab6c3;padding-top:3px;font-size:10px;color:#8996a5}
+.rpg.rcv .tp{height:338px;background:#102944;color:#fff;padding:40px 46px 0;position:relative;overflow:hidden}
+.rpg.rcv .tp:after{content:"";position:absolute;width:420px;height:420px;border:1px solid #ffffff1c;border-radius:50%;left:-170px;bottom:-250px;box-shadow:0 0 0 40px #ffffff0a,0 0 0 84px #ffffff06}
+.rpg.rcv .br{display:flex;align-items:center;gap:12px;font-weight:800;font-size:17px;position:relative;z-index:1}
+.rpg.rcv .br img{width:46px;height:46px;border-radius:12px;display:block}
+.rpg.rcv .ey{display:inline-block;margin-top:34px;border:1px solid #ffffff44;background:#ffffff12;border-radius:20px;padding:2px 14px;font-size:12px;color:#f6b44c;font-weight:700;position:relative;z-index:1}
+.rpg.rcv h1{margin:12px 0 4px;font-size:42px;line-height:1.35;font-weight:800;position:relative;z-index:1}
+.rpg.rcv .pj{font-size:22px;color:#dfe8f1;font-weight:600;position:relative;z-index:1;line-height:1.5}
+.rpg.rcv .lc{font-size:14px;color:#aebfd0;position:relative;z-index:1}
+.rpg.rcv .sp{height:9px;background:#ed8700}
+.rpg.rcv .pe{display:flex;gap:12px;margin:-1px 46px 0;padding-top:22px}
+.rpg.rcv .pe div{flex:1;border:1px solid #e3e9ef;border-radius:12px;padding:10px 14px;background:#fff}
+.rpg.rcv .pe small{display:block;color:#8996a5;font-size:11px}
+.rpg.rcv .pe b{display:block;color:#102944;font-size:14.5px;font-weight:700;line-height:1.5}
+.rpg.rcv .im{margin:22px 46px 0;height:500px;border-radius:14px;overflow:hidden;border:1px solid #e3e9ef;background:#eef1f5}
+.rpg.rcv .im img{display:block;width:100%;height:100%}
+.rpg.rcv .qs{margin:22px 46px 0;height:500px;border-radius:14px;border:1px solid #e3e9ef;background:#f6f9fc;padding:30px 34px}
+.rpg.rcv .qs .big{font-size:78px;font-weight:800;color:#102944;line-height:1.1}
+.rpg.rcv .qs .tr{height:14px;border-radius:8px;background:#e3e9ef;overflow:hidden;margin:12px 0 22px}
+.rpg.rcv .qs .tr i{display:block;height:100%;background:#ed8700}
+.rpg.rcv .qs p{margin:4px 0;font-size:15px;color:#33475b}
+.rpg.rcv .mt2{display:flex;justify-content:space-between;margin:22px 46px 0;padding-top:14px;border-top:1px solid #e3e9ef;font-size:12.5px;color:#52667b}
+.rpg.rcv .mt2 b{color:#102944}
+.rpg.rcv .cf{position:absolute;bottom:0;right:0;left:0;height:46px;display:flex;align-items:center;justify-content:center;gap:14px;font-size:11px;color:#8996a5;border-top:1px solid #eef1f5}
+`;
+const RPNF={weekday:"long",day:"numeric",month:"long",year:"numeric"};
+const LAY={1:{W:1400,H:864,cap:150,n:1},2:{W:1050,H:788,cap:110,n:2},3:{W:700,H:525,cap:60,n:3}};
+const isReno=p=>!!p&&p.ptype==="reno";
+const rpStatus=e=>e.resolved===true?["ok","تم الحل"]:e.resolved===false?["op","مفتوح"]:["un","مسجّل"];
+const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").replace(/-/g,"").slice(0,4).toUpperCase();
+
+/* —— النافذة —— */
+function openReport(){
+  const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",upd:true,pho:true,obs:true,wrk:true,ba:true,ana:true,text:"",price:false,q:"hi",lay:"2",dur:"",du:"d"};
+  RP.cancel=false;modal("report");
+}
+function rpPreset(k){
+  const t=day0(new Date()),p=S.projects.find(x=>x.id===S.cur);let f=t,e=t;
+  if(k==="7")f=addDays(t,-6);else if(k==="14")f=addDays(t,-13);
+  else if(k==="m")f=new Date(t.getFullYear(),t.getMonth(),1);
+  else if(k==="pm"){f=new Date(t.getFullYear(),t.getMonth()-1,1);e=new Date(t.getFullYear(),t.getMonth(),0)}
+  else if(k==="all")f=p?.start_date?new Date(p.start_date+"T00:00:00"):addDays(t,-365);
+  $("rpf").value=iso(f);$("rpt").value=iso(e);
+}
+const rpCk=(id,label,on)=>`<label style="display:flex;align-items:center;gap:10px;margin:7px 0;cursor:pointer"><input type="checkbox" id="${id}" ${on?"checked":""} style="width:20px;height:20px;margin:0;flex:none">${label}</label>`;
+function reportHtml(){
+  const r=S.rep,p=S.projects.find(x=>x.id===S.cur);
+  if(r.phase==="busy")return `<div class="modal"><div class="box"><h3>جاري إنشاء التقرير…</h3><div class="bar s-run"><i id="rpbar" style="width:3%"></i></div><p id="rpmsg" class="lbl">تحضير…</p><p class="lbl">لا تغلق الصفحة حتى يكتمل التقرير.</p><button class="btn alt" onclick="RP.cancel=true">إلغاء</button></div></div>`;
+  if(r.phase==="done")return `<div class="modal"><div class="box"><h3>التقرير جاهز ✅</h3>
+  <div class="item"><b>${esc(p?.name||"")} — ${esc(r.title)}</b><small>${r.full?"التغطية: كامل المشروع":`الفترة: ${esc(dfmt(r.from+"T00:00:00"))} – ${esc(dfmt(r.to+"T00:00:00"))}`}</small><small>${r.pages} صفحة · ${esc(r.size)}${r.fail?` · تعذر تضمين ${r.fail} صورة`:""}</small></div>
+  <div class="acts"><button class="btn" onclick="rpDownload()">⬇ تحميل PDF</button>${r.canShare?'<button class="btn alt" onclick="rpShare()">مشاركة</button>':""}<button class="btn alt" onclick="rpPreview()">معاينة</button></div>
+  <p class="lbl">على الجوال: «تحميل» يحفظ الملف في الجهاز، و«مشاركة» تفتح قائمة الإرسال (واتساب، حفظ في الملفات…).</p>
+  <button class="btn alt" onclick="S.rep.phase='form';render()">تقرير آخر</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+  const canObs=!!TABS.find(t=>t.k==="issues")?.see.includes(S.role),canPrice=!["contr","site"].includes(S.role);
+  const ch=(k,l)=>`<button class="btn alt" style="padding:6px 13px;min-height:0;font-size:13px;border-radius:20px" onclick="rpPreset('${k}')">${l}</button>`;
+  const per=r.reno
+    ?`<div style="background:#eef3f9;border-radius:10px;padding:10px 12px;margin:6px 0 4px;font-size:13.5px;line-height:1.8">🛠 <b>مشروع ترميم:</b> يصدر التقرير شاملاً لكامل المشروع من بدايته حتى اليوم، بدون تحديد فترات، ودون إظهار تاريخ بداية أو نهاية.</div><label class="lbl">مدة التنفيذ (تظهر في التقرير بدلاً من التواريخ)</label><div style="display:flex;gap:8px"><input id="rpdur" type="number" min="0" step="any" inputmode="decimal" placeholder="مثال: 12" value="${esc(r.dur)}" style="flex:1"><select id="rpdu" style="flex:1"><option value="h" ${r.du==="h"?"selected":""}>ساعات</option><option value="d" ${r.du!=="h"?"selected":""}>أيام</option></select></div>`
+    :`<label class="lbl">الفترة (من – إلى)</label><div class="acts" style="margin:0 0 6px">${ch("7","آخر 7 أيام")}${ch("14","آخر 14 يوم")}${ch("m","هذا الشهر")}${ch("pm","الشهر الماضي")}${ch("all","كامل المشروع")}</div>
+  <label class="lbl">من</label><input id="rpf" type="date" value="${esc(r.from)}"><label class="lbl">إلى</label><input id="rpt" type="date" value="${esc(r.to)}">`;
+  const sel=(v,t)=>`<option value="${v}" ${String(r.lay)===v?"selected":""}>${t}</option>`;
+  return `<div class="modal"><div class="box"><h3>${r.reno?"تقرير ترميم شامل":"إنشاء تقرير إنجاز احترافي"}</h3>
+  <p class="lbl">المشروع: <b>${esc(p?.name)}</b> · ${esc(TYN[p?.ptype]||"إنشاء")}</p>
+  <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
+  ${per}
+  <label class="lbl">محتوى التقرير</label>
+  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${canObs?rpCk("rpo","المعوقات وحالتها",r.obs):""}${rpCk("rpk","مراحل الأعمال ونسب إنجازها (من تبويب متابعة الأعمال)",r.wrk)}${rpCk("rpx","قبل وبعد (الصور التي حددتها في تبويب الصور)",r.ba)}${rpCk("rpa","التقرير المكتوب",r.ana)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
+  <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("2","شبكة — صورتان في الصف")}${sel("1","كبيرة — صورة في كل صف")}${sel("3","مصغّرة — 3 صور في الصف")}</select>
+  <label class="lbl">التقرير المكتوب (يمكنك تعديله)</label>
+  <textarea id="rpw" rows="8" placeholder="اتركه فارغاً ليُكتب تلقائياً، أو اضغط «كتابة مسودة» ثم عدّل عليها.">${esc(r.text)}</textarea>
+  <button class="btn alt" id="rpd" onclick="rpDraftNow()">✨ كتابة مسودة تلقائية</button>
+  <p class="lbl">لتنسيق النص: ابدأ السطر بـ «# » لعنوان فرعي أو بـ «- » لنقطة.</p>
+  <label class="lbl">أُعدّ بواسطة (يظهر في الغلاف والاعتماد)</label><input id="rpb" value="${esc(r.by)}">
+  <label class="lbl">الجودة</label><select id="rpq"><option value="hi" ${r.q==="hi"?"selected":""}>عالية (للعرض والطباعة)</option><option value="md" ${r.q==="md"?"selected":""}>متوسطة (حجم أصغر للمشاركة)</option></select>
+  <button class="btn" onclick="rpRun()">إنشاء التقرير</button> <button class="btn alt" onclick="modal(null)">إلغاء</button></div></div>`;
+}
+function rpReadCfg(){
+  const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
+  return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
+    upd:$("rpu").checked,pho:$("rpp").checked,obs:$("rpo")?.checked??false,wrk:$("rpk")?.checked??false,ba:$("rpx").checked,ana:$("rpa").checked,text:$("rpw").value.trim(),price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
+}
+function rpCheck(cfg){
+  if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
+  if(cfg.dur&&!(+cfg.dur>0))return "مدة التنفيذ يجب أن تكون رقماً أكبر من صفر";
+  if(!cfg.upd&&!cfg.pho&&!cfg.obs&&!cfg.ana&&!cfg.ba)return "اختر محتوى واحداً على الأقل";
+  return "";
+}
+async function rpDraftNow(){
+  const cfg=rpReadCfg(),er=rpCheck(cfg);if(er)return alert(er);
+  const b=$("rpd"),p=S.projects.find(x=>x.id===S.cur);b.disabled=true;b.textContent="جاري تحليل البيانات…";
+  try{
+    const d=await rpData(p,cfg),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G);
+    if(cfg.text&&!confirm("سيُستبدل النص الحالي بالمسودة. متابعة؟"))return;
+    $("rpw").value=rpDraft(p,cfg,d,A,G);
+  }catch(e){alert("تعذر كتابة المسودة: "+(e.message||e))}
+  finally{b.disabled=false;b.textContent="✨ كتابة مسودة تلقائية"}
+}
+async function rpRun(){
+  const cfg=rpReadCfg(),er=rpCheck(cfg);if(er)return alert(er);
+  S.rep={...cfg,phase:"busy"};RP.cancel=false;render();
+  try{await rpBuild(cfg)}
+  catch(e){S.rep={...cfg,phase:"form"};if(e.message!=="cancel")alert("تعذر إنشاء التقرير: "+(e.message||e));render()}
+}
+async function rpBuild(cfg){
+  const step=(pct,msg)=>{if(RP.cancel)throw new Error("cancel");const b=$("rpbar"),m=$("rpmsg");if(b)b.style.width=pct+"%";if(m)m.textContent=msg};
+  const p=S.projects.find(x=>x.id===S.cur);if(!p)throw new Error("لم يتم العثور على المشروع");
+  step(3,"تحميل المكتبات…");
+  await loadLib("html2canvas.min.js?v=22");await loadLib("jspdf.umd.min.js");
+  if(document.fonts){await Promise.all(["400","500","600","700","800"].map(w=>document.fonts.load(w+" 16px Tajawal","ابتثجحخدذرزسشصضطظعغفقكلمنهوىيءأإآؤئة٠١٢٣٤٥٦٧٨٩ Aa0").catch(()=>0)));await document.fonts.ready}
+  step(8,"قراءة بيانات المشروع…");
+  const data=await rpData(p,cfg);
+  if(cfg.full){cfg.from=iso(data.f);cfg.to=iso(data.t)}
+  step(14,"تجهيز الصور…");
+  await rpImages(p,cfg,data,(i,n)=>step(14+Math.round(i/Math.max(n,1)*32),`تجهيز الصور (${i}/${n})…`));
+  step(48,"تحليل البيانات وتنسيق الصفحات…");
+  const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0;pointer-events:none";document.body.appendChild(root);
+  try{
+    const pages=rpPages(p,cfg,data,root);
+    const doc=await rpPdf(p,cfg,pages,(i,n)=>step(52+Math.round(i/n*46),`إنتاج الصفحة ${i} من ${n}…`));
+    step(99,"حفظ الملف…");
+    const blob=doc.output("blob"),name=rpName(p,cfg);
+    if(RP.url)URL.revokeObjectURL(RP.url);
+    RP.blob=blob;RP.url=URL.createObjectURL(blob);
+    let canShare=false;try{canShare=!!(navigator.canShare&&navigator.canShare({files:[new File([blob],name,{type:"application/pdf"})]}))}catch(e){}
+    S.rep={...cfg,phase:"done",name,pages:pages.total,size:fmtSize(blob.size),canShare,fail:data.fail};render();
+  }finally{root.remove()}
+}
+const rpName=(p,cfg)=>(cfg.full?`${p.name} - ${cfg.title} ${iso(new Date())}`:`${p.name} - ${cfg.title} ${cfg.from} إلى ${cfg.to}`).replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()+".pdf";
+function rpDownload(){const a=document.createElement("a");a.href=RP.url;a.download=S.rep.name;document.body.appendChild(a);a.click();a.remove()}
+async function rpShare(){try{await navigator.share({files:[new File([RP.blob],S.rep.name,{type:"application/pdf"})],title:S.rep.name})}catch(e){if(e.name!=="AbortError")alert("تعذرت المشاركة: "+(e.message||e))}}
+function rpPreview(){window.open(RP.url,"_blank")}
+
+/* —— البيانات —— */
+async function rpData(p,cfg){
+  const eod=new Date();eod.setHours(23,59,59,999);
+  const f=cfg.full?new Date(0):new Date(cfg.from+"T00:00:00"),t=cfg.full?eod:new Date(cfg.to+"T23:59:59.999"),rows=[];
+  for(let o=0;;o+=1000){
+    const {data,error}=await sb.from("entries").select("*").eq("project_id",p.id).in("kind",["reports","media","issues"]).order("created_at",{ascending:true}).range(o,o+999);
+    if(error)throw error;rows.push(...data);if(data.length<1000)break;
+  }
+  const d=rpClassify(rows,f,t);
+  d.works=[];if(cfg.wrk){const {data:w}=await sb.from("work_items").select("*").eq("project_id",p.id).order("sort");d.works=w||[]}
+  if(cfg.full){const ds=rows.map(e=>new Date(e.created_at));if(p.start_date)ds.push(new Date(p.start_date+"T00:00:00"));d.f=day0(ds.length?new Date(Math.min(...ds)):new Date())}
+  return d;
+}
+function rpClassify(rows,f,t){
+  const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
+  const issAll=rows.filter(e=>e.kind==="issues"),byId=new Map(rows.map(e=>[String(e.id),e]));
+  const pairs=rows.filter(e=>e.ba==="after"&&e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&x.b.ba==="before"&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+  return {f,t,pairs,pairIds:new Set(),
+    ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)),
+    atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
+    pics:rows.filter(e=>(e.kind==="media"||e.kind==="reports")&&isImg(e)&&inP(e)),
+    iss:issAll.filter(inP),issAll,issOld:issAll.filter(e=>new Date(e.created_at)<f&&e.resolved===false),
+    lastAny:rows.length?new Date(Math.max(...rows.map(e=>+new Date(e.created_at)))):null,
+    img:{},fail:0,cover:""};
+}
+async function rpPrep(url,mode,L){
+  const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);
+  const u=URL.createObjectURL(await r.blob());
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("decode"));i.src=u});
+    const cv=mode==="cover",W=cv?1428:L.W,H=cv?1000:L.H,c=document.createElement("canvas");c.width=W;c.height=H;
+    const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
+    const s=cv?Math.max(W/img.naturalWidth,H/img.naturalHeight):Math.min(W/img.naturalWidth,H/img.naturalHeight),w=img.naturalWidth*s,h=img.naturalHeight*s;
+    x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+    const out=c.toDataURL("image/jpeg",.84);c.width=c.height=0;return out;
+  }finally{URL.revokeObjectURL(u)}
+}
+async function rpImages(p,cfg,data,prog){
+  const L=LAY[cfg.lay]||LAY[2];
+  const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),...(cfg.ba?data.pairs.flatMap(x=>[x.a.file_path,x.b.file_path]):[]),p.cover_path].filter(Boolean))],urls={};
+  for(let i=0;i<want.length;i+=100){
+    const {data:d}=await sb.storage.from("media").createSignedUrls(want.slice(i,i+100),3600);
+    (d||[]).forEach(x=>{if(x.signedUrl)urls[x.path]=x.signedUrl});
+  }
+  const jobs=want.filter(x=>urls[x]),q=[...jobs];let done=0,fail=want.length-jobs.length;
+  await Promise.all(Array.from({length:3},async()=>{
+    while(q.length){const path=q.shift();
+      try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit",L)}catch(e){fail++}
+      prog(++done,jobs.length)}
+  }));
+  data.cover=data.img[p.cover_path]||"";
+  data.pics=data.pics.filter(e=>data.img[e.file_path]);
+  data.pairs=cfg.ba?data.pairs.filter(x=>data.img[x.a.file_path]&&data.img[x.b.file_path]):[];
+  data.pairIds=new Set(data.pairs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
+  data.fail=fail;
+}
+
+/* —— التحليل —— */
+function rpGroups(d,cfg){
+  const f=day0(d.f),t=day0(d.t),days=Math.round((t-f)/864e5)+1,mode=cfg.full?"month":days<=10?"day":"week";
+  const keyOf=dt=>{const x=day0(dt);if(mode==="day")return iso(x);if(mode==="month")return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0");x.setDate(x.getDate()-x.getDay());return iso(x)};
+  const all=[],map=new Map();
+  let cur=mode==="day"?new Date(f):mode==="month"?new Date(f.getFullYear(),f.getMonth(),1):addDays(f,-f.getDay());
+  while(cur<=t){
+    const s=new Date(cur),e=mode==="day"?new Date(cur):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,0):addDays(cur,6);
+    const b={k:keyOf(s),s,e,ups:[],pics:[]};all.push(b);map.set(b.k,b);
+    cur=mode==="day"?addDays(cur,1):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,1):addDays(cur,7);
+  }
+  if(cfg.upd)d.ups.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.ups.push(e)});
+  if(cfg.pho)d.pics.forEach(e=>{if(d.pairIds&&d.pairIds.has(String(e.id)))return;const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
+  all.forEach((b,i)=>{
+    if(mode==="day"){b.tag="يوم العمل";b.label=dfmt(b.s,RPNF);b.short=dfmt(b.s,{day:"numeric",month:"numeric"})}
+    else if(mode==="month"){b.tag="الشهر";b.label=dfmt(b.s,{month:"long",year:"numeric"});b.short=dfmt(b.s,{month:"short"})}
+    else{b.tag="الأسبوع "+String(i+1).padStart(2,"0");const a=b.s<f?f:b.s,z=b.e>t?t:b.e;b.label=`من ${dfmt(a)} إلى ${dfmt(z)}`;b.short="أ"+(i+1)}
+  });
+  return {all,list:all.filter(b=>b.ups.length||b.pics.length),days,mode};
+}
+function rpAnalyze(p,cfg,d,G){
+  const T=day0(new Date()),isDone=p.status==="done",A={prog:clamp(p.progress),done:isDone,days:G.days};
+  const S0=!cfg.full&&p.start_date?new Date(p.start_date+"T00:00:00"):null,E0=!cfg.full&&p.due?new Date(p.due+"T00:00:00"):null;
+  if(S0&&E0&&E0>S0){
+    A.total=Math.round((E0-S0)/864e5);A.el=Math.max(0,Math.round((T-S0)/864e5));A.elp=Math.max(0,Math.min(100,Math.round(A.el/A.total*100)));
+    A.left=Math.round((E0-T)/864e5);A.diff=A.prog-A.elp;A.spi=A.elp>0?A.prog/A.elp:null;
+    if(!isDone){A.rem=100-A.prog;if(A.left>0)A.reqW=A.rem/(A.left/7);if(A.el>0&&A.prog>0)A.curW=A.prog/(A.el/7)}
+  }
+  if(S0&&!isDone&&A.prog>=5&&T>S0){const el=Math.round((T-S0)/864e5);if(el>=7){A.est=addDays(S0,Math.round(el/(A.prog/100)));if(E0)A.delta=Math.round((A.est-E0)/864e5)}}
+  const act=[...(cfg.upd?d.ups:[]),...(cfg.pho?d.pics:[])];
+  A.act=act.length;
+  A.idle=d.lastAny?Math.max(0,Math.round((T-day0(d.lastAny))/864e5)):null;
+  const I=d.issAll||[],io=A.io={tot:I.length,open:0,res:I.filter(e=>e.resolved===true).length,known:I.some(e=>e.resolved!==undefined)};
+  io.list=I.filter(e=>e.resolved===false).map(e=>({e,age:Math.max(0,Math.round((T-day0(e.created_at))/864e5))})).sort((a,b)=>b.age-a.age);
+  io.open=io.list.length;io.oldest=io.open?io.list[0].age:null;
+  const rt=I.filter(e=>e.resolved===true&&e.resolved_at).map(e=>(new Date(e.resolved_at)-new Date(e.created_at))/864e5);
+  io.avg=rt.length?rt.reduce((x,y)=>x+y,0)/rt.length:null;io.rate=io.tot&&io.known?Math.round(io.res/io.tot*100):null;
+  const rl=e=>ROLES[e.author_role]||e.author_role||"";
+  /* بنود تحتاج قراراً/متابعة (مرتبة بالأهمية) */
+  const att=[];let hs=false;
+  if(!isDone){
+    if(A.left!==undefined&&A.left<0){att.push({l:"h",t:`تجاوز موعد التسليم بـ ${-A.left} يوماً`,s:`المتبقي من الأعمال ${100-A.prog}%`});hs=true}
+    else if(A.delta>0){att.push({l:A.delta>14?"h":"m",t:`التسليم المتوقع متأخر نحو ${A.delta} يوماً عن الموعد`,s:A.reqW&&A.curW?`المعدل الحالي ${A.curW.toFixed(1)}% أسبوعياً والمطلوب ${A.reqW.toFixed(1)}%`:""});if(A.delta>14)hs=true}
+    else if(A.diff!==undefined&&A.diff<-5){att.push({l:A.diff<=-15?"h":"m",t:`الإنجاز أقل من المخطط بمقدار ${-A.diff} نقطة مئوية`,s:`الفعلي ${A.prog}% مقابل المخطط ${A.elp}%`});if(A.diff<=-15)hs=true}
+    if(A.idle!==null&&A.idle>7)att.push({l:A.idle>14?"h":"m",t:`لا يوجد توثيق منذ ${A.idle} يوماً`,s:"آخر تحديث أو صورة مسجلة في المشروع"});
+  }
+  if(cfg.obs!==false)io.list.slice(0,5).forEach(o=>att.push({l:o.age>14?"h":"m",t:cut(cleanTxt(o.e.body).replace(/\n/g," "),120),s:`مفتوح منذ ${o.age} يوماً${rl(o.e)?` · رفعه: ${rl(o.e)}`:""}`}));
+  if(cfg.obs!==false&&io.open>5)att.push({l:"l",t:`و${io.open-5} معوقات أخرى مفتوحة`,s:"التفاصيل في سجل المعوقات"});
+  A.attn=att;
+  const H=att.filter(x=>x.l==="h").length,lv=hs||H>=2?"r":att.some(x=>x.l==="h"||x.l==="m")?"a":"g";
+  A.rag=isDone?"g":lv;
+  A.ragT=[isDone?"تم تسليم المشروع":lv==="g"?"الوضع العام: جيد":lv==="a"?"الوضع العام: يحتاج متابعة":"الوضع العام: حرج"];
+  /* خلاصة بجملة واحدة */
+  const parts=[];
+  if(isDone)parts.push("اكتملت أعمال المشروع وتم تسليمه");
+  else if(A.left!==undefined&&A.left<0)parts.push(`تجاوز المشروع موعد التسليم بـ ${-A.left} يوماً وبقي ${100-A.prog}% من الأعمال`);
+  else if(A.delta!==undefined)parts.push(A.delta>7?`المشروع متأخر عن الخطة، وبالوتيرة الحالية يُتوقع التسليم بعد الموعد بنحو ${A.delta} يوماً`:A.delta<-7?`المشروع متقدم على الخطة، ويُتوقع التسليم قبل الموعد بنحو ${-A.delta} يوماً`:"المشروع يسير وفق الخطة، والتسليم المتوقع قريب من الموعد");
+  else if(A.diff!==undefined)parts.push(`الإنجاز الفعلي ${A.prog}% ${A.diff>=0?"أعلى من":"أقل من"} المخطط حتى اليوم (${A.elp}%)`);
+  else parts.push(cfg.full?`نسبة الإنجاز ${A.prog}%`:`نسبة الإنجاز ${A.prog}%، ولم تُحدَّد تواريخ المشروع لقياس الالتزام بالجدول`);
+  if(io.open)parts.push(`${io.open} معوق مفتوح${io.oldest>14?` (أقدمها منذ ${io.oldest} يوماً)`:""}`);
+  A.verdict=parts.join("، ")+".";
+  /* إجراءات مقترحة */
+  const ac=[];
+  io.list.filter(o=>o.age>14).slice(0,3).forEach(o=>ac.push(`تصعيد المعوق «${cut(cleanTxt(o.e.body).replace(/\n/g," "),70)}» (مفتوح منذ ${o.age} يوماً): تحديد مسؤول وموعد حل ملزم.`));
+  if(io.open&&!ac.length)ac.push(`متابعة المعوقات المفتوحة (${io.open}) أسبوعياً حتى إغلاقها.`);
+  if(A.reqW&&A.curW&&A.reqW>A.curW*1.15)ac.push(`رفع وتيرة الإنجاز من ${A.curW.toFixed(1)}% إلى ${A.reqW.toFixed(1)}% أسبوعياً للتسليم في الموعد، أو اعتماد موعد تسليم معدّل.`);
+  if(A.delta>0||(A.left!==undefined&&A.left<0&&!isDone))ac.push("إبلاغ العميل بالموقف الزمني واعتماد خطة استكمال بموعد واضح.");
+  if(A.idle!==null&&A.idle>7&&!isDone)ac.push("إلزام الموقع بالتوثيق اليومي بالتحديثات والصور.");
+  if(!cfg.full&&(!p.start_date||!p.due))ac.push("استكمال تاريخي البداية والتسليم في بيانات المشروع لتفعيل قياس الالتزام بالجدول.");
+  if(!ac.length)ac.push(isDone?"حفظ سجل المشروع وتقاريره للرجوع إليها.":(cfg.full?"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية.":"لا توجد إجراءات عاجلة؛ الاستمرار في المتابعة الدورية للجدول الزمني."));
+  A.actions=ac;
+  return A;
+}
+function rpDraft(p,cfg,d,A,G){
+  const L=[],tp=TYN[p.ptype]||"",per=cfg.full?`كامل مسار المشروع${rpDurTxt(cfg.dur,cfg.du)?` بمدة تنفيذ ${rpDurTxt(cfg.dur,cfg.du)}`:""}`:`الفترة من ${dfmt(d.f)} إلى ${dfmt(d.t)}`;
+  L.push("# نظرة عامة");
+  L.push(`يغطي هذا التقرير ${per} لمشروع «${p.name}»${tp?` (${tp})`:""}${p.loc?` في ${p.loc}`:""}. بلغت نسبة الإنجاز ${A.prog}%${A.elp!==undefined&&!A.done?` مقابل ${A.elp}% مخططة حتى اليوم`:""}. ${A.verdict}`);
+  if(d.works&&d.works.length){const P=[...new Set(d.works.map(i=>i.phase))],pc=P.map(f=>wCalc(d.works.filter(i=>i.phase===f))),dn=pc.filter(x=>x===100).length,rn=pc.filter(x=>x>0&&x<100).length;L.push(`من أصل ${P.length} مرحلة عمل: اكتملت ${dn}، وجارية ${rn}، ولم تبدأ ${P.length-dn-rn}.`)}
+  if(A.est&&A.delta!==undefined&&!A.done)L.push(`التاريخ المتوقع لانتهاء الأعمال بالوتيرة الحالية هو ${dfmt(A.est)}، وهو تقدير خطي يتغير بحسب سير العمل.`);
+  if(cfg.upd||cfg.pho){
+    L.push("# ما تم إنجازه");
+    const parts=[];if(cfg.upd)parts.push(`${d.ups.length} تحديثاً مكتوباً`);if(cfg.pho)parts.push(`${d.pics.length} صورة`);
+    L.push(`وُثّق ${cfg.full?"في المشروع":"خلال الفترة"} ${parts.join(" و")}. وأبرز الأعمال:`);
+    if(cfg.upd)[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,4).forEach(e=>L.push("- "+cut(cleanTxt(e.body).replace(/\n/g," "),150)));
+  }
+  L.push("# المعوقات والتوصيات");
+  const io=A.io;
+  L.push(io.tot?`سُجّل في المشروع ${io.tot} معوق${io.known?`: ${io.open} مفتوح و${io.res} تم حله${io.avg!==null?` (متوسط زمن الحل ${io.avg.toFixed(1)} يوم)`:""}`:""}.`:"لا توجد معوقات مسجلة في المشروع.");
+  A.actions.forEach(x=>L.push("- "+x));
+  return L.join("\n");
+}
+function rpWriteBlocks(txt){
+  const out=[];
+  for(const raw of String(txt).replace(/\r\n?/g,"\n").split("\n")){
+    const l=raw.trim();if(!l)continue;
+    if(l.startsWith("# "))out.push(`<div class="wh">${esc(l.slice(2))}</div>`);
+    else if(l.startsWith("- "))out.push(`<div class="bl"><i></i><span>${esc(l.slice(2))}</span></div>`);
+    else rpChunks(l,900).forEach(c=>out.push(`<div class="wp">${esc(c)}</div>`));
+  }
+  return out;
+}
+
+/* —— بناء الصفحات —— */
+function rpCutAt(t,max){
+  const w=t.slice(0,max);let i=Math.max(w.lastIndexOf(". "),w.lastIndexOf("؟ "),w.lastIndexOf("! "),w.lastIndexOf("، "));
+  if(i<max*.5)i=w.lastIndexOf(" ");if(i<max*.3)i=max-1;return i+1;
+}
+const rpDurTxt=(n,u)=>{n=+n;if(!(n>0))return"";const h=u==="h",x=Number.isInteger(n)?String(n):String(+n.toFixed(2));
+  if(n===1)return h?"ساعة واحدة":"يوم واحد";if(n===2)return h?"ساعتان":"يومان";
+  if(Number.isInteger(n)&&n<=10)return x+(h?" ساعات":" أيام");return x+(h?" ساعة":" يوماً")};
+function rpChunks(t,max=1150){
+  const out=[];let cur="";
+  for(const para of t.split("\n")){
+    if(cur&&(cur+"\n"+para).length>max){out.push(cur);cur=para}else cur=cur?cur+"\n"+para:para;
+    while(cur.length>max*1.25){const i=rpCutAt(cur,max);out.push(cur.slice(0,i).trim());cur=cur.slice(i).trim()}
+  }
+  if(cur)out.push(cur);return out;
+}
+function rpPages(p,cfg,d,root){
+  if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
+  const pages=[],today=new Date(),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G),isDone=p.status==="done",reno=!!cfg.full;
+  const execTxt=rpDurTxt(cfg.dur,cfg.du),range=reno?(execTxt?`مدة التنفيذ: ${execTxt}`:""):`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p),prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"",ref=rpRef(p),LY=String(cfg.lay||"2"),LC=LAY[LY]||LAY[2];
+  const mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
+  let no=0;const marks=[];
+  const sec=t=>{no++;marks.push([no,t,0]);return `<div class="rt"><span class="no">${no}</span><span>${t}</span><i class="l2"></i></div>`};
+  const mark=()=>{const m=marks[marks.length-1];if(m&&!m[2])m[2]=pages.length};
+  /* غلاف */
+  const cov=mk(`<div class="rpg rcv"><div class="tp"><div class="br"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div>
+    <div class="ey">${reno?"تقرير ترميم شامل":"تقرير رسمي"}</div><h1>${esc(cfg.title)}</h1><div class="pj">${esc(p.name)}</div><div class="lc">${esc(p.loc||"")}</div></div><div class="sp"></div>
+    <div class="pe">${reno?(execTxt?`<div><small>مدة التنفيذ</small><b>${esc(execTxt)}</b></div>`:""):`<div><small>فترة التقرير</small><b>${esc(range)}</b></div><div><small>مدة الفترة</small><b>${G.days} يوم</b></div>`}<div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>
+    ${d.cover?`<div class="im"><img src="${d.cover}" alt=""></div>`:`<div class="qs"><small style="color:#8996a5;font-size:12px">نسبة الإنجاز الحالية</small><div class="big">${prog}%</div><div class="tr"><i style="width:${prog}%"></i></div><p>الحالة: <b>${esc(ST[p.status][0])}</b></p>${!reno&&tm?`<p>${esc(tm.t)}</p>`:""}${!reno&&p.due?`<p>تاريخ التسليم: ${esc(dfmt(p.due+"T00:00:00"))}</p>`:""}</div>`}
+    <div class="mt2"><span>أُعدّ بواسطة: <b>${by||"—"}</b></span><span>الحالة: <b>${esc(ST[p.status][0])}</b> · الإنجاز: <b>${prog}%</b></span></div>
+    <div class="cf"><span>سري — للاستخدام الداخلي</span><span>·</span><span dir="ltr">${ref}</span></div></div>`);
+  root.appendChild(cov);pages.push(cov);
+  let box=null;
+  const fresh=()=>{
+    const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div><div class="r"><b>${esc(cfg.title)}</b><br>${esc(p.name)}</div></div><div class="rpc"></div><div class="rpf"><span class="pnum"></span><span class="rf">${ref}</span><span>${esc(range)}</span></div></div>`);
+    root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
+  };
+  const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
+  /* 1) ملخص الإدارة */
+  fresh();const tocEl=put(`<div class="toc"></div>`);
+  put(sec("ملخص الإدارة"));mark();
+  put(`<div class="rag ${A.rag}"><span class="dt"></span><div><b>${A.ragT[0]}</b><span>${esc(A.verdict)}</span></div></div>`);
+  const kc=(cls,big,lab,sub,sz)=>`<div class="k ${cls}"><b${sz?` style="font-size:${sz}px;padding:${Math.round((22-sz)/2)+2}px 0"`:""}>${big}</b><span>${lab}</span>${sub?`<em class="sub">${sub}</em>`:""}</div>`;
+  const dsh=v=>esc(dfmt(v,{day:"numeric",month:"long",year:"numeric"})),io=A.io,KP=[];
+  KP.push(kc("",prog+"%","الإنجاز الفعلي",isDone?"مكتمل":A.elp!==undefined?`المخطط حتى اليوم ${A.elp}%`:""));
+  if(reno){if(execTxt)KP.push(kc("",esc(execTxt),"مدة التنفيذ","",19))}else{
+  if(isDone)KP.push(kc("gd","تم التسليم","حالة المشروع",p.due?"الموعد المخطط "+dsh(p.due+"T00:00:00"):"",17));
+  else if(A.left===undefined)KP.push(kc("","—","المتبقي للتسليم","لم تُحدَّد تواريخ المشروع"));
+  else if(A.left<0)KP.push(kc("bd",`متأخر ${-A.left} يوم`,"موعد التسليم",dsh(p.due+"T00:00:00"),17));
+  else KP.push(kc("",`${A.left} يوم`,"المتبقي للتسليم","التسليم: "+dsh(p.due+"T00:00:00"),19));
+  if(isDone)KP.push(kc("",A.total!==undefined?A.total+" يوم":"—","مدة المشروع المخططة","",19));
+  else if(A.est)KP.push(kc(A.delta>0?"bd":A.delta<0?"gd":"",dsh(A.est),"التسليم المتوقع",A.delta>0?`بعد الموعد بـ ${A.delta} يوم`:A.delta<0?`قبل الموعد بـ ${-A.delta} يوم`:"في الموعد",15));
+  else KP.push(kc("","غير متاح بعد","التسليم المتوقع","يحتاج 7 أيام و5% إنجاز",15));
+  }
+  if(cfg.obs&&io.known)KP.push(kc(io.open?(io.oldest>14?"bd":""):"gd",io.open,"معوقات مفتوحة",io.open?`أقدمها منذ ${io.oldest} يوم`:"لا توجد معوقات مفتوحة"));
+  else KP.push(kc("",cfg.pho?d.pics.length:d.ups.length,cfg.pho?"صور موثقة":"تحديثات مكتوبة",reno?"منذ بداية المشروع":"خلال الفترة"));
+  put(`<div class="kp">${KP.join("")}</div>`);
+  put(`<div class="pbar"><div class="trk"><i style="width:${prog}%"></i>${A.elp!==undefined&&!isDone?`<b style="right:${A.elp}%"></b>`:""}</div><div class="lg3"><span>الإنجاز الفعلي ${prog}%</span>${A.elp!==undefined&&!isDone?`<span>العلامة الداكنة: المخطط حتى اليوم ${A.elp}%</span>`:"<span></span>"}</div></div>`);
+  /* بنود تحتاج قراراً */
+  const PL={h:"عاجل",m:"متابعة",l:"للعلم"};
+  const atRow=x=>`<div class="at2 ${x.l}"><div class="tt">${esc(x.t)}${x.s?`<small>${esc(x.s)}</small>`:""}</div><span class="pl2 ${x.l}">${PL[x.l]}</span></div>`;
+  const atRows=A.attn.length?A.attn.map(atRow):[`<div class="at2 ok"><div class="tt">لا توجد بنود تحتاج قراراً أو متابعة حالياً</div></div>`];
+  atRows.forEach((r,i)=>put(i?r:`<div><div class="st">بنود تحتاج قراراً أو متابعة الإدارة</div>${r}</div>`));
+  /* مراحل الأعمال */
+  if(cfg.wrk&&d.works&&d.works.length){
+    const W=d.works;{const PH=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0);
+    const row=f=>{const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0),c=pc===100?"#1d7a4d":pc>0?"#ed8700":"#9aa8b6",st=pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ";
+      return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #eef1f5;font-size:12.5px"><span style="flex:1;color:#182b3d;font-weight:600">${esc(f)}<small style="color:#8996a5;font-weight:400;margin-right:6px">وزن ${Math.round(w/tot*1000)/10}%</small></span><span style="width:54px;color:${c};font-size:11.5px;font-weight:700">${st}</span><span style="width:170px;height:9px;border-radius:5px;background:#e6ebf1;overflow:hidden;display:block"><i style="display:block;height:100%;width:${pc}%;background:${c}"></i></span><b style="width:38px;text-align:left;color:#102944">${pc}%</b></div>`};
+    const dn=PH.filter(f=>wCalc(W.filter(i=>i.phase===f))===100).length;
+    PH.forEach((f,i)=>put(i?row(f):`<div style="margin-top:6px"><div class="st">مراحل الأعمال ونسب الإنجاز (${dn} من ${PH.length} مراحل مكتملة)</div>${row(f)}</div>`))}
+  }
+  /* أبرز ما تم */
+  if(cfg.upd&&d.ups.length){
+    const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
+    const hd=`<div class="st" style="margin-top:12px">${reno?"آخر ما تم في المشروع":"أبرز ما تم خلال الفترة"} (${d.ups.length} تحديث${cfg.pho?` · ${d.pics.length} صورة`:""})</div>`;
+    const row=e=>`<div class="ac"><span class="d">${esc(dfmt(e.created_at,{day:"numeric",month:"short"}))}</span><span>${esc(cut(cleanTxt(e.body).replace(/\n/g," "),150))}</span></div>`;
+    lastUp.forEach((e,i)=>put(i?row(e):`<div>${hd}${row(e)}</div>`));
+    if(d.ups.length>lastUp.length)put(`<div class="more">و${d.ups.length-lastUp.length} تحديثات أخرى في سجل الأعمال.</div>`);
+  }
+  /* الفريق */
+  const tm2=[["مدير المشروع",p.pm_name],["المقاول",p.contractor_name],["مدير الموقع",p.site_manager],["مدير المنطقة",p.area_name]].filter(x=>x[1]);
+  if(cfg.price&&p.price!=null&&p.price!=="")tm2.push(["قيمة المشروع",money(p.price)]);
+  if(tm2.length)put(`<div><div class="st">فريق المشروع</div><div class="team">${tm2.map(x=>`<div><small>${x[0]}</small><b>${esc(x[1])}</b></div>`).join("")}</div></div>`);
+  /* أحدث الصور */
+  if(cfg.pho&&d.pics.some(e=>!d.pairIds.has(String(e.id)))){
+    const ph=d.pics.filter(e=>!d.pairIds.has(String(e.id))).slice(-3).reverse(),hh=Math.round(228*LC.H/LC.W);
+    const fr=e=>`<div class="pf l3"><img src="${d.img[e.file_path]}" alt="" style="height:${hh}px"><div class="pc" style="min-height:0"><small>${esc(dfmt(e.created_at))}</small></div></div>`;
+    put(`<div style="margin-top:6px"><div class="st">أحدث صور الموقع</div><div class="pr l3" style="margin-bottom:12px">${ph.map(fr).join("")}${'<div class="pf" style="visibility:hidden;border:0"></div>'.repeat(3-ph.length)}</div></div>`);
+  }
+  /* 2) قبل وبعد (الصور التي حددها المستخدم) */
+  if(cfg.ba&&d.pairs.length){
+    const ph=Math.round(348*LC.H/LC.W),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
+    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt="" style="height:${ph}px"><div class="pc"><b>${cp(e)}</b></div></div>`;
+    d.pairs.forEach((x,i)=>{
+      const days=Math.max(0,Math.round((day0(x.a.created_at)-day0(x.b.created_at))/864e5));
+      const row=`<div class="pr l2" style="margin-bottom:6px">${side(x.b,"bf","قبل")}${side(x.a,"af","بعد")}</div><div class="bagap">المدة بين الصورتين: ${days===0?"في نفس اليوم":days+" يوماً"}</div>`;
+      put(i?`<div>${row}</div>`:`<div>${sec("قبل وبعد")}<div class="st">مقارنة بين حالة الموقع قبل العمل وبعده</div>${row}</div>`);
+      if(!i)mark();
+    });
+  }
+  /* 3) التقرير المكتوب */
+  if(cfg.ana){
+    const wb=rpWriteBlocks(cfg.text||rpDraft(p,cfg,d,A,G));
+    if(wb.length){
+      let pend="",tf=true;
+      const flush=h2=>{const t=tf?sec("التقرير المكتوب"):"";put(`<div>${t}${h2}</div>`);if(tf){mark();tf=false}};
+      wb.forEach(b=>{if(b.startsWith('<div class="wh"')){pend+=b;return}flush(pend+b);pend=""});
+      if(pend)flush(pend);
+    }
+  }
+  /* سجل الأعمال */
+  let un=0,pn=0;
+  const upHtml=(e,n,txt,cont)=>`<div class="uc"><div class="mt"><i>${String(n).padStart(2,"0")}</i><b>${esc(tfmt(e.created_at))}</b>${e.author_role?`<span>· ${esc(ROLES[e.author_role]||e.author_role)}</span>`:""}${cont?"<span>· (تابع)</span>":""}</div><p>${esc(txt)}</p>${!cont&&e.file_path&&!(e.file_type||"").startsWith("image")?'<div class="at">مرفق: ملف مرفوع مع هذا التحديث</div>':""}</div>`;
+  const picCard=(e,n)=>`<div class="pf l${LY}"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
+  const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push(`<div class="pr l${LY}">${h}</div>`)}return rows};
+  if(G.list.length){
+    let ttl=sec(reno?"سجل أعمال الترميم":"سجل الأعمال"),firstPut=true;
+    const putT=h=>{put(h);if(firstPut){mark();firstPut=false}};
+    G.list.forEach(g=>{
+      const head=ttl+`<div class="gh"><div><small>${esc(g.tag)}</small><b>${esc(g.label)}</b></div><div class="cn">${cfg.upd?`<span>${g.ups.length} تحديث</span>`:""}${cfg.pho?`<span>${g.pics.length} صورة</span>`:""}</div></div>`;
+      const items=[];
+      g.ups.forEach(e=>{const ch=rpChunks(cleanTxt(e.body));un++;ch.forEach((c,i)=>items.push(upHtml(e,un,c,i>0)))});
+      ttl="";let first=true;
+      items.forEach(h=>{if(first){putT(`<div>${head}${h}</div>`);first=false}else put(h)});
+      if(g.pics.length){
+        picRows(g.pics).forEach((r,i)=>{
+          if(i===0){const lead=first?head:"";first=false;putT(`<div>${lead}<div class="st">صور الأعمال</div>${r}</div>`)}else put(r);
+        });
+      }
+      if(first)putT(head);
+    });
+  }else if(cfg.upd||cfg.pho)put(`<div class="em">لا توجد تحديثات أو صور مسجلة ${reno?"في المشروع":"في هذه الفترة"}.</div>`);
+  /* المعوقات */
+  if(cfg.obs&&(d.iss.length||d.issOld.length)){
+    const oc=e=>{const [c,l]=rpStatus(e);return `<div class="oc"><div class="bd ${c}">${l}</div><div class="tx"><p>${esc(cleanTxt(e.body))}</p><small>سُجّل ${esc(dfmt(e.created_at))}${e.resolved&&e.resolved_at?` · حُلّ ${esc(dfmt(e.resolved_at))}`:""}${e.author_role?` · ${esc(ROLES[e.author_role]||e.author_role)}`:""}</small></div></div>`};
+    let ot=sec("سجل المعوقات"),op=true;
+    const lst=(title,arr)=>arr.forEach((e,i)=>{put(i?oc(e):`<div>${ot}<div class="st">${title} (${arr.length})</div>${oc(e)}</div>`);if(!i&&op){mark();op=false}ot=""});
+    if(d.iss.length)lst(reno?"جميع المعوقات المسجلة":"معوقات سُجّلت خلال الفترة",d.iss);
+    if(d.issOld.length)lst("معوقات مفتوحة من فترات سابقة",d.issOld);
+  }
+  /* الاعتماد */
+  const pBox=box,pEl=box.lastElementChild;
+  const sgEl=put(`<div class="sg"><div><b>أعدّه</b>${by||"&nbsp;"}<div class="ln">التوقيع / التاريخ</div></div><div><b>راجعه</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div><div><b>اعتمده</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div></div>`);
+  if(box!==pBox&&pEl&&pEl.parentNode===pBox){pBox.removeChild(pEl);box.insertBefore(pEl,sgEl)}
+  /* الفهرس */
+  tocEl.innerHTML=marks.filter(m=>m[2]).map(m=>`<span><b>${m[0]}.</b> ${m[1].split(" ").map(w=>`<b><u>${w}</u></b>`).join("")}<em>ص ${m[2]}</em></span>`).join("");
+  pages.total=pages.length;return pages;
+}
+async function rpPdf(p,cfg,pages,prog){
+  /* تعطيل Intl.Segmenter: تقسيمه للنص العربي على بعض الجوالات يقطّع الحروف؛ المكتبة تستخدم بديلها الداخلي */
+  try{Intl.Segmenter=undefined}catch(e){}
+  const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+  const sc=cfg.q==="hi"?2:1.4,ql=cfg.q==="hi"?.9:.8,N=pages.length;
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v24`});
+  for(let i=0;i<N;i++){
+    if(RP.cancel)throw new Error("cancel");
+    prog(i+1,N);
+    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
+    if(i)doc.addPage();
+    doc.addImage(cv.toDataURL("image/jpeg",ql),"JPEG",0,0,W,H,undefined,"FAST");
+    cv.width=cv.height=0;pages[i].remove();
+    await new Promise(r=>setTimeout(r,0));
+  }
+  doc.setProperties({title:`${p.name} - ${cfg.title}`,subject:cfg.full?"تقرير شامل":`${cfg.from} → ${cfg.to}`,author:cfg.by||"إدارة المشاريع",creator:"إدارة المشاريع",keywords:rpRef(p)});
+  return doc;
+}
+
+/* ===== تحديد صور قبل / بعد عند الحفظ ===== */
+function baUi(){
+  return `<label class="lbl">نوع الصور (للمقارنة في التقرير)</label>
+  <select id="bat" onchange="baChange()"><option value="">صور عادية</option><option value="before">«قبل» — حالة الموقع قبل العمل</option><option value="after">«بعد» — تقابل صورة «قبل» محددة</option></select>
+  <div id="bap" style="display:none"></div>`;
+}
+function baChange(){
+  const v=$("bat").value,b=$("bap");S.baSel=null;
+  if(v!=="after"){b.style.display="none";b.innerHTML="";return}
+  const bf=S.entries.filter(e=>e.ba==="before"&&e.file_path&&S.urls[e.file_path]);
+  b.style.display="block";
+  b.innerHTML=bf.length
+    ?`<p class="lbl">اختر صورة «قبل» التي تقابلها الصور التي سترفعها (اضغط على الصورة):</p><div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px">${bf.map(e=>`<div data-id="${e.id}" onclick="baPick('${e.id}')" style="flex:none;width:92px;cursor:pointer;text-align:center"><img src="${S.urls[e.file_path]}" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:3px solid #cbd5e1;display:block"><small style="font-size:11px">${esc(cut(e.body||dfmt(e.created_at),14))}</small></div>`).join("")}</div>`
+    :`<p class="lbl">لا توجد صور «قبل» محفوظة بعد. ارفع صور «قبل» أولاً ثم ارجع لرفع صور «بعد».</p>`;
+}
+function baPick(id){S.baSel=id;document.querySelectorAll("#bap [data-id]").forEach(d=>{d.querySelector("img").style.borderColor=d.dataset.id===id?"#ed8700":"#cbd5e1"})}
+function baBadge(e){
+  const b=e.ba==="before";
+  return `<span style="display:inline-block;background:${b?"#6b7a8c":"#ed8700"};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px">${b?"قبل":"بعد"}</span>`;
+}
+async function saveProj(){
+  const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
+  const s=$("mb").value,d=$("md").value;
+  if(s&&d&&d<s)return alert("تاريخ التسليم قبل تاريخ البداية");
+  const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value),sp=normP($("msp").value),co=normP($("mcph").value);
+  if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap)||($("msp").value.trim()&&!sp)||($("mcph").value.trim()&&!co))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
+  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,coord_name:$("mcn").value.trim()||null,coord_phone:co||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
+  $("mbtn").disabled=true;$("mbtn").textContent="جاري الحفظ...";
+  const q=S.modal==="edit"?sb.from("projects").update(row).eq("id",S.cur):sb.from("projects").insert(row);
+  const {data,error}=await q.select().single();
+  if(error){alert(error.message);return modal(null)}
+  const f=$("mc").files[0];
+  if(f){const path=await up(data.id,f);if(path)await sb.from("projects").update({cover_path:path}).eq("id",data.id)}
+  {const o=S.modal==="edit"?S.projects.find(x=>x.id===S.cur):null,ch=[];
+   if(!o)ch.push("إنشاء المشروع");
+   else{const df=(l,a,b)=>{if(String(a??"")!==String(b??""))ch.push(`${l}: ${a||"-"} ← ${b||"-"}`)};
+     df("الاسم",o.name,row.name);df("الحالة",(ST[o.status]||[])[0],ST[row.status][0]);df("النوع",TYN[o.ptype]||"إنشاء",TYN[row.ptype]);df("الإنجاز",o.progress,row.progress);df("تاريخ البداية",o.start_date,row.start_date);df("تاريخ التسليم",o.due,row.due);df("المقاول",o.contractor_name,row.contractor_name);df("السعر",o.price,row.price)}
+   if(ch.length)logA("project",ch.join(" · "),data.id)}
+  S.modal=null;await load();
+}
+async function delProj(){
+  if(!confirm("حذف المشروع وكل ما فيه؟"))return;
+  const {data:es}=await sb.from("entries").select("file_path").eq("project_id",S.cur);
+  const paths=(es||[]).map(e=>e.file_path).filter(Boolean);
+  const cp=S.projects.find(x=>x.id===S.cur)?.cover_path;if(cp)paths.push(cp);
+  if(paths.length)await sb.storage.from("media").remove(paths);
+  const {error}=await sb.from("projects").delete().eq("id",S.cur);
+  if(error)return alert(error.message);
+  S.cur=null;S.modal=null;await load();
+}
+
+
+/* ===== الصيانة: مسار خفيف، مرحلة واحدة ظاهرة في كل وقت =====
+   طلب جديد ← معاينة ← اعتماد المعاينة ← تسعير ← اعتماد التكلفة (مدير المشروع أو الإدارة) ← تنفيذ ← تسليم */
+const MST=[["new","طلب جديد","#d97706","طلب"],["inspect","المعاينة","#7c3aed","معاينة"],["review","اعتماد المعاينة","#0891b2","اعتماد"],["price","التسعير","#ca8a04","تسعير"],["cost","اعتماد التكلفة","#db2777","تكلفة"],["exec","التنفيذ","#2563eb","تنفيذ"],["deliver","التسليم","#16a34a","تسليم"]];
+const MPRI={urgent:["مستعجل","#dc2626"],high:["عاجل","#ea580c"],normal:["عادي","#94a3b8"]};
+const MOUT={done:"تم التسليم",nowork:"لا يحتاج عمل",rejected:"أُلغي الطلب"};
+const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"الإدارة"};
+const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
+let MT={t:[],e:[],q:{},sm:[],id:null,err:"",rep:null};
+const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
+const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
+const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
+/* المرحلة الحالية (الطلبات القديمة بمرحلة "work" تُعرض كتنفيذ) */
+const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(MST.some(s=>s[0]===t.stage)?t.stage:"new"));
+/* من ينتظره الطلب الآن */
+const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_status==="pending")return"mgmt";return{new:"site",inspect:"site",review:"pm",price:"site",cost:"pm",exec:"site"}[s]||""};
+const mMine=t=>{const w=mWho(t);return !!w&&(w==="pm"?mAdm():S.role===w)};
+const mCan=t=>{const w=mWho(t);return !!w&&(mAdm()||S.role===w)};
+const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
+const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم"):"-";
+const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
+const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
+const mErr=e=>alert(/column|schema cache/i.test((e&&e.message)||"")?"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً.\n\n"+e.message:((e&&e.message)||e));
+const mCover=t=>{const e=MT.e.find(e=>e.ticket_id===t.id&&e.file_path&&(e.file_type||"").startsWith("image"));return e?e.file_path:null};
+const mShow=t=>!t.closed_at||(Date.now()-new Date(t.closed_at))<30*864e5;   /* المغلقة تظهر في الرئيسية 30 يوما */
+const mCol=t=>t.closed_at?"done":(mStg(t)==="exec"?"run":"plan");
+function mToast(m){const d=document.createElement("div");d.className="mtoast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnce.b=0}}
+
+async function loadM(){
+  if(!mSee())return;
+  if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
+  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("id,ticket_id,kind,phase,body,file_path,file_type,author_role,created_at").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
+  if(a.error||b.error||quotes.error){MT.err=(a.error||b.error||quotes.error).message;MT.t=[];MT.e=[];return}
+  MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
+  (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
+  if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
+  await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));
+}
+function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
+async function mEvent(t,kind,body,phase,file){
+  const row={ticket_id:t.id,kind,phase:phase||null,body:body||null,author_role:ROLES[S.role]};
+  if(file){row.file_path=file.path;row.file_type=file.type}
+  const {error}=await sb.from("mnt_events").insert(row);if(error)alert(error.message);return !error;
+}
+/* تحديث الطلب: يحفظ، يشعر الأدوار المعنية، يعيد التحميل، ويغلق النافذة (إلا إذا keep) */
+async function mUpd(id,patch,ev,roles,pt,o){
+  o=o||{};const t=mT(id);if(!t)return false;
+  if(patch.stage&&patch.stage!==t.stage)patch.stage_at=mNow();
+  const {error}=await sb.from("mnt_requests").update(patch).eq("id",id);
+  if(error){mErr(error);return false}
+  if(ev)await mEvent(t,"stage",ev);
+  if(roles&&roles.length)mPush(t,pt||("صيانة "+mNo(t)),o.body||ev,roles);
+  await loadM();if(!o.keep)S.modal=null;render();if(o.toast)mToast(o.toast);return true;
+}
+async function mUploadFiles(t,fs,phase){
+  let n=0;
+  for(const f of fs){
+    if((f.type||"").startsWith("video/")){alert("الفيديو غير متاح في الصيانة");continue}
+    const path=await up("maint",f);if(!path)continue;
+    if(await mEvent(t,"photo",null,phase,{path,type:f.type||"image/jpeg"}))n++;
+  }
+  return n;
+}
+const mHasPic=(id,ph)=>MT.e.some(e=>e.ticket_id===id&&e.phase===ph&&e.file_path);
+
+/* ---------- الرئيسية: بطاقة الصيانة بنفس شكل بطاقة المشروع ---------- */
+function mHomeCard(t){
+  const s=mStg(t),idx=MST.findIndex(x=>x[0]===s),col=mCol(t),pr=MPRI[t.priority]||MPRI.normal,mine=mMine(t),cp=mCover(t),u=cp&&S.urls[cp];
+  const pct=t.closed_at?100:Math.round(idx/(MST.length-1)*100),label=t.closed_at?(MOUT[t.outcome]||"مغلق"):MST[idx][1];
+  return `<div class="card ${ST[col][1]}${mine?" mine":""}" data-search="${esc((mNo(t)+" "+t.title+" "+(t.branch||"")+" "+(t.assignee||"")+" صيانة").toLocaleLowerCase())}" onclick="mOpen('${t.id}')">
+  <div class="img${u?"":" mimg"}" ${u?`style="background-image:url('${u}')"`:""}>${u?"":'<span class="mic">🔧</span>'}<div class="cw"><span class="chip ty">🔧 صيانة</span>${t.priority&&t.priority!=="normal"?`<span class="chip" style="background:${pr[1]}">${pr[0]}</span>`:""}${mine?'<span class="chip" style="background:#ed8700">بانتظارك</span>':""}</div></div>
+  <div class="body"><h4>${esc(t.title)}</h4><p>🏪 ${esc(t.branch||"")}${t.assignee?" · 👤 "+esc(t.assignee):""}</p><div class="bar"><i style="width:${pct}%"></i></div>
+  <div class="row"><span>${label}</span><span>${t.closed_at?dfmt(t.closed_at):mAge(t)}</span></div></div></div>`;
+}
+
+/* ---------- طلب جديد ---------- */
+function mNewHtml(){
+  const BR=[...new Set(MT.t.map(t=>t.branch).filter(Boolean))].sort();
+  return `<div class="modal"><div class="box"><h3>🔧 طلب صيانة جديد</h3>
+  <label class="lbl">الفرع *</label><input id="nbr" list="nbrl" placeholder="مثال: بريدة - طريق الملك"><datalist id="nbrl">${BR.map(b=>`<option value="${esc(b)}">`).join("")}</datalist>
+  <label class="lbl">وش المشكلة؟ *</label><input id="ntt" placeholder="مثال: تسريب ماء في المطبخ">
+  <label class="lbl">تفاصيل (اختياري)</label><textarea id="nds" rows="2" placeholder="وين المشكلة ومتى بدت؟"></textarea>
+  <label class="lbl">مدير الموقع (يوصله إشعار للمعاينة) *</label><select id="nas">${MT.sm.length===1?"":'<option value="">اختر مدير الموقع</option>'}${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
+  ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع. أنشئ حسابًا من «الحسابات».</div>'}
+  <label class="mck" style="margin:8px 0"><input id="nur" type="checkbox"> 🚨 مستعجل</label>
+  <label class="lbl">صور المشكلة (اختياري)</label><input id="nfl" type="file" accept="image/*" multiple class="mfile">
+  <button class="btn big" id="nbt" onclick="mCreate()">إرسال الطلب</button><button class="btn alt" style="width:100%" onclick="modal(null)">إلغاء</button></div></div>`;
+}
+async function mCreate(){await mOnce(async()=>{
+  const br=$("nbr").value.trim(),title=$("ntt").value.trim(),ds=$("nds").value.trim(),as=$("nas").value,site=MT.sm.find(x=>String(x.user_id)===String(as));
+  if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");
+  const b=$("nbt");b.disabled=true;b.textContent="جاري الإرسال...";
+  const urgent=$("nur").checked;
+  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by:S.user.id,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:mMeName()};
+  const {data,error}=await sb.from("mnt_requests").insert(row).select().single();
+  if(error){mErr(error);b.disabled=false;b.textContent="إرسال الطلب";return}
+  await mEvent(data,"stage","رُفع الطلب "+mNo(data));
+  await mUploadFiles(data,[...($("nfl")?.files||[])],"issue");
+  mPush(data,(urgent?"🚨 مستعجل · ":"")+"طلب صيانة جديد "+mNo(data),br+" · "+title,["site"].concat(S.role==="mgmt"?["owner","pm"]:[]));
+  S.modal=null;await loadM();render();mToast("أُرسل الطلب لـ "+site.name);
+})}
+
+/* ---------- نافذة الطلب: المرحلة الحالية فقط ---------- */
+async function mOpen(id){
+  MT.id=id;MT.rep=null;
+  await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));
+  modal("mtk");
+}
+const mPics=(id,ph)=>{const L=MT.e.filter(e=>e.ticket_id===id&&ph.includes(e.phase)&&e.file_path&&S.urls[e.file_path]&&(e.file_type||"").startsWith("image"));return L.length?`<div class="mpics">${L.map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("")}</div>`:""};
+function mSteps(t){
+  const idx=MST.findIndex(s=>s[0]===mStg(t)),all=t.closed_at&&t.outcome==="done";
+  return `<div class="msteps">${MST.map((s,k)=>`<div class="${all||k<idx?"dn":k===idx?"cur":""}" style="--c:${s[2]}"><i>${all||k<idx?"✓":k+1}</i><span>${s[3]}</span></div>`).join("")}</div>`;
+}
+const mLink=t=>location.origin+location.pathname+"?k="+(t.mgmt_token||"");
+const mShareText=t=>`طلب اعتماد تكلفة صيانة ${mNo(t)}\n${t.branch} · ${t.title}\nالتكلفة: ${money(mCost(t))} ر.س\n${mLink(t)}`;
+async function mShare(id){
+  const t=mT(id),tx=mShareText(t);
+  if(navigator.share){try{await navigator.share({text:tx});return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(tx);mToast("نُسخ الرابط")}catch(e){prompt("انسخ الرابط",mLink(t))}
+}
+function mClosed(t){
+  const ok=t.outcome==="done";
+  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
+}
+function mStageBody(t){
+  if(t.closed_at)return mClosed(t);
+  const id=t.id,s=mStg(t),can=mCan(t),w=mWho(t),st=MST.find(x=>x[0]===s);
+  const head=`<div class="mstt" style="--c:${st[2]}">${st[1]}</div>`;
+  const back=t.back_note?`<div class="hlq"><b>ملاحظة:</b> ${esc(t.back_note)}</div>`:"";
+  const wait=`<div class="mwait">⏳ بانتظار ${MWN[w]}${s==="new"&&t.assignee?" · "+esc(t.assignee):""}</div>`;
+  const desc=t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:"";
+  const rep=t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:"";
+  const big=(label,fn,color)=>`<button class="btn big" ${color?`style="background:${color}"`:""} onclick="${fn}">${label}</button>`;
+  let h="";
+  if(s==="new"){
+    h=desc+mPics(id,["issue"])+(can?big("✔ استلمت الطلب",`mReceive('${id}')`):wait);
+  }else if(s==="inspect"){
+    h=back+desc+(can?`<label class="lbl">تقرير المعاينة *</label><textarea id="mdg" rows="3" placeholder="وش لقيت؟ وش المطلوب؟">${esc(t.diagnosis||"")}</textarea><label class="lbl">صور المعاينة</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["before"])}${big("📤 إرسال المعاينة للاعتماد",`mInspSend('${id}')`)}`:wait);
+  }else if(s==="review"){
+    h=desc+rep+mPics(id,["before"])+(can?`<div class="mbtns">${big("✔ اعتماد المعاينة",`mReviewOk('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
+  }else if(s==="price"){
+    h=back+rep+(can?`<label class="lbl">التكلفة (ر.س) *</label><input id="mcost" type="number" inputmode="decimal" min="0" step="any" value="${esc(t.cost_total??"")}" class="mcin" placeholder="0"><label class="lbl">ملاحظة (اختياري)</label><input id="msc" value="${esc(t.scope||"")}" placeholder="مثال: تشمل المواد والعمالة">${big("📤 إرسال التكلفة للاعتماد",`mPriceSend('${id}')`)}`:wait);
+  }else if(s==="cost"){
+    const sum=`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div>${t.scope?`<div class="lbl">${esc(t.scope)}</div>`:""}`+rep+mPics(id,["before"])+(typeof prPanel==="function"?prPanel(t):"");
+    if(t.mgmt_status==="pending"){
+      h=sum+`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
+      if(["mgmt","owner"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mrs" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`mDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`mDecide('${id}',0)`,"#dc2626")}</div>`;
+      if(mAdm())h+=`<div class="link">${esc(mLink(t))}</div><div class="acts"><button class="btn" onclick="mShare('${id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",mShareText(t))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`;
+    }else{
+      h=sum+(can?`<div class="mbtns">${big("✔ اعتماد التكلفة",`mCostOk('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`mCostUp('${id}')`,"#db2777")}<button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`:wait);
+    }
+  }else{   /* exec */
+    if(!t.started_at){
+      const CN=[...new Set(MT.t.map(x=>x.contractor).filter(Boolean))];
+      h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div><label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
+    }else{
+      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل">${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
+    }
+  }
+  return head+h;
+}
+function mGallery(id){
+  const g=ph=>mPics(id,ph),b=g(["issue","before"]),d=g(["during","other"]),a=g(["after"]);
+  if(!b&&!d&&!a)return "";
+  return `<div class="mgal">${b?`<div class="mgp"><b>قبل</b>${b}</div>`:""}${d?`<div class="mgp"><b>أثناء العمل</b>${d}</div>`:""}${a?`<div class="mgp"><b>بعد</b>${a}</div>`:""}</div>`;
+}
+function mDetails(t){
+  const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${mGallery(t.id)}`;
+}
+function mTicketHtml(){
+  const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
+  const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
+  const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
+  return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
+  <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
+  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>
+  <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
+  <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+}
+
+/* ---------- الإجراءات ---------- */
+async function mReceive(id){await mOnce(async()=>{
+  const t=mT(id),p={stage:"inspect",received_at:mNow()};
+  if(!t.assignee_id&&S.role==="site"){p.assignee_id=S.user.id;p.assignee=mMeName()}
+  await mUpd(id,p,"استُلم الطلب للمعاينة",["owner","pm"],"استلم مدير الموقع الطلب للمعاينة",{body:t.branch+" · "+t.title,toast:"تم الاستلام ✔"});
+})}
+async function mInspSend(id){await mOnce(async()=>{
+  const t=mT(id),rep=$("mdg").value.trim(),fs=[...($("mfl")?.files||[])];
+  if(!rep)return alert("اكتب تقرير المعاينة");
+  if(!fs.length&&!mHasPic(id,"before")&&!confirm("ما رفعت صور للمعاينة. تبي ترسل بدونها؟"))return;
+  if(fs.length)await mUploadFiles(t,fs,"before");
+  await mUpd(id,{stage:"review",diagnosis:rep,insp_at:mNow(),back_note:null},"أُرسلت المعاينة للاعتماد",["owner","pm"],"معاينة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+t.title,toast:"أُرسلت المعاينة للاعتماد ✔"});
+})}
+async function mReviewOk(id){await mOnce(async()=>{
+  const t=mT(id);
+  await mUpd(id,{stage:"price",review_at:mNow(),back_note:null},"اعتُمدت المعاينة",["site"],"اعتُمدت المعاينة، حدّد التكلفة "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت المعاينة ✔"});
+})}
+async function mReviewBack(id){await mOnce(async()=>{
+  const n=prompt("ملاحظتك لمدير الموقع:");if(n===null||!n.trim())return;
+  const t=mT(id);
+  await mUpd(id,{stage:"inspect",back_note:n.trim()},"أُعيدت المعاينة: "+n.trim(),["site"],"أُعيدت المعاينة للتعديل "+mNo(t),{body:n.trim(),toast:"أُعيدت للمعاينة"});
+})}
+async function mNoWork(id){await mOnce(async()=>{
+  if(!confirm("إغلاق الطلب لأنه لا يحتاج عمل؟"))return;
+  const t=mT(id);
+  await mUpd(id,{closed_at:mNow(),outcome:"nowork"},"أُغلق: لا يحتاج عمل",["site"],"أُغلق الطلب "+mNo(t),{body:"لا يحتاج عمل",toast:"أُغلق الطلب"});
+})}
+async function mCancel(id){await mOnce(async()=>{
+  const r=prompt("سبب إلغاء الطلب؟");if(r===null)return;
+  const t=mT(id);
+  await mUpd(id,{closed_at:mNow(),outcome:"rejected",close_note:r.trim()||null},"أُلغي الطلب"+(r.trim()?": "+r.trim():""),["site"],"أُلغي الطلب "+mNo(t),{body:r.trim()||t.title,toast:"أُلغي الطلب"});
+})}
+async function mPriceSend(id){await mOnce(async()=>{
+  const t=mT(id),v=$("mcost").value.trim(),note=$("msc").value.trim();
+  if(!v||!(+v>0))return alert("اكتب التكلفة");
+  const now=mNow();
+  await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:+v}],subtotal:+v,vat:0,total:+v,updated_at:now,status:"pending",note:note||null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
+  await mUpd(id,{stage:"cost",cost_total:+v,scope:note||null,priced_at:now,mgmt_status:null,mgmt_note:null,back_note:null},"أُرسلت التكلفة "+money(v)+" ر.س",["owner","pm"],"تكلفة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+money(v)+" ر.س",toast:"أُرسلت التكلفة للاعتماد ✔"});
+})}
+async function mCostOk(id){await mOnce(async()=>{
+  const t=mT(id);
+  await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
+  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),mgmt_status:null,mgmt_token:null,back_note:null},"اعتُمدت التكلفة",["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
+})}
+async function mCostUp(id){await mOnce(async()=>{
+  const t=mT(id);
+  await mUpd(id,{mgmt_status:"pending",mgmt_note:null,mgmt_token:crypto.randomUUID()},"رُفعت التكلفة للإدارة",["mgmt"],"طلب اعتماد تكلفة صيانة "+mNo(t),{body:t.branch+" · "+t.title+" · "+money(mCost(t))+" ر.س",keep:true,toast:"رُفعت للإدارة. شارك الرابط"});
+})}
+async function mCostBack(id){await mOnce(async()=>{
+  const n=prompt("ملاحظتك لمدير الموقع (لإعادة التسعير):");if(n===null||!n.trim())return;
+  const t=mT(id);
+  await mUpd(id,{stage:"price",back_note:n.trim(),mgmt_status:null,mgmt_token:null},"أُعيدت للتسعير: "+n.trim(),["site"],"أُعيد الطلب للتسعير "+mNo(t),{body:n.trim(),toast:"أُعيدت للتسعير"});
+})}
+async function mDecide(id,ok){await mOnce(async()=>{
+  const t=mT(id),r=($("mrs")?.value||"").trim();
+  if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const now=mNow();
+  if(ok){
+    await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
+    await mUpd(id,{stage:"exec",mgmt_status:"approved",mgmt_at:now,cost_ok_at:now,mgmt_token:null,back_note:null},"وافقت الإدارة على التكلفة",["site","owner","pm"],"وافقت الإدارة "+mNo(t),{body:t.branch+" · "+money(mCost(t))+" ر.س",toast:"تمت الموافقة ✔"});
+  }else{
+    await mUpd(id,{stage:"price",mgmt_status:"rejected",mgmt_note:r,mgmt_at:now,mgmt_token:null,back_note:"رفضت الإدارة التكلفة: "+r},"رفضت الإدارة التكلفة: "+r,["site","owner","pm"],"رفضت الإدارة التكلفة "+mNo(t),{body:r,toast:"تم الرفض"});
+  }
+})}
+async function mExecStart(id){await mOnce(async()=>{
+  const t=mT(id),c=$("mct").value.trim(),q=+$("mq").value;
+  if(!c)return alert("اكتب اسم المقاول");if(!(q>0))return alert("اكتب مدة العمل");
+  const u=$("mu").value;
+  await mUpd(id,{started_at:mNow(),contractor:c,work_qty:q,work_unit:u},"بدأ العمل: "+c+" · "+q+(u==="h"?" ساعة":" يوم"),["owner","pm"],"بدأ تنفيذ "+mNo(t),{body:c+" · "+q+(u==="h"?" ساعة":" يوم"),toast:"بدأ العمل ▶"});
+})}
+async function mDeliver(id){await mOnce(async()=>{
+  const t=mT(id),rc=$("mrc").value.trim(),fs=[...($("mfl")?.files||[])];
+  if(!rc)return alert("اكتب اسم المستلم");
+  if(!fs.length&&!mHasPic(id,"after")&&!confirm("ما رفعت صور بعد التنفيذ. تبي تسلّم بدونها؟"))return;
+  if(fs.length)await mUploadFiles(t,fs,"after");
+  await mUpd(id,{closed_at:mNow(),stage:"deliver",outcome:"done",receiver:rc,close_note:null},"سُلّم العمل إلى "+rc,["owner","pm"],"تم التسليم "+mNo(t),{body:t.branch+" · "+t.title,keep:true,toast:"تم التسليم ✔"});
+})}
+async function mReopen(id){
+  if(!confirm("إعادة فتح الطلب؟"))return;
+  const t=mT(id);if(!t)return;
+  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"exec"},"أُعيد فتح الطلب",["site"],"أُعيد فتح الطلب "+mNo(t),{body:t.branch+" · "+t.title,keep:true});
+}
+async function mDel(id){
+  if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
+  const paths=MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path);
+  if(paths.length)await sb.storage.from("media").remove(paths);
+  const {error}=await sb.from("mnt_requests").delete().eq("id",id);if(error)return alert(error.message);
+  S.modal=null;await loadM();render();
+}
+
+/* ---------- تنبيه مدير الموقع عند الدخول ---------- */
+async function mSiteWelcome(){if(MT.err||!MT.t.some(mMine)){render();return}S.modal="msite";render()}
+function mSiteWelcomeHtml(){
+  const L=MT.t.filter(mMine);
+  return `<div class="modal"><div class="box"><h3>🔧 بانتظارك ${L.length} ${L.length===1?"طلب":"طلبات"}</h3>${L.map(t=>{const pr=MPRI[t.priority]||MPRI.normal;return `<button class="srow" onclick="mOpen('${t.id}')"><div><div style="font-weight:700">${esc(t.branch||"")} · ${esc(t.title)}</div><small>${mNo(t)} · ${MST.find(s=>s[0]===mStg(t))[1]} · ${mAge(t)}</small></div>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</button>`}).join("")}<button class="btn alt" onclick="modal(null)">لاحقاً</button></div></div>`;
+}
+
+/* ===== صفحة قرار الإدارة (رابط بدون تسجيل دخول) ===== */
+let MG={k:"",d:null,urls:{}};
+const mgShell=b=>{$("app").innerHTML=`<header><h1>إدارة المشاريع</h1></header><div class="wrap" style="max-width:560px">${b}</div>`};
+async function mgLink(k){
+  MG.k=k;mgShell('<div class="note">جاري التحميل...</div>');
+  const {data,error}=await sb.rpc("mnt_mgmt_view",{p_token:k});
+  if(error||!data)return mgShell('<div class="box note">الرابط غير صالح أو سبق استخدامه.</div>');
+  MG.d=data;
+  const ps=(data.photos||[]).map(p=>p.path);
+  if(ps.length){const {data:u}=await sb.storage.from("media").createSignedUrls(ps,3600);(u||[]).forEach(x=>{if(x.signedUrl)MG.urls[x.path]=x.signedUrl})}
+  mgDraw();
+}
+function mgDraw(){
+  const d=MG.d,pr=MPRI[d.priority]||MPRI.normal,no="MNT-"+String(d.no||0).padStart(4,"0");
+  const pics=(d.photos||[]).filter(p=>MG.urls[p.path]).map(p=>`<img class="mth" src="${MG.urls[p.path]}" onclick="openImg(this.src)" alt="">`).join("");
+  mgShell(`<div class="box"><div class="mh"><h3 style="margin:0">${esc(d.title)}</h3>${d.priority&&d.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
+  <div class="lbl" style="margin:4px 0 10px">${no} · 🏪 ${esc(d.branch||"")}${d.pm_name?" · "+esc(d.pm_name):""}</div>
+  ${d.descr&&d.descr!==d.title?`<div class="hlq mpre">${esc(d.descr)}</div>`:""}
+  ${d.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(d.diagnosis)}</div></div>`:""}
+  ${pics?`<div class="mpics">${pics}</div>`:""}
+  <div class="mcostbox"><span>التكلفة المطلوب اعتمادها</span><b>${money(d.cost)} ر.س</b></div>${d.scope?`<div class="lbl">${esc(d.scope)}</div>`:""}
+  ${d.pending?`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mgr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns"><button class="btn big" style="background:#16a34a" onclick="mgDecide(1)">✔ موافقة</button><button class="btn big" style="background:#dc2626" onclick="mgDecide(0)">✖ رفض</button></div>`:`<div class="mwait">تم اتخاذ القرار على هذا الطلب.</div>`}</div>`);
+}
+async function mgDecide(ok){await mOnce(async()=>{
+  const r=($("mgr")?.value||"").trim();if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const {data,error}=await sb.rpc("mnt_mgmt_decide",{p_token:MG.k,p_ok:!!ok,p_reason:r});
+  if(error)return alert(error.message);
+  if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":"الرابط غير صالح");
+  mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التكلفة":"❌ تم رفض التكلفة"}<br><small>تم إبلاغ مدير المشروع ومدير الموقع. تقدر تقفل الصفحة.</small></div>`);
+})}
+
+/* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
+const MRCSS=`.rpg .pf.m1 img{height:200px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
+async function mPdf(id){
+  const t=mT(id);if(!t)return;
+  MT.rep={busy:true};render();
+  const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0";document.body.appendChild(root);
+  try{
+    await loadLib("html2canvas.min.js?v=22");await loadLib("jspdf.umd.min.js");
+    if(document.fonts)await document.fonts.ready;
+    if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
+    if(!document.getElementById("rpcss2")){const s=document.createElement("style");s.id="rpcss2";s.textContent=MRCSS;document.head.appendChild(s)}
+    const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
+    let bef=imgs.filter(e=>e.phase==="before");if(!bef.length)bef=imgs.filter(e=>e.phase==="issue");
+    bef=bef.slice(0,2);const aft=imgs.filter(e=>e.phase==="after").slice(0,2),pics=[...bef,...aft],img={};
+    if(pics.length){
+      const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
+      const um={};(data||[]).forEach(d=>{if(d.signedUrl)um[d.path]=d.signedUrl});
+      for(const e of pics){if(um[e.file_path]&&!img[e.file_path]){try{img[e.file_path]=await rpPrep(um[e.file_path],"fit",{W:700,H:400})}catch{}}}
+    }
+    const ref=mNo(t),pages=[],mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
+    let box=null;const fresh=()=>{const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png"><span>إدارة المشاريع</span></div><div class="r"><b>تقرير صيانة</b><br>${esc(ref)}</div></div><div class="rpc"></div><div class="rpf"><span></span><span class="rf">${ref}</span><span>${esc(dfmt(new Date()))}</span></div></div>`);root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc")};
+    const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
+    const pr=MPRI[t.priority]||MPRI.normal,cost=mCost(t),done=t.closed_at&&t.outcome==="done";
+    fresh();
+    put(`<div><div class="rt"><span class="no">🔧</span><span>${esc(t.title)}</span><i class="l2"></i></div><table class="info"><tr><td class="a">الفرع</td><td class="b">${esc(t.branch||"")}</td><td class="a">رقم الطلب</td><td class="b">${esc(ref)}</td></tr><tr><td class="a">تاريخ الطلب</td><td class="b">${esc(dfmt(t.created_at))}</td><td class="a">${done?"تاريخ التسليم":"الحالة"}</td><td class="b">${done?esc(dfmt(t.closed_at)):t.closed_at?esc(MOUT[t.outcome]||"مغلق"):esc(MST.find(s=>s[0]===mStg(t))[1])}</td></tr></table></div>`);
+    put(`<div class="hl"><b>المشكلة${t.priority==="urgent"?" (مستعجل)":""}</b><br>${esc(t.descr&&t.descr!==t.title?t.descr:t.title)}</div>`);
+    if(t.diagnosis)put(`<div class="hl"><b>تقرير المعاينة</b>${t.insp_at?` <small style="display:inline">· ${esc(dfmt(t.insp_at))}</small>`:""}<br>${esc(t.diagnosis).replace(/\n/g,"<br>")}</div>`);
+    if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
+    if(cost!=null&&cost!==""){
+      const ap=t.mgmt_status==="approved"?"اعتماد الإدارة · "+dfmt(t.mgmt_at):t.cost_ok_at?"اعتماد مدير المشروع · "+dfmt(t.cost_ok_at):"";
+      put(`<div class="gh"><div><small>التكلفة الإجمالية</small><b>${esc(money(cost))} ر.س</b></div><div class="cn">${ap?`<span>${esc(ap)}</span>`:""}</div></div>`);
+    }
+    put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
+    const row=(L,tag,cls)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
+      const card=e=>`<div class="pf m1"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
+      put(`<div class="pr">${card(P[0])}${P[1]?card(P[1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
+    row(bef,"قبل","bf");row(aft,"بعد","af");
+    const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+    for(let i=0;i<pages.length;i++){
+      const cv=await html2canvas(pages[i],{scale:1.6,backgroundColor:"#fff",useCORS:true});
+      if(i)doc.addPage();doc.addImage(cv.toDataURL("image/jpeg",.85),"JPEG",0,0,W,H,undefined,"FAST");
+    }
+    const blob=doc.output("blob"),name=`${ref} ${iso(new Date())}.pdf`;
+    if(MT.rep&&MT.rep.url)URL.revokeObjectURL(MT.rep.url);
+    MT.rep={url:URL.createObjectURL(blob),blob,name};
+  }catch(e){MT.rep=null;alert("تعذر: "+(e.message||e))}finally{root.remove();if(S.modal==="mtk")render()}
+}
+
+/* ===== تنظيف الصور اليتيمة */
+
+
+/* ===== تنظيف الصور اليتيمة (ملفات في التخزين لا يشير إليها أي سجل) — للمدير فقط ===== */
+const ORPH_GRACE_H=24;   // لا نلمس الملفات الأحدث من 24 ساعة (قد تكون قيد الرفع)
+function fmtSz(n){n=+n||0;return n>=1048576?(n/1048576).toFixed(1)+" ميجا":Math.max(1,Math.round(n/1024))+" كيلوبايت"}
+function openOrph(){S.orph={st:"idle",list:[],bytes:0,total:0,msg:""};modal("orph")}
+async function listAllFiles(){
+  const bk=sb.storage.from("media"),files=[];
+  const page=async prefix=>{const out=[];for(let o=0;;o+=1000){
+    const {data,error}=await bk.list(prefix,{limit:1000,offset:o,sortBy:{column:"name",order:"asc"}});
+    if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break}return out};
+  const top=await page("");
+  for(const it of top){
+    if(it.id){files.push({path:it.name,size:it.metadata?.size||0,at:it.created_at||it.updated_at});continue}
+    for(const f of await page(it.name)){if(f.id)files.push({path:it.name+"/"+f.name,size:f.metadata?.size||0,at:f.created_at||f.updated_at})}
+  }
+  return files;
+}
+async function scanOrph(){
+  S.orph={st:"scan",list:[],bytes:0,total:0,msg:""};render();
+  try{
+    const refs=new Set();
+    for(let o=0;;o+=1000){
+      const {data,error}=await sb.from("entries").select("file_path").not("file_path","is",null).range(o,o+999);
+      if(error)throw error;(data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
+    const {data:pr,error:pe}=await sb.from("projects").select("cover_path");if(pe)throw pe;
+    for(const tb of ["mnt_events","maint_events"])for(let o=0;;o+=1000){   /* صور الصيانة (الجديد + الأرشيف القديم): إذا الجدول غير موجود نتجاهله، وأي خطأ آخر يوقف الفحص */
+      const {data,error}=await sb.from(tb).select("file_path").not("file_path","is",null).range(o,o+999);
+      if(error){if(/does not exist|schema cache|PGRST205|42P01/i.test(error.message+(error.code||"")))break;throw error}
+      (data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
+    (pr||[]).forEach(p=>{if(p.cover_path)refs.add(p.cover_path)});
+    const files=await listAllFiles(),now=Date.now();
+    const orph=files.filter(f=>!refs.has(f.path)&&(!f.at||now-new Date(f.at).getTime()>ORPH_GRACE_H*3600e3));
+    /* حماية: إذا ما وجدنا أي مرجع إطلاقا والتخزين فيه ملفات، غالبا الصلاحيات ناقصة، لا نعرض شيئا للحذف */
+    if(!refs.size&&files.length)throw new Error("لم تُقرأ سجلات الملفات (تحقق من الصلاحيات). تم إيقاف التنظيف للأمان.");
+    S.orph={st:"ready",list:orph,bytes:orph.reduce((s,f)=>s+f.size,0),total:files.length,msg:""};
+  }catch(e){S.orph={st:"idle",list:[],bytes:0,total:0,msg:"تعذر الفحص: "+(e.message||e)}}
+  render();
+}
+async function delOrph(){
+  const O=S.orph;if(!O.list.length)return;
+  if(!confirm(`حذف ${O.list.length} ملف يتيم (${fmtSz(O.bytes)}) نهائيا؟ لا يمكن التراجع.`))return;
+  S.orph={...O,st:"del"};render();
+  let ok=0,err="";
+  for(let i=0;i<O.list.length;i+=100){
+    const ch=O.list.slice(i,i+100).map(f=>f.path);
+    const {data,error}=await sb.storage.from("media").remove(ch);
+    if(error){err=error.message;break}ok+=(data||[]).length}
+  logA("entry",`تنظيف الصور اليتيمة: حُذف ${ok} ملف (${fmtSz(O.bytes)})`,null);
+  S.orph={st:"done",list:[],bytes:0,total:0,msg:err?`حُذف ${ok} ثم توقف: ${err}`:`تم حذف ${ok} ملف وتحرير ${fmtSz(O.bytes)} ✅`};
+  render();
+}
+function orphHtml(){
+  const O=S.orph||{st:"idle",list:[],bytes:0,msg:""};
+  let body;
+  if(O.st==="scan"||O.st==="del")body=`<p class="lbl">${O.st==="scan"?"جاري فحص التخزين...":"جاري الحذف..."}</p>`;
+  else if(O.st==="ready")body=O.list.length
+    ?`<p>وُجد <b>${O.list.length}</b> ملف يتيم (من أصل ${O.total}) بحجم <b>${fmtSz(O.bytes)}</b>.</p><p class="lbl">هذه ملفات لا يرتبط بها أي تقرير أو ملاحظة أو غلاف مشروع، ومرّ عليها أكثر من ${ORPH_GRACE_H} ساعة.</p><button class="btn danger" onclick="delOrph()">🗑 حذف الملفات اليتيمة</button>`
+    :`<p>لا توجد ملفات يتيمة 👌 (فُحص ${O.total} ملف).</p>`;
+  else body=`${O.msg?`<p>${esc(O.msg)}</p>`:`<p class="lbl">يفحص كل ملفات التخزين ويعرض ما لا يرتبط بأي سجل قبل الحذف.</p>`}<button class="btn" onclick="scanOrph()">${O.st==="done"?"فحص مرة أخرى":"فحص الآن"}</button>`;
+  return `<div class="modal"><div class="box"><h3>🧹 تنظيف المساحة</h3>${body}<div style="margin-top:14px"><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+}
+/* ===== سجل النشاط ===== */
+function logA(action,detail,pid){try{if(!S.user||!(pid||S.cur))return;sb.from("activity_log").insert({project_id:pid||S.cur,user_id:S.user.id,role:ROLES[S.role]||"",action,detail:String(detail||"").slice(0,300)}).then(()=>{},()=>{})}catch(e){}}
+async function openLog(){
+  const {data,error}=await sb.from("activity_log").select("*").eq("project_id",S.cur).order("created_at",{ascending:false}).limit(200);
+  S.log=error?null:(data||[]);modal("log");
+}
+function logHtml(){
+  const L=S.log,AC={project:"المشروع",work:"الأعمال",entry:"السجل"};
+  return `<div class="modal"><div class="box" style="max-height:85vh;overflow:auto"><h3>سجل النشاط</h3>${L===null?`<p class="lbl">لم يُفعَّل سجل النشاط في قاعدة البيانات بعد. شغّل ملف activity-log.sql في Supabase.</p>`:!L.length?`<div class="empty">لا توجد أنشطة مسجلة بعد</div>`:L.map(a=>`<div class="item"><div>${esc(a.detail)}</div><small>${esc(a.role)} · ${AC[a.action]||esc(a.action)} · ${new Date(a.created_at).toLocaleString("ar")}</small></div>`).join("")}<button class="btn" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+
+/* ===== طابور الرفع بدون إنترنت (IndexedDB) ===== */
+const QDB=(()=>{let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open("pm-queue",1);r.onupgradeneeded=()=>r.result.createObjectStore("q",{keyPath:"id"});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(m,f)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction("q",m),r=f(t.objectStore("q"));t.oncomplete=()=>res(r.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})};
+  return{put:v=>tx("readwrite",s=>s.put(v)),all:()=>tx("readonly",s=>s.getAll()),del:id=>tx("readwrite",s=>s.delete(id)),clear:()=>tx("readwrite",s=>s.clear())};
+})();
+async function qAdd(it,noRender){
+  it.id=crypto.randomUUID();it.ts=Date.now();
+  try{await QDB.put(it)}catch(e){alert("تعذر الحفظ على الجهاز: "+(e&&e.message||e));if(!noRender)render();return}
+  await qUpd();
+  alert("لا يوجد اتصال مستقر. حُفظ العنصر على جهازك وسيُرفع تلقائيا عند عودة الإنترنت.");
+  if(!noRender)render();
+}
+async function qUpd(){
+  let n=0;try{n=(await QDB.all()).length}catch(e){}
+  let b=$("qb");
+  if(!n){if(b)b.remove();return}
+  if(!b){b=document.createElement("div");b.id="qb";b.style.cssText="position:fixed;left:12px;right:12px;bottom:12px;z-index:50;background:#102944;color:#fff;border-radius:12px;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;box-shadow:0 8px 24px #0004;font-size:14px";document.body.appendChild(b)}
+  b.innerHTML=`<span>⏳ ${n} عنصر بانتظار الرفع${navigator.onLine?"":" (لا يوجد اتصال)"}</span><span><button class="sm" onclick="syncQ()">رفع الآن</button> <button class="sm" onclick="qClear()">حذف المعلّق</button></span>`;
+}
+async function qClear(){if(!confirm("حذف كل العناصر المعلّقة من الجهاز دون رفعها؟"))return;try{await QDB.clear()}catch(e){}qUpd()}
+async function syncQ(){
+  if(syncQ.b||!navigator.onLine||!S.user)return;syncQ.b=true;let ok=0;
+  try{
+    const L=(await QDB.all()).sort((a,b)=>a.ts-b.ts);
+    for(const it of L){
+      const base={project_id:it.project_id,kind:it.kind,author_role:it.author_role},rows=[],ups=[];let bad=false;
+      if(!it.files.length)rows.push({...base,body:it.body,file_path:null,file_type:null});
+      else for(const f of it.files){const path=await up(it.project_id,f,true);if(!path||path==="NET"){bad=true;break}ups.push(path);rows.push({...base,body:it.body,file_path:path,file_type:f.type,...(it.bax||{})})}
+      if(bad){if(ups.length)await sb.storage.from("media").remove(ups);break}
+      const {error}=await sb.from("entries").insert(rows);
+      if(error){if(ups.length)await sb.storage.from("media").remove(ups);break}
+      await QDB.del(it.id);ok++;
+      logA("entry",`${(TABS.find(x=>x.k===it.kind)||{}).n||""}: ${it.files.length?it.files.length+" ملف":String(it.body||"").slice(0,60)} (رُفع بعد عودة الاتصال)`,it.project_id);
+    }
+  }catch(e){}
+  finally{syncQ.b=false}
+  await qUpd();
+  if(ok){
+    if(S.cur&&S.tab!=="works"){try{await loadE()}catch(e){}}
+    const ae=document.activeElement;if(!S.modal&&!(ae&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName)))render();
+  }
+}
+addEventListener("online",()=>{qUpd();syncQ()});addEventListener("offline",qUpd);
+setInterval(()=>syncQ(),60000);setTimeout(()=>{qUpd();syncQ()},3000);
+
+async function addE(){
+  const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
+  if(!body&&!fs.length)return;
+  const isVid=f=>(f.type&&f.type.startsWith("video/"))||/\.(mp4|mov|m4v|avi|mkv|webm|3gp|wmv)$/i.test(f.name||"");
+  if(fs.some(isVid))return alert("رفع الفيديو غير متاح في الموقع للحفاظ على المساحة. صوّر لقطات من الفيديو، أو ارفعه في OneDrive وألصق رابطه في الملاحظة.");
+  const bigF=fs.find(f=>!(f.type&&f.type.startsWith("image/"))&&f.size>5*1024*1024);
+  if(bigF)return alert("حجم الملف "+(bigF.size/1048576).toFixed(1)+" ميجا والحد المسموح 5 ميجا. ارفعه في OneDrive وألصق رابطه في الملاحظة.");
+  const bat=$("bat")?.value||"";
+  if(bat){
+    if(!fs.length)return alert("ارفع صورة لتحديد قبل / بعد");
+    if(fs.some(f=>!f.type.startsWith("image")))return alert("تحديد قبل / بعد للصور فقط");
+    if(bat==="after"&&!S.baSel)return alert("اختر صورة «قبل» التي تقابلها هذه الصور");
+  }
+  const bax=bat?{ba:bat,ba_ref:bat==="after"?S.baSel:null}:{};
+  $("bt").disabled=true;
+  const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
+  if(!navigator.onLine)return qAdd({...base,body,bax,files:fs});
+  if(!fs.length)rows.push({...base,body,file_path:null,file_type:null});
+  {const res=new Array(fs.length);let nx=0,dn=0;
+  await Promise.all(Array.from({length:Math.min(3,fs.length)},async()=>{
+    while(nx<fs.length){const i=nx++;res[i]=await up(S.cur,fs[i],true);$("bt").textContent=`جاري رفع ${++dn} من ${fs.length}...`}
+  }));
+  const net=[];res.forEach((path,i)=>{if(path==="NET")net.push(fs[i]);else if(path)rows.push({...base,body,file_path:path,file_type:fs[i].type,...bax})});if(net.length)await qAdd({...base,body,bax,files:net},true);}
+  if(!rows.length)return render();
+  const {error}=await sb.from("entries").insert(rows);
+  if(error&&!fs.length&&isNetErr(error)){await qAdd({...base,body,bax,files:[]});return}
+  if(error)alert(error.message.includes("ba")?"لم يتم تفعيل قبل/بعد في قاعدة البيانات بعد. شغّل ملف before-after.sql في Supabase ثم أعد المحاولة.":error.message);
+  if(!error)logA("entry",`${(TABS.find(x=>x.k===S.tab)||{}).n||""}: ${fs.length?fs.length+" ملف":body.slice(0,60)}`);
+  S.baSel=null;
+  await loadE();render();
+}
+async function delE(id){
+  if(!confirm("حذف؟"))return;
+  const e=S.entries.find(x=>x.id===id);
+  logA("entry","حذف من "+((TABS.find(x=>x.k===S.tab)||{}).n||"")+": "+String((e&&e.body)||"").slice(0,40));
+  if(e?.file_path)await sb.storage.from("media").remove([e.file_path]);
+  await sb.from("entries").delete().eq("id",id);await loadE();render();
+}
+
+/* ===== كتالوج وتسعيرات الصيانة ===== */
+async function openPricing(){
+  S.price={loading:true,error:"",catalog:[],quotes:[],query:"",category:"الكل",quote:{id:null,title:"تسعيرة جديدة",branch:"",overhead_pct:10,profit_pct:10,items:[]}};modal("pricing");
+  const [c,q]=await Promise.all([sb.from("price_catalog").select("*").eq("is_active",true).order("category").order("name"),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30)]);
+  S.price.loading=false;if(c.error||q.error){S.price.error=(c.error||q.error).message;render();return}S.price.catalog=c.data||[];S.price.quotes=q.data||[];render();
+}
+function priceFmt(v){return Number(v||0).toLocaleString("ar-SA",{maximumFractionDigits:2})}
+function priceSource(x){const s=String(x.source||"تقدير استرشادي"),a=s.indexOf("https://"),b=s.indexOf("http://"),i=a>=0?a:b;return i<0?esc(s):esc(s.slice(0,i))+`<a href="${esc(s.slice(i).trim())}" target="_blank" rel="noopener">فتح المصدر</a>`}
+function priceQty(x){const L=Number(x.length_m)||0,W=Number(x.width_m)||0,D=Number(x.depth_m)||0;if(L&&x.unit==="م.ط")return L;if(L&&W&&x.unit==="م²")return L*W;if(L&&W&&D&&x.unit==="م³")return L*W*D;return Number(x.quantity)||0}
+function priceSteelQty(x){return x.include_steel?priceQty(x)*(Number(x.steel_kg_per_unit)||0):0}
+function priceCanAnalyze(x){return Number(x.material_cost||0)+Number(x.labor_cost||0)+Number(x.equipment_cost||0)+Number(x.steel_kg_per_unit||0)>0}
+function priceParts(x){const sk=x.include_steel?(Number(x.steel_kg_per_unit)||0):0;return{material:Number(x.material_cost||0)+sk*3.13,labor:Number(x.labor_cost||0)+sk*.55,equipment:Number(x.equipment_cost||0)+sk*.08,steel:priceSteelQty(x)}}
+function priceUnit(x){if(x.custom_unit_price!==null&&x.custom_unit_price!==undefined&&x.custom_unit_price!=="")return Number(x.custom_unit_price)||0;const sk=x.include_steel?(Number(x.steel_kg_per_unit)||0):0;return x.pricing_method==="analysis"&&priceCanAnalyze(x)?(priceParts(x).material+priceParts(x).labor+priceParts(x).equipment)*(1+Number(S.price.quote.overhead_pct||0)/100)*(1+Number(S.price.quote.profit_pct||0)/100):Number(x.market_fair||0)+sk*3.13}
+function priceListHtml(){const p=S.price||{},items=(p.catalog||[]).filter(x=>(p.category==="الكل"||x.category===p.category)&&(!p.query||(x.name+" "+x.spec+" "+x.category).toLowerCase().includes(p.query.toLowerCase())));return items.map(x=>`<button class="prPick" onclick="priceAdd('${esc(x.code)}')"><b>${esc(x.name)}</b><span>${esc(x.unit)} · سعر مرجعي ${priceFmt(Number(x.market_fair)+(x.steel_included_default?Number(x.steel_kg_per_unit)*3.13:0))} ر.س</span><small>${esc(x.spec)}</small></button>`).join("")||'<div class="empty">لا توجد بنود مطابقة</div>'}
+function priceAdd(code){const x=S.price.catalog.find(v=>v.code===code);if(!x)return;S.price.quote.items.push({...x,id:crypto.randomUUID(),quantity:1,length_m:null,width_m:null,depth_m:null,custom_unit_price:null,pricing_method:"market",include_steel:!!x.steel_included_default,steel_kg_per_unit:Number(x.steel_kg_per_unit)||0,note:""});render()}
+function priceEdit(i,k,v){const x=S.price.quote.items[i];if(!x)return;x[k]=["quantity","length_m","width_m","depth_m","custom_unit_price"].includes(k)?(v===""?null:Number(v)):v;if(k==="length_m"||k==="width_m"||k==="depth_m")x.quantity=priceQty(x);render()}
+function priceRemove(i){S.price.quote.items.splice(i,1);render()}
+function priceNew(){S.price.quote={id:null,title:"تسعيرة جديدة",branch:"",overhead_pct:10,profit_pct:10,items:[]};render()}
+async function priceLoadQuote(id){const {data,error}=await sb.from("price_quotes").select("*").eq("id",id).single();if(error)return alert(error.message);const r=await sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at");if(r.error)return alert(r.error.message);S.price.quote={...data,items:(r.data||[]).map(x=>({...x,id:x.id}))};render()}
+async function priceSave(){const q=S.price.quote;if(!q.title.trim())return alert("اكتب اسم التسعيرة");if(!q.items.length)return alert("أضف بنداً واحداً على الأقل");const b=$("priceSave");if(b)b.disabled=true;const head={title:q.title.trim(),branch:q.branch.trim(),overhead_pct:Number(q.overhead_pct)||0,profit_pct:Number(q.profit_pct)||0,updated_at:new Date().toISOString()};let res=q.id?await sb.from("price_quotes").update(head).eq("id",q.id).select().single():await sb.from("price_quotes").insert(head).select().single();if(res.error){if(b)b.disabled=false;return alert(res.error.message)}q.id=res.data.id;const removed=await sb.from("price_quote_items").delete().eq("quote_id",q.id);if(removed.error){if(b)b.disabled=false;return alert(removed.error.message)}const rows=q.items.map(x=>({quote_id:q.id,code:x.code,category:x.category,name:x.name,spec:x.spec||"",unit:x.unit,quantity:priceQty(x),length_m:x.length_m,width_m:x.width_m,depth_m:x.depth_m,material_cost:Number(x.material_cost)||0,labor_cost:Number(x.labor_cost)||0,equipment_cost:Number(x.equipment_cost)||0,market_low:Number(x.market_low)||0,market_fair:Number(x.market_fair)||0,market_high:Number(x.market_high)||0,source:x.source||"",checked_at:x.checked_at||null,steel_kg_per_unit:Number(x.steel_kg_per_unit)||0,include_steel:!!x.include_steel,pricing_method:x.pricing_method,custom_unit_price:x.custom_unit_price==null||x.custom_unit_price===""?null:Number(x.custom_unit_price),note:x.note||""}));const saved=await sb.from("price_quote_items").insert(rows);if(saved.error){if(b)b.disabled=false;return alert(saved.error.message)}alert("حُفظت التسعيرة");const l=await sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30);S.price.quotes=l.data||[];render()}
+async function priceDelete(){const q=S.price.quote;if(!q.id||!confirm("حذف التسعيرة نهائياً؟"))return;const {error}=await sb.from("price_quotes").delete().eq("id",q.id);if(error)return alert(error.message);S.price.quotes=S.price.quotes.filter(x=>x.id!==q.id);priceNew()}
+async function priceAddCustom(){const name=$("pcname").value.trim(),category=$("pccat").value.trim()||"بنود مخصصة",unit=$("pcunit").value.trim()||"حبة";if(!name)return alert("اكتب اسم البند");const mat=Number($("pcmat").value)||0,lab=Number($("pclab").value)||0,eq=Number($("pceqp").value)||0,fair=Number($("pcfair").value)||(mat+lab+eq)*1.21;const code="USR-"+Date.now();const {data,error}=await sb.from("price_catalog").insert({code,category,name,spec:"بند أضافه المستخدم",unit,material_cost:mat,labor_cost:lab,equipment_cost:eq,market_low:fair*.85,market_fair:fair,market_high:fair*1.2,source:"سعر مضاف/معدل بواسطة المستخدم",checked_at:new Date().toISOString().slice(0,10)}).select().single();if(error)return alert(error.message);S.price.catalog.push(data);priceAdd(code)}
+function priceLineHtml(x,i){const q=priceQty(x),unit=priceUnit(x),total=q*unit,parts=priceParts(x),direct=q*(parts.material+parts.labor+parts.equipment),steel=priceSteelQty(x),steelOption=Number(x.steel_kg_per_unit)>0?`<label class="prSteel"><input type="checkbox" ${x.include_steel?"checked":""} onchange="priceEdit(${i},'include_steel',this.checked)"> إضافة الحديد (${priceFmt(Number(x.steel_kg_per_unit))} كجم لكل ${esc(x.unit)}) · كمية محسوبة ${priceFmt(steel)} كجم</label>`:"";return `<div class="prLine"><div class="prLineHead"><b>${i+1}. ${esc(x.name)}</b><button class="sm del" onclick="priceRemove(${i})">حذف</button></div><small>${esc(x.spec)} · الوحدة ${esc(x.unit)} · المرجع: ${priceSource(x)}${x.checked_at?" · تحديث "+esc(x.checked_at):""}</small><div class="prDims"><label>الكمية<input type="number" min="0" step="any" value="${q}" onchange="priceEdit(${i},'quantity',this.value)"></label><label>الطول م<input type="number" min="0" step="any" value="${x.length_m??""}" onchange="priceEdit(${i},'length_m',this.value)"></label>${["م²","م³"].includes(x.unit)?`<label>العرض م<input type="number" min="0" step="any" value="${x.width_m??""}" onchange="priceEdit(${i},'width_m',this.value)"></label>`:""}${x.unit==="م³"?`<label>العمق/السماكة م<input type="number" min="0" step="any" value="${x.depth_m??""}" onchange="priceEdit(${i},'depth_m',this.value)"></label>`:""}</div>${steelOption}${priceCanAnalyze(x)?"":"<small>السعر مرجعي؛ لا يتوفر تفصيل موارد منشور لهذا البند.</small>"}<div class="prDims"><label>طريقة التسعير<select onchange="priceEdit(${i},'pricing_method',this.value)"><option value="market" ${x.pricing_method==="market"?"selected":""}>السعر المرجعي في الكتالوج</option><option value="analysis" ${x.pricing_method==="analysis"&&priceCanAnalyze(x)?"selected":""} ${priceCanAnalyze(x)?"":"disabled"}>تحليل موارد + مصاريف وربح${priceCanAnalyze(x)?"":" (غير منشور لهذا البند)"}</option></select></label><label>سعر الوحدة المعدل (اختياري)<input type="number" min="0" step="any" placeholder="${priceFmt(unit)}" value="${x.custom_unit_price??""}" onchange="priceEdit(${i},'custom_unit_price',this.value)"></label></div><div class="prBreak"><span>مواد ${priceFmt(q*parts.material)}</span><span>عمالة ${priceFmt(q*parts.labor)}</span><span>معدات ${priceFmt(q*parts.equipment)}</span><span>السوق ${priceFmt((Number(x.market_low)||0)+(x.include_steel?Number(x.steel_kg_per_unit)*3.13:0))}–${priceFmt((Number(x.market_high)||0)+(x.include_steel?Number(x.steel_kg_per_unit)*3.13:0))}</span><b>تكلفة مباشرة ${priceFmt(direct)} · سعر الوحدة ${priceFmt(unit)} · الإجمالي ${priceFmt(total)} ر.س</b></div><input placeholder="ملاحظات/مقاسات/موقع البند" value="${esc(x.note||"")}" onchange="priceEdit(${i},'note',this.value)"></div>`}
+function pricingHtml(){const p=S.price||{};if(p.loading)return '<div class="modal"><div class="box"><h3>التسعير</h3><p class="note">جاري تحميل البنود...</p></div></div>';if(p.error)return `<div class="modal"><div class="box"><h3>التسعير</h3><div class="hlq">يلزم تشغيل ملف <b>pricing.sql</b> في SQL Editor داخل Supabase.<br><small dir="ltr">${esc(p.error)}</small></div><button class="btn" onclick="openPricing()">إعادة المحاولة</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;const q=p.quote,cats=["الكل",...new Set(p.catalog.map(x=>x.category))],subtotal=q.items.reduce((n,x)=>n+priceQty(x)*priceUnit(x),0),direct=q.items.reduce((n,x)=>n+priceQty(x)*(priceParts(x).material+priceParts(x).labor+priceParts(x).equipment),0);return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>تسعير صيانة المبنى والخدمات</h3><div><button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><details class="prSaved"><summary>التسعيرات المحفوظة (${p.quotes.length})</summary>${p.quotes.map(x=>`<button class="prPick" onclick="priceLoadQuote('${x.id}')"><b>${esc(x.title)}</b><span>${esc(x.branch||"بدون فرع")}</span></button>`).join("")||'<small>لا توجد تسعيرات محفوظة</small>'}</details><div class="prMeta"><label>اسم التسعيرة<input value="${esc(q.title)}" onchange="S.price.quote.title=this.value"></label><label>الفرع<input value="${esc(q.branch||"")}" placeholder="اسم/رقم الفرع" onchange="S.price.quote.branch=this.value"></label><label>مصاريف عامة %<input type="number" min="0" value="${q.overhead_pct}" onchange="S.price.quote.overhead_pct=this.value"></label><label>ربح المقاول %<input type="number" min="0" value="${q.profit_pct}" onchange="S.price.quote.profit_pct=this.value"></label></div><div class="prGrid"><section><h4>كتالوج البنود (${p.catalog.length})</h4><input placeholder="ابحث باسم البند أو المواصفة" value="${esc(p.query)}" oninput="S.price.query=this.value;document.getElementById('priceList').innerHTML=priceListHtml()"><select onchange="S.price.category=this.value;document.getElementById('priceList').innerHTML=priceListHtml()">${cats.map(c=>`<option ${c===p.category?"selected":""}>${esc(c)}</option>`).join("")}</select><div id="priceList" class="priceList">${priceListHtml()}</div><details class="prCustom"><summary>＋ إضافة بند جديد</summary><input id="pccat" placeholder="القسم"><input id="pcname" placeholder="اسم البند ومواصفته"><input id="pcunit" placeholder="الوحدة: م²، م³، م.ط، حبة"><div class="prDims"><input id="pcmat" type="number" placeholder="مواد/وحدة"><input id="pclab" type="number" placeholder="عمالة/وحدة"><input id="pceqp" type="number" placeholder="معدات/وحدة"><input id="pcfair" type="number" placeholder="سعر المقاول العادل"></div><button class="btn" onclick="priceAddCustom()">إضافة للكتالوج والتسعيرة</button></details></section><section class="pricePrint"><h3>عنوان القهوة | تسعيرة صيانة</h3><p>التسعيرة: <b>${esc(q.title)}</b> · الفرع: <b>${esc(q.branch||"—")}</b> · التاريخ: ${new Date().toLocaleDateString("ar-SA")}</p><h4>بنود التسعيرة (${q.items.length})</h4>${q.items.map(priceLineHtml).join("")||'<div class="empty">اختر البنود من الكتالوج لإضافتها</div>'}<div class="prTotals"><div>إجمالي السعر حسب الطريقة المختارة <b>${priceFmt(subtotal)} ر.س</b></div><div>إجمالي تكلفة الموارد المتاحة للتحليل <b>${priceFmt(direct)} ر.س</b></div><small>المجموع قبل إضافة الضريبة. حالة الضريبة غير مذكورة لبعض المراجع؛ وتكلفة الموارد لا تظهر إلا للبنود ذات تفصيل مواد/عمالة/معدات. راجع الاستثناءات واطلب عرضًا مكتوبًا قبل التنفيذ.</small></div><div class="prActions"><button class="btn" id="priceSave" onclick="priceSave()">حفظ التسعيرة</button>${q.id?`<button class="btn danger" onclick="priceDelete()">حذف التسعيرة</button>`:""}</div></section></div><small class="prFoot">الأسعار مرجعية وليست عرضًا ملزمًا؛ وقد لا تشمل الضريبة أو كل ظروف الموقع. لا يعتمد بند الحفر/الخرسانة/العزل قبل تثبيت النطاق والكميات والمناسيب. لا يشمل معدات القهوة التشغيلية. تحليل الموارد = مواد + عمالة + معدات، ثم المصاريف العامة والربح. المساحات = طول × عرض، والحجوم = طول × عرض × عمق. مصادر: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الهيئة العامة للإحصاء</a> · <a href="https://prices.qsmind.app/en/saudi/works" target="_blank" rel="noopener">مرجع أسعار تنفيذ الرياض</a>.</small></div></div>`}
+/* ===== 7) النوافذ ===== */
+function modal(m){S.modal=m;S.link="";S.cred=null;render()}
+function projForm(p){
+  const edit=S.modal==="edit";
+  return `<div class="modal"><div class="box"><h3>${edit?"تعديل المشروع":"مشروع جديد"}</h3>
+  <input id="mn" placeholder="اسم المشروع" value="${esc(p.name)}"><input id="ml" placeholder="الموقع / المدينة" value="${esc(p.loc)}">
+  <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}"><input id="msp" dir="ltr" inputmode="tel" placeholder="جوال مدير الموقع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.site_phone)}">
+  <input id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
+  <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
+  <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
+  <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
+  <input id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
+  <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${(!p.ptype||p.ptype==="new")?"selected":""}>إنشاء بالموقع</option><option value="kiosk" ${p.ptype==="kiosk"?"selected":""}>كشك جاهز من المصنع</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
+  <select id="ms">${stOpts(p.status)}</select>
+  <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
+  <label class="lbl">تاريخ البداية</label><input id="mb" type="date" value="${esc(p.start_date)}" onchange="calcDue()">
+  <label class="lbl">مدة المشروع (بالأيام)</label><input id="mdays" type="number" min="1" placeholder="مثال: 120" value="${daysBetween(p.start_date,p.due)}" oninput="calcDue()">
+  <label class="lbl">تاريخ التسليم (يُحسب تلقائياً من المدة، ويمكن تعديله)</label><input id="md" type="date" value="${esc(p.due)}" onchange="calcDays()">
+  <label class="lbl">السعر</label><input id="mpr" type="number" min="0" step="any" placeholder="السعر" value="${esc(p.price)}">
+  <label class="lbl">${edit?"تغيير صورة الغلاف":"صورة الغلاف"}</label><input id="mc" type="file" accept="image/*">
+  <button class="btn" id="mbtn" onclick="saveProj()">حفظ</button> <button class="btn alt" onclick="modal(null)">إلغاء</button>
+  ${edit&&(S.role==="owner"||S.role==="pm")?'<button class="btn danger" onclick="delProj()">حذف المشروع</button>':""}</div></div>`;
+}
+function modalHtml(){
+  const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
+  if(m==="pricing")return pricingHtml();
+  if(m==="welcome")return welcomeHtml();
+  if(m==="report")return reportHtml();
+  if(m==="log")return logHtml();
+  if(m==="users")return usersHtml();
+  if(m==="orph")return orphHtml();
+  if(m==="mtk")return mTicketHtml();
+  if(m==="msite")return mSiteWelcomeHtml();
+  if(m==="mnew")return mNewHtml();
+  if(m==="new")return projForm({status:"plan",progress:0,ptype:"new"});
+  if(m==="edit")return projForm(p);
+  if(S.cred)return `<div class="modal"><div class="box"><h3>تم إنشاء الحساب ✅</h3>
+  <p class="lbl">احفظ البيانات الآن وأرسلها للمستخدم، كلمة المرور لا تظهر مرة ثانية.</p>
+  <div class="link">${esc(S.cred)}</div>
+  <button class="btn" onclick="copyCred(this)">نسخ البيانات</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+  const K={invc:["contr","إنشاء حساب مقاول للمشروع: "+(p?.name||""),"المقاول يرى هذا المشروع فقط: يرفع التقارير والمعوقات والصور ويناقشك، ولا يرى ملاحظات الإدارة."],
+    invm:["mgmt","إنشاء حساب الإدارة","الإدارة تشاهد كل المشاريع والتقارير والمعوقات والملاحظات، ولا ترى مناقشاتك مع المقاول، ولا تعدّل شيئاً."],
+    invs:["site","إنشاء حساب مدير موقع","مدير الموقع يدخل المشاريع التي تسنده إليها فقط: يرفع التقارير والمعوقات والصور ويناقش، ولا يرى ملاحظات الإدارة ولا السعر."],
+    invp:["pm","إنشاء حساب مدير مشروع","مدير مشروع (بدون «ال») ينشئ مشاريعه ويديرها بصلاحياتك ويدعو مقاوليه، ولا يرى مشاريع غيره، ولا يحذف الملاحظات أو المناقشات أو التقارير."]};
+  const [role,title,desc]=K[m];
+  const nm=role==="mgmt"?"admin":(role==="pm"?"pm":role==="site"?"site":"contr")+Math.floor(1000+Math.random()*9000);
+  return `<div class="modal"><div class="box"><h3>${esc(title)}</h3><p class="lbl">${desc}</p>
+  ${role==="site"?'<label class="lbl">الاسم الظاهر (يظهر في المشروع)</label><input id="an" placeholder="مثال: م. أحمد">':""}<label class="lbl">اسم المستخدم (أحرف إنجليزية وأرقام)</label><input id="au" dir="ltr" autocapitalize="none" value="${nm}">
+  <label class="lbl">كلمة المرور (6 أحرف فأكثر)</label><input id="ap" dir="ltr" value="${rndPass()}">
+  <button class="btn" id="ab" onclick="mkAccount('${role}')">إنشاء الحساب</button> <button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+function calcDue(){
+  const s=$("mb").value,n=parseInt($("mdays").value);
+  if(!s||!n||n<1)return;
+  const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);$("md").value=fmt(d);
+}
+function calcDays(){$("mdays").value=daysBetween($("mb").value,$("md").value)}
+/* عرض الصورة كاملة */
+function openImg(u){
+  const d=document.createElement("div");d.className="lb";d.id="lb";d.onclick=closeImg;
+  const i=document.createElement("img");i.src=u;
+  const x=document.createElement("button");x.className="lbx";x.textContent="✕";
+  d.append(i,x);document.body.appendChild(d);
+}
+function closeImg(){$("lb")?.remove()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeImg()});
+const rndPass=()=>[...crypto.getRandomValues(new Uint8Array(8))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
+async function mkAccount(role){
+  const user=$("au").value.trim().toLowerCase().replace(/[^a-z0-9._-]/g,""),pass=$("ap").value;
+  if(user.length<3)return alert("اسم المستخدم 3 أحرف أو أرقام إنجليزية على الأقل");
+  if(pass.length<6)return alert("كلمة المرور 6 أحرف على الأقل");
+  $("ab").disabled=true;$("ab").textContent="جاري الإنشاء...";
+  const fail=m=>{alert(m);$("ab").disabled=false;$("ab").textContent="إنشاء الحساب"};
+  const {data,error}=await sb2.auth.signUp({email:user+"@"+UD,password:pass});
+  if(error)return fail(/already|registered/i.test(error.message)?"اسم المستخدم مستخدم، اختر غيره":error.message);
+  const {error:e2}=role==="site"?await sb.rpc("create_site",{uid:data.user.id,nm:($("an")?.value.trim())||user,un:user}):await sb.rpc("create_member",{uid:data.user.id,new_role:role,pid:role==="contr"?S.cur:null});
+  sb2.auth.signOut().catch(()=>{});
+  if(e2)return fail(e2.message);
+  S.cred=`الموقع: ${location.origin+location.pathname}\nاسم المستخدم: ${user}\nكلمة المرور: ${pass}`;render();
+}
+function copyCred(b){navigator.clipboard.writeText(S.cred);b.textContent="تم النسخ"}
+
+/* ===== رسالة ترحيب الإدارة: المعوقات والملاحظات والمشاريع ===== */
+const isMg=()=>["owner","mgmt"].includes(S.role),canRes=()=>["owner","pm","contr","site"].includes(S.role);
+const obsBar=e=>e.resolved
+  ?`<b style="color:var(--done)">● تم الحل</b>${canRes()?` <button class="sm" onclick="resolveE('${e.id}',false)">إعادة فتح</button>`:""}`
+  :`<b style="color:var(--late)">● قيد الحل</b>${canRes()?` <button class="sm" onclick="resolveE('${e.id}',true)">تم الحل</button>`:""}`;
+async function setRes(id,v){const {error}=await sb.from("entries").update({resolved:v,resolved_at:v?new Date().toISOString():null}).eq("id",id);if(error)alert(error.message)}
+async function resolveE(id,v){await setRes(id,v);await loadE();if(isMg())await loadWelcome();render()}
+async function resolveW(id){await setRes(id,true);await loadWelcome();render()}
+async function loadWelcome(){
+  const {data}=await sb.from("entries").select("*").eq("kind","issues").eq("resolved",false).order("created_at",{ascending:false});
+  S.wl={obs:data||[],notes:[]};
+}
+async function openWelcome(){await loadWelcome();modal("welcome")}
+async function goP(id,tab){S.modal=null;S.cur=id;S.view=null;S.tab=tab||defTab(id);S.entries=[];render();scrollTo(0,0);await Promise.allSettled([loadE(),loadPS()]);if(S.cur===id)render()}
+const pn=id=>S.projects.find(p=>p.id===id)?.name||"-";
+function welcomeHtml(){
+  const o=S.wl.obs;
+  return `<div class="modal"><div class="box"><h3>مرحباً بك 👋</h3>
+  <b>المعوقات المفتوحة (${o.length})</b>
+  ${o.map(e=>`<div class="item" style="cursor:pointer" onclick="goP('${e.project_id}','issues')"><b>${esc(pn(e.project_id))}</b><div>${esc(e.body)}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>${canRes()?`<button class="sm" onclick="event.stopPropagation();resolveW('${e.id}')">تم الحل</button>`:""}</div>`).join("")||'<div class="empty">لا توجد معوقات 🎉</div>'}
+  <button class="btn alt" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+
+/* ===== مدراء الموقع: إسناد المشاريع ===== */
+async function loadPS(){
+  S.sites=[];S.ps=[];S.siteErr="";
+  if(!["owner","pm"].includes(S.role)||!S.cur)return;
+  try{
+    let sites=[];
+    // 1) site_managers view
+    try{
+      const {data,error}=await sb.from("site_managers").select("*").order("created_at");
+      if(!error && data && data.length) sites=data;
+      else if(error) S.siteErr=error.message;
+    }catch(e){ S.siteErr=String(e&&e.message||e); }
+    // 2) fallback: profiles where role=site
+    if(!sites.length){
+      try{
+        const {data,error}=await sb.from("profiles").select("*").eq("role","site").order("created_at");
+        if(!error && data && data.length){
+          sites=data.map(p=>({user_id:p.id, id:p.id, name:p.name||p.username||"مدير موقع", username:p.username||"", created_at:p.created_at||""}));
+        }
+      }catch(e){}
+    }
+    // 3) fallback: RPC list_users
+    if(!sites.length){
+      try{
+        const {data,error}=await sb.rpc("list_users");
+        if(!error && data){
+          const filtered=data.filter(u=>u.role==="site");
+          if(filtered.length){
+            sites=filtered.map(u=>({user_id:u.id, id:u.id, name:u.username||u.name||"مدير موقع", username:u.username||"", created_at:u.created_at||""}));
+          }
+        }
+      }catch(e){}
+    }
+    S.sites=sites||[];
+    const {data:psData, error:psErr}=await sb.from("project_sites").select("user_id").eq("project_id",S.cur);
+    if(psErr) S.siteErr=(S.siteErr?S.siteErr+" | ":"")+psErr.message;
+    S.ps=(psData||[]).map(x=>x.user_id);
+  }catch(e){
+    S.siteErr=String(e.message||e);
+    S.sites=[];S.ps=[];
+  }
+}
+function siteBox(){
+  const mine=S.sites.filter(x=>S.ps.includes(x.user_id)),rest=S.sites.filter(x=>!S.ps.includes(x.user_id));
+  const err = S.siteErr ? `<div class="lbl" style="color:#dc2626;margin-top:6px">تنبيه: ${esc(S.siteErr)}</div>` : "";
+  return `<div class="box" style="margin-top:14px"><b>مدراء الموقع في هذا المشروع</b>
+  ${mine.map(x=>`<div class="item"><b>${esc(x.name)}</b> <span dir="ltr">(${esc(x.username)})</span> <button class="sm del" onclick="rmPS('${x.user_id}')">إزالة</button></div>`).join("")||'<div class="empty">لم يُسند مدير موقع</div>'}
+  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:'<p class="lbl">أنشئ حساب مدير موقع من زر «مدير موقع» أعلى الصفحة</p>'}${err}</div>`;
+}
+async function syncSM(){
+  const names=S.sites.filter(x=>S.ps.includes(x.user_id)).map(x=>x.name);
+  const v=names.length?names.join("، "):null;
+  try{ await sb.from("projects").update({site_manager:v}).eq("id",S.cur); }catch(e){}
+  const p=S.projects.find(x=>x.id===S.cur);if(p)p.site_manager=v;
+}
+async function addPS(){const u=$("pss").value;if(!u)return;const {error}=await sb.from("project_sites").insert({project_id:S.cur,user_id:u});if(error)return alert(error.message);await loadPS();await syncSM();render()}
+async function rmPS(u){await sb.from("project_sites").delete().eq("project_id",S.cur).eq("user_id",u);await loadPS();await syncSM();render()}
+
+/* ===== إدارة الحسابات وحذفها (المالك فقط) ===== */
+async function openUsers(){const {data,error}=await sb.rpc("list_users");if(error)return alert(error.message);S.users=data||[];modal("users")}
+function usersHtml(){
+  const L=S.users||[];
+  return `<div class="modal"><div class="box"><h3>الحسابات (${L.length})</h3>
+  <div class="acts"><button class="btn" onclick="modal('invp')">＋ مدير مشروع</button><button class="btn" onclick="modal('invm')">＋ الإدارة</button><button class="btn" onclick="modal('invs')">＋ مدير موقع</button></div>
+  ${L.map(u=>`<div class="item"><b dir="ltr">${esc(u.username)}</b> · ${ROLES[u.role]||"بدون دور"}${u.role==="owner"?"":` <button class="sm del" onclick="delUser('${u.id}')">حذف</button>`}</div>`).join("")}
+  <button class="btn alt" style="margin-top:14px" onclick="modal(null)">إغلاق</button></div></div>`;
+}
+async function delUser(id){
+  const u=(S.users||[]).find(x=>x.id===id);
+  if(!confirm("حذف الحساب «"+(u?.username||"")+"» نهائياً؟"))return;
+  const {error}=await sb.rpc("delete_user",{uid:id});
+  if(error)return alert(error.message);
+  await openUsers();
+}
+
+const tel=(l,n)=>n?`<div><span>${l}</span><b dir="ltr"><a href="tel:+${esc(n)}">${esc(n)}</a></b></div>`:"";
+/* ===== 8) تثبيت التطبيق على الجوال ===== */
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+let DP=null;
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+function installBar(msg,btn=""){
+  if(standalone||$("ib"))return;
+  try{if(localStorage.getItem("ib0"))return}catch(e){}
+  const d=document.createElement("div");d.id="ib";
+  d.style.cssText="position:fixed;bottom:12px;left:12px;right:12px;z-index:50;background:#0f2742;color:#fff;padding:12px 14px;border-radius:14px;display:flex;gap:10px;align-items:center;font-size:14px;box-shadow:0 6px 20px #0006";
+  d.innerHTML=`<span style="flex:1">${msg}</span>${btn}<button onclick="closeIb()" style="background:none;border:0;color:#fff;font-size:20px;cursor:pointer">✕</button>`;
+  document.body.appendChild(d);
+}
+function closeIb(){$("ib")?.remove();try{localStorage.setItem("ib0","1")}catch(e){}}
+addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault();DP=e;
+  installBar("ثبّت التطبيق على جوالك","<button class='btn' onclick='DP.prompt();closeIb()'>تثبيت</button>");
+});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent))
+  installBar("للتثبيت: اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية»");
+
+init();
+</script>
+
+<script src="i18n.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
