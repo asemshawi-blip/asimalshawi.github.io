@@ -136,7 +136,7 @@ const TABS=[
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
 {k:"media",n:"الصور",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*",multi:1}];
-let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],q:""};
+let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],siteErr:"",q:""};
 
 /* ===== 2) مساعدات ===== */
 const $=id=>document.getElementById(id);
@@ -189,8 +189,9 @@ async function boot(){
   if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
-  await load();
-  if(mSee())await loadM().catch(e=>{MT.err=String(e&&e.message||e)});
+  const loads=[load()];
+  if(mSee())loads.push(loadM().catch(e=>{MT.err=String(e&&e.message||e)}));
+  await Promise.all(loads);
   render();
   const dl=await deepLink();
   if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
@@ -202,14 +203,16 @@ async function load(){
   const {data,error}=await sb.from("projects").select("*").order("created_at",{ascending:false});
   if(error)alert("تعذر تحميل المشاريع: "+error.message);
   S.projects=(data||[]).filter(p=>p.ptype!=="maint").map(p=>({...p,status:ST[p.status]?p.status:"run"}));   // حالة "متأخر" القديمة تتحول لقيد التنفيذ
+  render();
   await sign(S.projects.map(p=>p.cover_path));
   render();
 }
 async function sign(paths){
   const need=[...new Set(paths.filter(x=>x&&!S.urls[x]))];
   if(!need.length)return;
-  const {data}=await sb.storage.from("media").createSignedUrls(need,7200);
-  (data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl});
+  const batches=Array.from({length:Math.ceil(need.length/100)},(_,i)=>need.slice(i*100,(i+1)*100));
+  const results=await Promise.all(batches.map(batch=>sb.storage.from("media").createSignedUrls(batch,7200)));
+  results.forEach(({data})=>(data||[]).forEach(d=>{if(d.signedUrl)S.urls[d.path]=d.signedUrl}));
 }
 async function shrink(f){
   if(!f.type||!f.type.startsWith("image/")||/gif|svg/.test(f.type)||f.size<120*1024)return f;
@@ -405,7 +408,7 @@ async function setTab(k){S.tab=k;await loadE();render()}
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
   const t=e.file_type||"";
-  if(t.startsWith("image"))return `<img src="${u}" onclick="openImg(this.src)">`;
+  if(t.startsWith("image"))return `<img src="${u}" loading="lazy" decoding="async" onclick="openImg(this.src)">`;
   if(t.startsWith("video"))return `<video src="${u}" controls preload="none"></video>`;
   return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
 }
@@ -1131,14 +1134,12 @@ async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnc
 async function loadM(){
   if(!mSee())return;
   if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
-  const {data:a,error:ae}=await sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000);
-  const {data:b,error:be}=await sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000);
-  if(ae||be){MT.err=(ae||be).message;MT.t=[];MT.e=[];return}
-  MT.err="";MT.t=a||[];MT.e=(b||[]).reverse();MT.q={};
-  const {data:quotes}=await sb.from("mnt_quotes").select("*").limit(1000);
-  (quotes||[]).forEach(q=>MT.q[q.ticket_id]=q);
+  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("id,ticket_id,kind,phase,body,file_path,file_type,author_role,created_at").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
+  if(a.error||b.error||quotes.error){MT.err=(a.error||b.error||quotes.error).message;MT.t=[];MT.e=[];return}
+  MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
+  (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
   if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
-  await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));   /* صورة الغلاف فقط، وباقي الصور تُحمّل عند فتح الطلب */
+  await sign(MT.t.filter(mShow).map(mCover).filter(Boolean));
 }
 function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
 async function mEvent(t,kind,body,phase,file){
@@ -1720,6 +1721,7 @@ async function mkAccount(role){
   const {error:e2}=role==="site"?await sb.rpc("create_site",{uid:data.user.id,nm:($("an")?.value.trim())||user,un:user}):await sb.rpc("create_member",{uid:data.user.id,new_role:role,pid:role==="contr"?S.cur:null});
   sb2.auth.signOut().catch(()=>{});
   if(e2)return fail(e2.message);
+  if(role==="site"&&S.cur)await loadPS();
   S.cred=`الموقع: ${location.origin+location.pathname}\nاسم المستخدم: ${user}\nكلمة المرور: ${pass}`;render();
 }
 function copyCred(b){navigator.clipboard.writeText(S.cred);b.textContent="تم النسخ"}
@@ -1749,16 +1751,19 @@ function welcomeHtml(){
 
 /* ===== مدراء الموقع: إسناد المشاريع ===== */
 async function loadPS(){
-  S.sites=[];S.ps=[];
+  S.sites=[];S.ps=[];S.siteErr="";
   if(!["owner","pm"].includes(S.role)||!S.cur)return;
-  const [a,b]=await Promise.all([sb.from("site_managers").select("*").order("created_at"),sb.from("project_sites").select("user_id").eq("project_id",S.cur)]);
+  const [a,b]=await Promise.all([sb.from("site_managers").select("user_id,name,username"),sb.from("project_sites").select("user_id").eq("project_id",S.cur)]);
+  if(a.error||b.error){S.siteErr=(a.error||b.error).message;return}
   S.sites=a.data||[];S.ps=(b.data||[]).map(x=>x.user_id);
 }
 function siteBox(){
+  if(S.siteErr)return `<div class="box" style="margin-top:14px"><b>تعذر تحميل قائمة مدراء الموقع</b><div class="hlq">${esc(S.siteErr)}</div><button class="btn alt" onclick="loadPS().then(render)">إعادة المحاولة</button></div>`;
   const mine=S.sites.filter(x=>S.ps.includes(x.user_id)),rest=S.sites.filter(x=>!S.ps.includes(x.user_id));
+  const empty=S.sites.length?'<p class="lbl">جميع مدراء الموقع المسجلين مسندون لهذا المشروع</p>':`<p class="lbl">لا توجد حسابات مدراء موقع مسجلة بعد.</p>${S.role==="owner"?'<button class="btn" onclick="modal(\'invs\')">＋ إنشاء حساب مدير موقع</button>':'<p class="lbl">اطلب من مالك النظام إنشاء حساب مدير موقع أولاً.</p>'}`;
   return `<div class="box" style="margin-top:14px"><b>مدراء الموقع في هذا المشروع</b>
   ${mine.map(x=>`<div class="item"><b>${esc(x.name)}</b> <span dir="ltr">(${esc(x.username)})</span> <button class="sm del" onclick="rmPS('${x.user_id}')">إزالة</button></div>`).join("")||'<div class="empty">لم يُسند مدير موقع</div>'}
-  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:'<p class="lbl">أنشئ حساب مدير موقع من زر «مدير موقع» أعلى الصفحة</p>'}</div>`;
+  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:empty}</div>`;
 }
 async function syncSM(){
   const names=S.sites.filter(x=>S.ps.includes(x.user_id)).map(x=>x.name);if(!names.length)return;
