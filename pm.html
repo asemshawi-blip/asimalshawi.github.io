@@ -400,6 +400,14 @@ function filterProjects(value){
   S.q=value.trim().toLocaleLowerCase();
   document.querySelectorAll(".col").forEach(col=>{let count=0;col.querySelectorAll(".card[data-search]").forEach(c=>{const show=c.dataset.search.includes(S.q);c.style.display=show?"":"none";if(show)count++});const empty=col.querySelector(".empty");if(empty){empty.style.display=count?"none":"block";empty.textContent=S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}});
 }
+function defTab(id){
+  try{
+    const vis = TABS.filter(t=>t.see.includes(S.role));
+    if(vis.some(t=>t.k==="works")) return "works";
+    if(vis.length) return vis[0].k;
+  }catch(e){}
+  return "works";
+}
 async function openP(id){
   S.cur=id;S.view=null;S.tab=defTab(id);S.entries=[];
   render();scrollTo(0,0);
@@ -1752,20 +1760,57 @@ function welcomeHtml(){
 
 /* ===== مدراء الموقع: إسناد المشاريع ===== */
 async function loadPS(){
-  S.sites=[];S.ps=[];
+  S.sites=[];S.ps=[];S.siteErr="";
   if(!["owner","pm"].includes(S.role)||!S.cur)return;
-  const [a,b]=await Promise.all([sb.from("site_managers").select("*").order("created_at"),sb.from("project_sites").select("user_id").eq("project_id",S.cur)]);
-  S.sites=a.data||[];S.ps=(b.data||[]).map(x=>x.user_id);
+  try{
+    let sites=[];
+    // 1) site_managers view
+    try{
+      const {data,error}=await sb.from("site_managers").select("*").order("created_at");
+      if(!error && data && data.length) sites=data;
+      else if(error) S.siteErr=error.message;
+    }catch(e){ S.siteErr=String(e&&e.message||e); }
+    // 2) fallback: profiles where role=site
+    if(!sites.length){
+      try{
+        const {data,error}=await sb.from("profiles").select("*").eq("role","site").order("created_at");
+        if(!error && data && data.length){
+          sites=data.map(p=>({user_id:p.id, id:p.id, name:p.name||p.username||"مدير موقع", username:p.username||"", created_at:p.created_at||""}));
+        }
+      }catch(e){}
+    }
+    // 3) fallback: RPC list_users
+    if(!sites.length){
+      try{
+        const {data,error}=await sb.rpc("list_users");
+        if(!error && data){
+          const filtered=data.filter(u=>u.role==="site");
+          if(filtered.length){
+            sites=filtered.map(u=>({user_id:u.id, id:u.id, name:u.username||u.name||"مدير موقع", username:u.username||"", created_at:u.created_at||""}));
+          }
+        }
+      }catch(e){}
+    }
+    S.sites=sites||[];
+    const {data:psData, error:psErr}=await sb.from("project_sites").select("user_id").eq("project_id",S.cur);
+    if(psErr) S.siteErr=(S.siteErr?S.siteErr+" | ":"")+psErr.message;
+    S.ps=(psData||[]).map(x=>x.user_id);
+  }catch(e){
+    S.siteErr=String(e.message||e);
+    S.sites=[];S.ps=[];
+  }
 }
 function siteBox(){
   const mine=S.sites.filter(x=>S.ps.includes(x.user_id)),rest=S.sites.filter(x=>!S.ps.includes(x.user_id));
+  const err = S.siteErr ? `<div class="lbl" style="color:#dc2626;margin-top:6px">تنبيه: ${esc(S.siteErr)}</div>` : "";
   return `<div class="box" style="margin-top:14px"><b>مدراء الموقع في هذا المشروع</b>
   ${mine.map(x=>`<div class="item"><b>${esc(x.name)}</b> <span dir="ltr">(${esc(x.username)})</span> <button class="sm del" onclick="rmPS('${x.user_id}')">إزالة</button></div>`).join("")||'<div class="empty">لم يُسند مدير موقع</div>'}
-  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:'<p class="lbl">أنشئ حساب مدير موقع من زر «مدير موقع» أعلى الصفحة</p>'}</div>`;
+  ${rest.length?`<select id="pss"><option value="">— اختر مدير موقع —</option>${rest.map(x=>`<option value="${x.user_id}">${esc(x.name)}</option>`).join("")}</select><button class="btn" onclick="addPS()">إسناد للمشروع</button>`:'<p class="lbl">أنشئ حساب مدير موقع من زر «مدير موقع» أعلى الصفحة</p>'}${err}</div>`;
 }
 async function syncSM(){
-  const names=S.sites.filter(x=>S.ps.includes(x.user_id)).map(x=>x.name);if(!names.length)return;
-  const v=names.join("، ");await sb.from("projects").update({site_manager:v}).eq("id",S.cur);
+  const names=S.sites.filter(x=>S.ps.includes(x.user_id)).map(x=>x.name);
+  const v=names.length?names.join("، "):null;
+  try{ await sb.from("projects").update({site_manager:v}).eq("id",S.cur); }catch(e){}
   const p=S.projects.find(x=>x.id===S.cur);if(p)p.site_manager=v;
 }
 async function addPS(){const u=$("pss").value;if(!u)return;const {error}=await sb.from("project_sites").insert({project_id:S.cur,user_id:u});if(error)return alert(error.message);await loadPS();await syncSM();render()}
