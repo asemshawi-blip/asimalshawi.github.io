@@ -1218,7 +1218,7 @@ async function mCreate(){await mOnce(async()=>{
 
 /* ---------- نافذة الطلب: المرحلة الحالية فقط ---------- */
 async function mOpen(id){
-  MT.id=id;MT.rep=null;
+  MT.id=id;MT.rep=null;MT.edit=null;
   await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path).concat((MT.o||[]).filter(o=>o.ticket_id===id&&o.file_path).map(o=>o.file_path)));
   modal("mtk");
 }
@@ -1299,9 +1299,9 @@ function mTicketHtml(){
   const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
-  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>${mObsHtml(t)}${mPhotosHtml(t)}
+  ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mObsHtml(t)}${mPhotosHtml(t)}
   <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
-  <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+  <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 
 /* ---------- معوقات الطلب: أي عائق يؤخر الطلب ---------- */
@@ -1310,7 +1310,7 @@ const mObsAddOk=()=>["owner","pm","mgmt","site"].includes(S.role),mObsResOk=()=>
 function mObsHtml(t){
   if(MT.oerr)return mAdm()?`<div class="hlq">المعوقات غير مفعّلة بعد: شغّل ملف migrate_maintenance_v3.sql في Supabase.</div>`:"";
   const L=(MT.o||[]).filter(o=>o.ticket_id===t.id),n=L.filter(o=>!o.resolved).length;
-  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}</div></div>`).join("");
+  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}${S.role==="owner"?` <button class="sm" onclick="mObsDel('${o.id}')">🗑 حذف</button>`:""}</div></div>`).join("");
   const add=mObsAddOk()&&!t.closed_at?`<label class="lbl">إضافة عائق</label><textarea id="mob" rows="2" placeholder="اكتب العائق الذي يؤخر الطلب..."></textarea><input id="mobf" type="file" accept="image/*" class="mfile"><button class="btn" style="width:100%" onclick="mObsAdd('${t.id}')">＋ إضافة العائق</button>`:"";
   return `<details class="mdt" ${n?"open":""}><summary>🚧 المعوقات${L.length?` (${n?n+" مفتوح":"كلها محلولة"})`:""}</summary>${rows||'<div class="lbl">لا توجد معوقات</div>'}${add}</details>`;
 }
@@ -1329,6 +1329,48 @@ async function mObsRes(id,v){await mOnce(async()=>{
   if(error)return alert(error.message);
   await loadM();render();
 })}
+
+/* ---------- تعديل الطلب من الموقع (المالك ومدير المشروع) ---------- */
+const mIdx=s=>MST.findIndex(x=>x[0]===s);
+function mEditHtml(t){
+  const s=mStg(t),c=mCost(t);
+  const opts=MST.map(x=>`<option value="${x[0]}" ${x[0]===s?"selected":""}>${x[1]}</option>`).join("");
+  return `<div class="mstage"><div class="mstt" style="--c:#64748b">✏️ تعديل الطلب</div>
+  <label class="lbl">العنوان</label><input id="mef_t" value="${esc(t.title||"")}">
+  <label class="lbl">الفرع</label><input id="mef_b" value="${esc(t.branch||"")}">
+  <label class="lbl">وصف الطلب</label><textarea id="mef_d" rows="2">${esc(t.descr||"")}</textarea>
+  <label class="lbl">المرحلة</label><select id="mef_s">${opts}</select>
+  <label class="lbl">تقرير المعاينة</label><textarea id="mef_g" rows="3">${esc(t.diagnosis||"")}</textarea>
+  <label class="lbl">التكلفة (ر.س): اتركها فاضية إذا ما تسعّر</label><input id="mef_c" type="number" inputmode="decimal" min="0" step="any" value="${c!=null&&c!==""?esc(c):""}">
+  <label class="lbl">المقاول</label><input id="mef_k" value="${esc(t.contractor||"")}">
+  <label class="lbl">المستلم (للتسليم)</label><input id="mef_r" value="${esc(t.receiver||"")}">
+  <div class="hlq">عند الرجوع لمرحلة أقدم يُمسح تلقائياً ما بعدها (التكلفة والاعتماد والتنفيذ والتسليم). التقرير والصور والمعوقات تبقى.</div>
+  <button class="btn big" onclick="mEditSave('${t.id}')">حفظ</button><button class="btn alt" style="width:100%" onclick="MT.edit=null;render()">إلغاء</button></div>`;
+}
+async function mEditSave(id){await mOnce(async()=>{
+  const t=mT(id),g=k=>($(k)?.value||"").trim();
+  const title=g("mef_t"),br=g("mef_b");
+  if(!title||!br)return alert("العنوان والفرع مطلوبان");
+  const s=$("mef_s").value,i=mIdx(s),cs=g("mef_c"),cost=cs===""?null:+cs,now=mNow();
+  if(cs!==""&&!(cost>=0))return alert("التكلفة غير صحيحة");
+  const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,receiver:g("mef_r")||null,stage:s,back_note:null};
+  if(i<3){p.cost_total=null;p.scope=null;p.priced_at=null}else{p.cost_total=cost;p.priced_at=cost==null?null:(t.priced_at||now)}
+  if(i<5){p.cost_ok_at=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
+  else{p.cost_ok_at=t.cost_ok_at||now}
+  if(i<5){p.started_at=null;p.work_qty=null;p.work_unit=null}
+  if(i===6){p.closed_at=t.closed_at||now;p.outcome="done"}else{p.closed_at=null;p.outcome=null;p.close_note=null}
+  const ok=await mUpd(id,p,"عُدّل الطلب يدوياً · المرحلة: "+MST[i][1],null,null,{keep:true,toast:"تم الحفظ ✔"});
+  if(!ok)return;
+  if(p.cost_total==null)await sb.from("mnt_quotes").delete().eq("ticket_id",id).then(()=>{},()=>{});
+  else await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:p.cost_total}],subtotal:p.cost_total,vat:0,total:p.cost_total,updated_at:now,status:i>=5?"approved":"pending",note:p.scope||null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
+  MT.edit=null;await loadM();render();
+})}
+async function mObsDel(id){
+  if(!confirm("حذف هذا العائق؟"))return;
+  const {error}=await sb.from("mnt_obstacles").delete().eq("id",id);
+  if(error)return alert(error.message);
+  await loadM();render();
+}
 
 /* ---------- الإجراءات ---------- */
 async function mReceive(id){await mOnce(async()=>{
