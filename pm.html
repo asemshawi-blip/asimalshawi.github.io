@@ -1282,7 +1282,16 @@ function mGallery(id){
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
-  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${mGallery(t.id)}`;
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}`;
+}
+/* ---------- قسم الصور: كل صور الطلب ظاهرة، حتى لو مرحلتها أو نوع ملفها غير محدد ---------- */
+function mPhotosHtml(t){
+  const all=MT.e.filter(e=>e.ticket_id===t.id&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image")));
+  if(!all.length)return "";
+  const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]]],known=["issue","before","during","other","after"];
+  const pics=L=>L.filter(e=>S.urls[e.file_path]).map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("");
+  const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
+  return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary><div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||'<div class="lbl">جاري تحميل الصور...</div>'}</div></details>`;
 }
 function mTicketHtml(){
   const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
@@ -1290,7 +1299,7 @@ function mTicketHtml(){
   const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
-  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>${mObsHtml(t)}
+  ${mSteps(t)}<div class="mstage">${mStageBody(t)}</div>${mObsHtml(t)}${mPhotosHtml(t)}
   <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
   <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
