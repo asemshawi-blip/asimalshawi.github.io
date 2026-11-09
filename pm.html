@@ -25,6 +25,7 @@ header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-
 header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.rl{font-size:13px;opacity:.85}
 .sm{background:#ffffff26;color:#fff;border:0;padding:6px 14px;border-radius:8px;cursor:pointer}
 .sm.del{background:#fee2e2;color:var(--late);margin-top:6px}
+.item .sm:not(.del),.mrep .sm:not(.del){background:#e8eef5;color:var(--navy,#102944);border:1px solid var(--line);font-weight:600;margin-top:6px}
 .btn{background:var(--run);color:#fff;border:0;padding:11px 22px;border-radius:10px;cursor:pointer;font-weight:700;margin:4px 0}
 .btn:disabled{opacity:.6;cursor:wait}.btn.alt{background:#475569}.btn.danger{background:var(--late)}
 .back{background:none;border:0;color:var(--run);font-weight:700;cursor:pointer;padding:0 0 12px}
@@ -1365,7 +1366,7 @@ const mObsAddOk=()=>["owner","pm","mgmt","site"].includes(S.role),mObsResOk=()=>
 function mObsHtml(t){
   if(MT.oerr)return mAdm()?`<div class="hlq">المعوقات غير مفعّلة بعد: شغّل ملف migrate_maintenance_v3.sql في Supabase.</div>`:"";
   const L=(MT.o||[]).filter(o=>o.ticket_id===t.id),n=L.filter(o=>!o.resolved).length;
-  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}${S.role==="owner"||mObsMine(o)?` <button class="sm" onclick="mObsDel('${o.id}')">🗑 حذف</button>`:""}</div></div>`).join("");
+  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}${S.role==="owner"||mObsMine(o)?` <button class="sm del" onclick="mObsDel('${o.id}')">🗑 حذف</button>`:""}</div></div>`).join("");
   const add=mObsAddOk()&&!t.closed_at?`<label class="lbl">إضافة عائق</label><textarea id="mob" rows="2" placeholder="اكتب العائق الذي يؤخر الطلب..."></textarea><input id="mobf" type="file" accept="image/*" class="mfile"><button class="btn" style="width:100%" onclick="mObsAdd('${t.id}')">＋ إضافة العائق</button>`:"";
   return `<details class="mdt" ${n?"open":""}><summary>🚧 المعوقات${L.length?` (${n?n+" مفتوح":"كلها محلولة"})`:""}</summary>${rows||'<div class="lbl">لا توجد معوقات</div>'}${add}</details>`;
 }
