@@ -107,6 +107,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .mdur{display:flex;gap:8px}.mdur input{flex:1}.mdur select{width:110px}
 .mfile{padding:12px;border:2px dashed #cbd5e1;background:#fff}
 .mpics{margin:4px 0 8px}
+.mthw{position:relative;display:inline-block;margin:6px 6px 0 0}.mthw .mth{margin:0!important}.mthw .pb{position:absolute;top:4px;width:26px;height:26px;border:0;border-radius:50%;color:#fff;font-size:14px;line-height:26px;padding:0;cursor:pointer;box-shadow:0 2px 6px #0004}.mthw .pd{inset-inline-start:4px;background:#dc2626}.mthw .pc{inset-inline-end:4px;background:#ed8700}.mthw .cvt{position:absolute;bottom:4px;inset-inline-start:4px;background:#ed8700;color:#fff;font-size:11px;border-radius:6px;padding:0 6px}.mpadd{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.mpadd select{width:auto}
 .mtb{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}.mtb td{padding:6px 4px;border-bottom:1px solid var(--line)}.mtb td:first-child{color:var(--muted);width:32%}
 .tfs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.tfs button{border:1px solid var(--line);background:#fff;border-radius:22px;padding:7px 16px;cursor:pointer;font-weight:600}.tfs button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .dashStats{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))!important}
@@ -1198,6 +1199,9 @@ function mNewHtml(){
   <label class="lbl">تفاصيل (اختياري)</label><textarea id="nds" rows="2" placeholder="وين المشكلة ومتى بدت؟"></textarea>
   <label class="lbl">مدير الموقع (يوصله إشعار للمعاينة) *</label><select id="nas">${MT.sm.length===1?"":'<option value="">اختر مدير الموقع</option>'}${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
   ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع. أنشئ حسابًا من «الحسابات».</div>'}
+  <label class="lbl">اسم مدير المشروع (يظهر في التقرير)</label><input id="npm" value="${esc(mMeName())}">
+  <label class="lbl">مدير المنطقة (اختياري)</label><input id="nam" placeholder="اسم مدير المنطقة"><input id="nap" dir="ltr" inputmode="tel" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
+  <label class="lbl">موقع الفرع على قوقل ماب (اختياري)</label><input id="nmp" dir="ltr" placeholder="الصق رابط قوقل ماب أو الإحداثيات">
   <label class="mck" style="margin:8px 0"><input id="nur" type="checkbox"> 🚨 مستعجل</label>
   <label class="lbl">صور المشكلة (اختياري)</label><input id="nfl" type="file" accept="image/*" multiple class="mfile">
   <button class="btn big" id="nbt" onclick="mCreate()">إرسال الطلب</button><button class="btn alt" style="width:100%" onclick="modal(null)">إلغاء</button></div></div>`;
@@ -1207,7 +1211,10 @@ async function mCreate(){await mOnce(async()=>{
   if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");
   const b=$("nbt");b.disabled=true;b.textContent="جاري الإرسال...";
   const urgent=$("nur").checked;
-  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by:S.user.id,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:mMeName()};
+  const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by:S.user.id,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:($("npm")?.value||"").trim()||mMeName()};
+  const amv=($("nam")?.value||"").trim(),apv=($("nap")?.value||"").trim(),apn=normP(apv),mpv=($("nmp")?.value||"").trim();
+  if(apv&&!apn){b.disabled=false;b.textContent="إرسال الطلب";return alert("رقم جوال مدير المنطقة غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX")}
+  if(amv)row.area_name=amv;if(apn)row.area_phone=apn;if(mpv)row.map_url=mpv;
   const {data,error}=await sb.from("mnt_requests").insert(row).select().single();
   if(error){mErr(error);b.disabled=false;b.textContent="إرسال الطلب";return}
   await mEvent(data,"stage","رُفع الطلب "+mNo(data));
@@ -1282,23 +1289,71 @@ function mGallery(id){
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
-  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}`;
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}`;
 }
 /* ---------- قسم الصور: كل صور الطلب ظاهرة، حتى لو مرحلتها أو نوع ملفها غير محدد ---------- */
-function mPhotosHtml(t){
-  const all=MT.e.filter(e=>e.ticket_id===t.id&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image")));
-  if(!all.length)return "";
-  const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]]],known=["issue","before","during","other","after"];
-  const pics=L=>L.filter(e=>S.urls[e.file_path]).map(e=>`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`).join("");
-  const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
-  return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary><div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||'<div class="lbl">جاري تحميل الصور...</div>'}</div></details>`;
+/* ---------- مدير المنطقة + موقع الفرع على خرائط قوقل ---------- */
+function mMapUrl(v){v=String(v||"").trim();if(!v)return "";
+  if(/^https?:\/\//i.test(v))return v;
+  if(/^-?\d{1,3}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?$/.test(v))return "https://www.google.com/maps?q="+encodeURIComponent(v.replace(/\s+/g,""));
+  return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(v);
 }
+const mAreaHtml=t=>{if(!t.area_name&&!t.area_phone)return "";const ph=t.area_phone?String(t.area_phone).replace(/\D/g,""):"";
+  return esc(t.area_name||"")+(ph?` <a href="tel:+${ph}" dir="ltr">📞 +${ph}</a> <a href="https://wa.me/${ph}" target="_blank" rel="noopener">واتساب</a>`:"")};
+const mMapLink=t=>{const u=mMapUrl(t.map_url);return u?`<a href="${esc(u)}" target="_blank" rel="noopener">📍 افتح في خرائط قوقل</a>`:""};
+function mQuick(t){const u=mMapUrl(t.map_url),ph=t.area_phone?String(t.area_phone).replace(/\D/g,""):"";
+  if(!u&&!ph)return "";
+  return `<div class="acts" style="margin:0 0 10px">${u?`<a class="btn" href="${esc(u)}" target="_blank" rel="noopener">📍 موقع الفرع</a>`:""}${ph?`<a class="btn alt" href="tel:+${ph}">📞 ${esc(t.area_name||"مدير المنطقة")}</a>`:""}</div>`}
+function mPhotosHtml(t){
+  const adm=mAdm();
+  const all=MT.e.filter(e=>e.ticket_id===t.id&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image")));
+  if(!all.length&&!adm)return "";
+  const cov=mCover(t);
+  const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]]],known=["issue","before","during","other","after"];
+  const one=e=>{const im=`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`;
+    if(!adm)return im;
+    const isCov=e.file_path===cov;
+    return `<span class="mthw">${im}${isCov?'<span class="cvt">★ صورة العرض</span>':`<button class="pb pc" title="اجعلها صورة العرض" onclick="mPicCover('${e.id}')">★</button>`}<button class="pb pd" title="حذف الصورة" onclick="mPicDel('${e.id}')">✕</button></span>`};
+  const pics=L=>L.filter(e=>S.urls[e.file_path]).map(one).join("");
+  const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
+  const add=adm?`<div class="mpadd"><select id="mpph"><option value="before">قبل</option><option value="during">أثناء العمل</option><option value="after">بعد</option></select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button></div>`:"";
+  return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary><div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||(all.length?'<div class="lbl">جاري تحميل الصور...</div>':'<div class="lbl">لا توجد صور</div>')}</div>${add}</details>`;
+}
+/* حذف صورة / تغيير صورة العرض / إضافة صور (للمالك ومدير المشروع) */
+const mPicNeedSql="\nإذا ما انحذفت: شغّل ملف mnt_photo_edit.sql في Supabase.";
+async function mPicDel(eid){
+  const e=MT.e.find(x=>String(x.id)===String(eid));if(!e||!mAdm())return;
+  if(!confirm("حذف هذه الصورة نهائياً؟"))return;
+  await mOnce(async()=>{
+    const {data,error}=await sb.from("mnt_events").delete().eq("id",e.id).select("id");
+    if(error)return alert(error.message+mPicNeedSql);
+    if(!data||!data.length)return alert("ما انحذفت الصورة (لا توجد صلاحية حذف)."+mPicNeedSql);
+    if(!MT.e.some(x=>x.id!==e.id&&x.file_path===e.file_path)){try{await sb.storage.from("media").remove([e.file_path])}catch(_){}}
+    await loadM();render();mToast("حُذفت الصورة");
+  });
+}
+async function mPicCover(eid){await mOnce(async()=>{
+  const e=MT.e.find(x=>String(x.id)===String(eid));if(!e||!mAdm())return;
+  const L=MT.e.filter(x=>x.ticket_id===e.ticket_id&&x.file_path&&(x.file_type||"").startsWith("image")),first=L[0];
+  if(!first||first.id===e.id)return;
+  const ts=new Date(new Date(first.created_at).getTime()-1000).toISOString();
+  const {data,error}=await sb.from("mnt_events").update({created_at:ts}).eq("id",e.id).select("id");
+  if(error)return alert(error.message+mPicNeedSql);
+  if(!data||!data.length)return alert("ما تغيرت صورة العرض (لا توجد صلاحية تعديل)."+mPicNeedSql);
+  await loadM();render();mToast("تم تغيير صورة العرض ★");
+})}
+async function mPicAdd(id){await mOnce(async()=>{
+  const t=mT(id),fs=[...($("mpfl")?.files||[])];if(!t)return;if(!fs.length)return alert("اختر صورة أولاً");
+  const n=await mUploadFiles(t,fs,$("mpph")?.value||"before");
+  await loadM();await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));render();if(n)mToast("رُفعت "+n+" صورة");
+})}
 function mTicketHtml(){
   const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
   const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
   const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
+  ${mQuick(t)}
   ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mObsHtml(t)}${mPhotosHtml(t)}
   <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
   <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
@@ -1338,6 +1393,9 @@ function mEditHtml(t){
   return `<div class="mstage"><div class="mstt" style="--c:#64748b">✏️ تعديل الطلب</div>
   <label class="lbl">العنوان</label><input id="mef_t" value="${esc(t.title||"")}">
   <label class="lbl">الفرع</label><input id="mef_b" value="${esc(t.branch||"")}">
+  <label class="lbl">اسم مدير المشروع (يظهر في التقرير)</label><input id="mef_pm" value="${esc(t.pm_name||"")}" placeholder="اكتب الاسم الذي تبيه في التقرير">
+  <label class="lbl">مدير المنطقة</label><input id="mef_am" value="${esc(t.area_name||"")}" placeholder="اسم مدير المنطقة"><input id="mef_ph" dir="ltr" inputmode="tel" value="${esc(t.area_phone||"")}" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
+  <label class="lbl">موقع الفرع على قوقل ماب</label><input id="mef_mp" dir="ltr" value="${esc(t.map_url||"")}" placeholder="الصق رابط قوقل ماب أو الإحداثيات">
   <label class="lbl">وصف الطلب</label><textarea id="mef_d" rows="2">${esc(t.descr||"")}</textarea>
   <label class="lbl">المرحلة</label><select id="mef_s">${opts}</select>
   <label class="lbl">تقرير المعاينة</label><textarea id="mef_g" rows="3">${esc(t.diagnosis||"")}</textarea>
@@ -1349,11 +1407,12 @@ function mEditHtml(t){
 }
 async function mEditSave(id){await mOnce(async()=>{
   const t=mT(id),g=k=>($(k)?.value||"").trim();
-  const title=g("mef_t"),br=g("mef_b");
+  const title=g("mef_t"),br=g("mef_b"),ap=normP(g("mef_ph"));
+  if(g("mef_ph")&&!ap)return alert("رقم جوال مدير المنطقة غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX");
   if(!title||!br)return alert("العنوان والفرع مطلوبان");
   const s=$("mef_s").value,i=mIdx(s),cs=g("mef_c"),cost=cs===""?null:+cs,now=mNow();
   if(cs!==""&&!(cost>=0))return alert("التكلفة غير صحيحة");
-  const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,receiver:g("mef_r")||null,stage:s,back_note:null};
+  const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,receiver:g("mef_r")||null,pm_name:g("mef_pm")||null,area_name:g("mef_am")||null,area_phone:ap||null,map_url:g("mef_mp")||null,stage:s,back_note:null};
   if(i<3){p.cost_total=null;p.scope=null;p.priced_at=null}else{p.cost_total=cost;p.priced_at=cost==null?null:(t.priced_at||now)}
   if(i<5){p.cost_ok_at=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
   else{p.cost_ok_at=t.cost_ok_at||now}
@@ -1533,6 +1592,7 @@ async function mPdf(id){
       put(`<div class="gh"><div><small>التكلفة الإجمالية</small><b>${esc(money(cost))} ر.س</b></div><div class="cn">${ap?`<span>${esc(ap)}</span>`:""}</div></div>`);
     }
     put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
+    if(t.area_name||t.area_phone)put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
     const row=(L,tag,cls)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
       const card=e=>`<div class="pf m1"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
       put(`<div class="pr">${card(P[0])}${P[1]?card(P[1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
