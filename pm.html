@@ -1243,7 +1243,7 @@ async function mShare(id){
 }
 function mClosed(t){
   const ok=t.outcome==="done";
-  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
+  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>${t.close_note?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
 }
 function mStageBody(t){
   if(t.closed_at)return mClosed(t);
@@ -1277,7 +1277,7 @@ function mStageBody(t){
       const CN=[...new Set(MT.t.map(x=>x.contractor).filter(Boolean))];
       h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div><label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
     }else{
-      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل">${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
+      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل"><label class="lbl">تقرير الإنجاز (اختياري)</label><textarea id="mrp" rows="3" placeholder="اكتب ملخص ما تم تنفيذه إن رغبت">${esc(t.close_note||"")}</textarea>${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
     }
   }
   return head+h;
@@ -1289,7 +1289,7 @@ function mGallery(id){
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
-  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}`;
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${t.close_note&&t.outcome==="done"?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`;
 }
 /* ---------- قسم الصور: كل صور الطلب ظاهرة، حتى لو مرحلتها أو نوع ملفها غير محدد ---------- */
 /* ---------- مدير المنطقة + موقع الفرع على خرائط قوقل ---------- */
@@ -1402,6 +1402,7 @@ function mEditHtml(t){
   <label class="lbl">التكلفة (ر.س): اتركها فاضية إذا ما تسعّر</label><input id="mef_c" type="number" inputmode="decimal" min="0" step="any" value="${c!=null&&c!==""?esc(c):""}">
   <label class="lbl">المقاول</label><input id="mef_k" value="${esc(t.contractor||"")}">
   <label class="lbl">المستلم (للتسليم)</label><input id="mef_r" value="${esc(t.receiver||"")}">
+  <label class="lbl">تقرير الإنجاز (اختياري، يظهر في التقرير بعد التسليم)</label><textarea id="mef_cr" rows="3">${esc(t.outcome==="done"?(t.close_note||""):"")}</textarea>
   <div class="hlq">عند الرجوع لمرحلة أقدم يُمسح تلقائياً ما بعدها (التكلفة والاعتماد والتنفيذ والتسليم). التقرير والصور والمعوقات تبقى.</div>
   <button class="btn big" onclick="mEditSave('${t.id}')">حفظ</button><button class="btn alt" style="width:100%" onclick="MT.edit=null;render()">إلغاء</button></div>`;
 }
@@ -1417,7 +1418,7 @@ async function mEditSave(id){await mOnce(async()=>{
   if(i<5){p.cost_ok_at=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
   else{p.cost_ok_at=t.cost_ok_at||now}
   if(i<5){p.started_at=null;p.work_qty=null;p.work_unit=null}
-  if(i===6){p.closed_at=t.closed_at||now;p.outcome="done"}else{p.closed_at=null;p.outcome=null;p.close_note=null}
+  if(i===6){p.closed_at=t.closed_at||now;p.outcome="done";p.close_note=g("mef_cr")||null}else{p.closed_at=null;p.outcome=null;p.close_note=null}
   const ok=await mUpd(id,p,"عُدّل الطلب يدوياً · المرحلة: "+MST[i][1],null,null,{keep:true,toast:"تم الحفظ ✔"});
   if(!ok)return;
   if(p.cost_total==null)await sb.from("mnt_quotes").delete().eq("ticket_id",id).then(()=>{},()=>{});
@@ -1506,7 +1507,7 @@ async function mDeliver(id){await mOnce(async()=>{
   if(!rc)return alert("اكتب اسم المستلم");
   if(!fs.length&&!mHasPic(id,"after")&&!confirm("ما رفعت صور بعد التنفيذ. تبي تسلّم بدونها؟"))return;
   if(fs.length)await mUploadFiles(t,fs,"after");
-  await mUpd(id,{closed_at:mNow(),stage:"deliver",outcome:"done",receiver:rc,close_note:null},"سُلّم العمل إلى "+rc,["owner","pm"],"تم التسليم "+mNo(t),{body:t.branch+" · "+t.title,keep:true,toast:"تم التسليم ✔"});
+  await mUpd(id,{closed_at:mNow(),stage:"deliver",outcome:"done",receiver:rc,close_note:($("mrp")?.value||"").trim()||null},"سُلّم العمل إلى "+rc,["owner","pm"],"تم التسليم "+mNo(t),{body:t.branch+" · "+t.title,keep:true,toast:"تم التسليم ✔"});
 })}
 async function mReopen(id){
   if(!confirm("إعادة فتح الطلب؟"))return;
@@ -1571,8 +1572,8 @@ async function mPdf(id){
     if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
     if(!document.getElementById("rpcss2")){const s=document.createElement("style");s.id="rpcss2";s.textContent=MRCSS;document.head.appendChild(s)}
     const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
-    let bef=imgs.filter(e=>e.phase==="before");if(!bef.length)bef=imgs.filter(e=>e.phase==="issue");
-    bef=bef.slice(0,2);const aft=imgs.filter(e=>e.phase==="after").slice(0,2),pics=[...bef,...aft],img={};
+    let bef=imgs.filter(e=>e.phase==="before"||e.phase==="issue");   /* قبل = صور الطلب + صور المعاينة */
+    const aft=imgs.filter(e=>e.phase==="after"),pics=[...bef,...aft],img={};
     if(pics.length){
       const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
       const um={};(data||[]).forEach(d=>{if(d.signedUrl)um[d.path]=d.signedUrl});
@@ -1593,10 +1594,12 @@ async function mPdf(id){
     }
     put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
     if(t.area_name||t.area_phone)put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
-    const row=(L,tag,cls)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
+    if(t.close_note&&t.outcome==="done")put(`<div class="hl"><b>تقرير الإنجاز</b><br>${esc(t.close_note).replace(/\n/g,"<br>")}</div>`);
+    const row=(L,tag,cls,title)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
       const card=e=>`<div class="pf m1"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
-      put(`<div class="pr">${card(P[0])}${P[1]?card(P[1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
-    row(bef,"قبل","bf");row(aft,"بعد","af");
+      put(`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`);
+      for(let k=0;k<P.length;k+=2)put(`<div class="pr">${card(P[k])}${P[k+1]?card(P[k+1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
+    row(bef,"قبل","bf","📷 صور قبل (الطلب والمعاينة)");row(aft,"بعد","af","📷 صور بعد التسليم");
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
     for(let i=0;i<pages.length;i++){
       const cv=await html2canvas(pages[i],{scale:1.6,backgroundColor:"#fff",useCORS:true});
