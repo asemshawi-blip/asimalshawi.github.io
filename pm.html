@@ -448,7 +448,7 @@ function proj(){
   const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
   const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
-  ${own?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
+  ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
@@ -1766,12 +1766,17 @@ async function addE(){
   S.baSel=null;
   await loadE();render();
 }
+/* كاتب المعوق/الملاحظة يقدر يحذف اللي أضافه بالغلط (تبويب المعوقات فقط) */
+function canDelMine(e){return e.kind==="issues"&&!!e.author_id&&!!S.user&&e.author_id===S.user.id}
 async function delE(id){
-  if(!confirm("حذف؟"))return;
   const e=S.entries.find(x=>x.id===id);
+  if(!confirm(e&&e.kind==="issues"?"حذف هذا المعوق/الملاحظة نهائياً؟":"حذف؟"))return;
+  const {data,error}=await sb.from("entries").delete().eq("id",id).select("id");
+  if(error)return alert(error.message);
+  if(!data||!data.length)return alert("ما تم الحذف: ما عندك صلاحية لحذف هذا العنصر.");
   logA("entry","حذف من "+((TABS.find(x=>x.k===S.tab)||{}).n||"")+": "+String((e&&e.body)||"").slice(0,40));
-  if(e?.file_path)await sb.storage.from("media").remove([e.file_path]);
-  await sb.from("entries").delete().eq("id",id);await loadE();render();
+  if(e?.file_path)await sb.storage.from("media").remove([e.file_path]).catch(()=>{});
+  await loadE();render();
 }
 
 /* ===== كتالوج وتسعيرات الصيانة ===== */
