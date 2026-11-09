@@ -1561,7 +1561,7 @@ async function mgDecide(ok){await mOnce(async()=>{
 })}
 
 /* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
-const MRCSS=`.rpg .pf.m1 img{height:200px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
+const MRCSS=`.rpg .pf.m2 img{height:200px}.rpg .pf.m3 img{height:130px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
   const t=mT(id);if(!t)return;
   MT.rep={busy:true};render();
@@ -1596,9 +1596,13 @@ async function mPdf(id){
     if(t.area_name||t.area_phone)put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
     if(t.close_note&&t.outcome==="done")put(`<div class="hl"><b>تقرير الإنجاز</b><br>${esc(t.close_note).replace(/\n/g,"<br>")}</div>`);
     const row=(L,tag,cls,title)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
-      const card=e=>`<div class="pf m1"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
-      put(`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`);
-      for(let k=0;k<P.length;k+=2)put(`<div class="pr">${card(P[k])}${P[k+1]?card(P[k+1]):'<div class="pf" style="visibility:hidden;border:0"></div>'}</div>`)};
+      const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
+      const hd=`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`;
+      for(let k=0;k<P.length;k+=n){
+        let cells=P.slice(k,k+n).map(card).join("");
+        for(let f=P.slice(k,k+n).length;f<n;f++)cells+='<div class="pf" style="visibility:hidden;border:0"></div>';
+        put(`<div>${k===0?hd:""}<div class="pr">${cells}</div></div>`);   /* العنوان يبقى مع أول صفّ صور ولا ينفصل عنه */
+      }};
     row(bef,"قبل","bf","📷 صور قبل (الطلب والمعاينة)");row(aft,"بعد","af","📷 صور بعد التسليم");
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
     for(let i=0;i<pages.length;i++){
