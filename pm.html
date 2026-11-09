@@ -1365,7 +1365,7 @@ const mObsAddOk=()=>["owner","pm","mgmt","site"].includes(S.role),mObsResOk=()=>
 function mObsHtml(t){
   if(MT.oerr)return mAdm()?`<div class="hlq">المعوقات غير مفعّلة بعد: شغّل ملف migrate_maintenance_v3.sql في Supabase.</div>`:"";
   const L=(MT.o||[]).filter(o=>o.ticket_id===t.id),n=L.filter(o=>!o.resolved).length;
-  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}${S.role==="owner"?` <button class="sm" onclick="mObsDel('${o.id}')">🗑 حذف</button>`:""}</div></div>`).join("");
+  const rows=L.map(o=>`<div class="mrep"><b>${esc(o.author_role||"")} · ${dfmt(o.created_at)}</b><div class="mpre">${esc(o.body||"")}</div>${o.file_path&&S.urls[o.file_path]?`<img class="mth" src="${S.urls[o.file_path]}" onclick="openImg(this.src)" alt="">`:""}<div style="margin-top:6px">${o.resolved?`<b style="color:#16a34a">● تم الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',false)">إعادة فتح</button>`:""}`:`<b style="color:#dc2626">● قيد الحل</b>${mObsResOk()?` <button class="sm" onclick="mObsRes('${o.id}',true)">تم الحل</button>`:""}`}${S.role==="owner"||mObsMine(o)?` <button class="sm" onclick="mObsDel('${o.id}')">🗑 حذف</button>`:""}</div></div>`).join("");
   const add=mObsAddOk()&&!t.closed_at?`<label class="lbl">إضافة عائق</label><textarea id="mob" rows="2" placeholder="اكتب العائق الذي يؤخر الطلب..."></textarea><input id="mobf" type="file" accept="image/*" class="mfile"><button class="btn" style="width:100%" onclick="mObsAdd('${t.id}')">＋ إضافة العائق</button>`:"";
   return `<details class="mdt" ${n?"open":""}><summary>🚧 المعوقات${L.length?` (${n?n+" مفتوح":"كلها محلولة"})`:""}</summary>${rows||'<div class="lbl">لا توجد معوقات</div>'}${add}</details>`;
 }
@@ -1425,11 +1425,19 @@ async function mEditSave(id){await mOnce(async()=>{
   else await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:p.cost_total}],subtotal:p.cost_total,vat:0,total:p.cost_total,updated_at:now,status:i>=5?"approved":"pending",note:p.scope||null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
   MT.edit=null;await loadM();render();
 })}
+/* كاتب العائق يقدر يحذف اللي أضافه بالغلط */
+const mObsMine=o=>!!o.author_id&&!!S.user&&o.author_id===S.user.id;
 async function mObsDel(id){
-  if(!confirm("حذف هذا العائق؟"))return;
-  const {error}=await sb.from("mnt_obstacles").delete().eq("id",id);
-  if(error)return alert(error.message);
-  await loadM();render();
+  const o=(MT.o||[]).find(x=>String(x.id)===String(id));
+  if(!o||!(S.role==="owner"||mObsMine(o)))return;
+  if(!confirm("حذف هذا العائق نهائياً؟"))return;
+  await mOnce(async()=>{
+    const {data,error}=await sb.from("mnt_obstacles").delete().eq("id",id).select("id");
+    if(error)return alert(error.message);
+    if(!data||!data.length)return alert("ما تم الحذف: ما عندك صلاحية لحذف هذا العائق.\nإذا كنت كاتبه: شغّل ملف mnt_obstacle_author_delete.sql في Supabase.");
+    if(o.file_path&&!(MT.o||[]).some(x=>x.id!==o.id&&x.file_path===o.file_path)){try{await sb.storage.from("media").remove([o.file_path])}catch(_){}}
+    await loadM();render();mToast("حُذف العائق");
+  });
 }
 
 /* ---------- الإجراءات ---------- */
