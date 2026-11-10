@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -959,7 +959,7 @@ function rpPages(p,cfg,d,root){
     const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div><div class="r"><b>${esc(cfg.title)}</b><br>${esc(p.name)}</div></div><div class="rpc"></div><div class="rpf"><span class="pnum"></span><span class="rf">${ref}</span><span>${esc(range)}</span></div></div>`);
     root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
   };
-  const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
+  const put=h=>{const el=mk(h);box.appendChild(el);const overflow=box.children.length>1&&(box.scrollHeight>box.clientHeight+2||el.getBoundingClientRect().bottom>box.getBoundingClientRect().bottom-8);if(overflow){box.removeChild(el);fresh();box.appendChild(el)}return el};
   /* 1) ملخص الإدارة */
   fresh();const tocEl=put(`<div class="toc"></div>`);
   put(sec("ملخص الإدارة"));mark();
@@ -1753,7 +1753,13 @@ async function rgDecide(ok){await mOnce(async()=>{
   mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التسعيرة":"❌ تم رفض التسعيرة"}<br><small>سُجّل القرار باسم: ${esc(n)}. تقدر تقفل الصفحة.</small></div>`);
 })}
 
-/* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
+function mPdfTextChunks(value,max=650){
+  let rest=String(value||"").trim();if(!rest)return[];
+  const out=[];
+  while(rest.length>max){let cut=Math.max(rest.lastIndexOf(" ",max),rest.lastIndexOf("\n",max));if(cut<max*.5)cut=max;out.push(rest.slice(0,cut).trim());rest=rest.slice(cut).trim()}
+  if(rest)out.push(rest);return out;
+}
+/* ---------- تقرير PDF متعدد الصفحات ---------- */
 const MRCSS=`.rpg .pf.m2 img{max-height:480px}.rpg .pf.m3 img{max-height:340px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
   const t=mT(id);if(!t)return;
@@ -1774,12 +1780,13 @@ async function mPdf(id){
     }
     const ref=mNo(t),pages=[],mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
     let box=null;const fresh=()=>{const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png"><span>إدارة المشاريع</span></div><div class="r"><b>تقرير صيانة</b><br>${esc(ref)}</div></div><div class="rpc"></div><div class="rpf"><span></span><span class="rf">${ref}</span><span>${esc(dfmt(new Date()))}</span></div></div>`);root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc")};
-    const put=h=>{const el=mk(h);box.appendChild(el);if(box.scrollHeight>box.clientHeight+1&&box.children.length>1){box.removeChild(el);fresh();box.appendChild(el)}return el};
+    const put=h=>{const el=mk(h);box.appendChild(el);const overflow=box.children.length>1&&(box.scrollHeight>box.clientHeight+2||el.getBoundingClientRect().bottom>box.getBoundingClientRect().bottom-8);if(overflow){box.removeChild(el);fresh();box.appendChild(el)}return el};
     const pr=MPRI[t.priority]||MPRI.normal,cost=mCost(t),done=t.closed_at&&t.outcome==="done";
+    const putText=(title,value,tail)=>{const parts=mPdfTextChunks(value);parts.forEach((part,i)=>put('<div class="hl"><b>'+title+(i?' (تابع)':'')+'</b>'+(i?'':(tail||''))+'<br>'+esc(part).replace(/\n/g,'<br>')+'</div>'))};
     fresh();
     put(`<div><div class="rt"><span class="no">🔧</span><span>${esc(t.title)}</span><i class="l2"></i></div><table class="info"><tr><td class="a">الفرع</td><td class="b">${esc(t.branch||"")}</td><td class="a">رقم الطلب</td><td class="b">${esc(ref)}</td></tr><tr><td class="a">تاريخ الطلب</td><td class="b">${esc(dfmt(t.created_at))}</td><td class="a">${done?"تاريخ التسليم":"الحالة"}</td><td class="b">${done?esc(dfmt(t.closed_at)):t.closed_at?esc(MOUT[t.outcome]||"مغلق"):esc(MST.find(s=>s[0]===mStg(t))[1])}</td></tr></table></div>`);
-    put(`<div class="hl"><b>المشكلة${t.priority==="urgent"?" (مستعجل)":""}</b><br>${esc(t.descr&&t.descr!==t.title?t.descr:t.title)}</div>`);
-    if(t.diagnosis)put(`<div class="hl"><b>تقرير المعاينة</b>${t.insp_at?` <small style="display:inline">· ${esc(dfmt(t.insp_at))}</small>`:""}<br>${esc(t.diagnosis).replace(/\n/g,"<br>")}</div>`);
+    putText("المشكلة"+(t.priority==="urgent"?" (مستعجل)":""),t.descr&&t.descr!==t.title?t.descr:t.title);
+if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <small style="display:inline">· '+esc(dfmt(t.insp_at))+'</small>':'');
     if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
     if(cost!=null&&cost!==""){
       const A=mApprover(t),ap=A?"اعتماد "+A.r+(A.n?" · "+A.n:"")+" · "+dfmt(A.at):"";
@@ -1787,7 +1794,7 @@ async function mPdf(id){
     }
     put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
     if(t.area_name||t.area_phone)put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
-    if(t.close_note&&t.outcome==="done")put(`<div class="hl"><b>تقرير الإنجاز</b><br>${esc(t.close_note).replace(/\n/g,"<br>")}</div>`);
+    if(t.close_note&&t.outcome==="done")putText("تقرير الإنجاز",t.close_note);
     const row=(L,tag,cls,title)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
       const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
       const hd=`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`;
@@ -1798,6 +1805,7 @@ async function mPdf(id){
       }};
     row(bef,"قبل","bf","📷 صور قبل (الطلب والمعاينة)");row(aft,"بعد","af","📷 صور بعد التسليم");
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
+    pages.forEach((pg,i)=>{const f=pg.querySelector(".rpf span");if(f)f.textContent="صفحة "+(i+1)+" من "+pages.length});
     for(let i=0;i<pages.length;i++){
       const cv=await html2canvas(pages[i],{scale:1.6,backgroundColor:"#fff",useCORS:true});
       if(i)doc.addPage();doc.addImage(cv.toDataURL("image/jpeg",.85),"JPEG",0,0,W,H,undefined,"FAST");
