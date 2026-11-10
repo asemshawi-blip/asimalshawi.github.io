@@ -1434,6 +1434,7 @@ function mEditHtml(t){
   <label class="lbl">تقرير المعاينة</label><textarea id="mef_g" rows="3">${esc(t.diagnosis||"")}</textarea>
   <label class="lbl">التكلفة (ر.س): اتركها فاضية إذا ما تسعّر</label><input id="mef_c" type="number" inputmode="decimal" min="0" step="any" value="${c!=null&&c!==""?esc(c):""}">
   <label class="lbl">المقاول</label><input id="mef_k" value="${esc(t.contractor||"")}">
+  <label class="lbl">جوال المقاول (اختياري)</label><input id="mef_cp" dir="ltr" inputmode="tel" value="${esc(t.contractor_phone||"")}" placeholder="مع رمز الدولة، مثال 9665XXXXXXXX">
   <label class="lbl">المستلم (للتسليم)</label><input id="mef_r" value="${esc(t.receiver||"")}">
   <label class="lbl">تقرير الإنجاز (اختياري، يظهر في التقرير بعد التسليم)</label><textarea id="mef_cr" rows="3">${esc(t.outcome==="done"?(t.close_note||""):"")}</textarea>
   <div class="hlq">عند الرجوع لمرحلة أقدم يُمسح تلقائياً ما بعدها (التكلفة والاعتماد والتنفيذ والتسليم). التقرير والصور والمعوقات تبقى.</div>
@@ -1441,12 +1442,13 @@ function mEditHtml(t){
 }
 async function mEditSave(id){await mOnce(async()=>{
   const t=mT(id),g=k=>($(k)?.value||"").trim();
-  const title=g("mef_t"),br=g("mef_b"),ap=normP(g("mef_ph"));
+  const title=g("mef_t"),br=g("mef_b"),ap=normP(g("mef_ph")),cp=normP(g("mef_cp"));
   if(g("mef_ph")&&!ap)return alert("رقم جوال مدير المنطقة غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX");
+  if(g("mef_cp")&&!cp)return alert("رقم جوال المقاول غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX");
   if(!title||!br)return alert("العنوان والفرع مطلوبان");
   const s=$("mef_s").value,i=mIdx(s),cs=g("mef_c"),cost=cs===""?null:+cs,now=mNow();
   if(cs!==""&&!(cost>=0))return alert("التكلفة غير صحيحة");
-  const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,receiver:g("mef_r")||null,pm_name:g("mef_pm")||null,area_name:g("mef_am")||null,area_phone:ap||null,map_url:g("mef_mp")||null,stage:s,back_note:null};
+  const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,contractor_phone:cp||null,receiver:g("mef_r")||null,pm_name:g("mef_pm")||null,area_name:g("mef_am")||null,area_phone:ap||null,map_url:g("mef_mp")||null,stage:s,back_note:null};
   if(i<3){p.cost_total=null;p.scope=null;p.priced_at=null}else{p.cost_total=cost;p.priced_at=cost==null?null:(t.priced_at||now)}
   if(i<5){p.cost_ok_at=null;p.cost_ok_by=null;p.cost_ok_role=null;p.mgmt_by=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
   else{p.cost_ok_at=t.cost_ok_at||now}
