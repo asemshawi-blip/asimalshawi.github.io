@@ -1799,6 +1799,7 @@ if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <sm
       const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
       const hd=`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`;
       for(let k=0;k<P.length;k+=n){
+        if(box.children.length)fresh();
         let cells=P.slice(k,k+n).map(card).join("");
         for(let f=P.slice(k,k+n).length;f<n;f++)cells+='<div class="pf" style="visibility:hidden;border:0"></div>';
         put(`<div>${k===0?hd:""}<div class="pr">${cells}</div></div>`);   /* العنوان يبقى مع أول صفّ صور ولا ينفصل عنه */
