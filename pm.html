@@ -58,7 +58,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .lbl{font-size:13px;color:var(--muted)}
 .item{border-bottom:1px solid var(--line);padding:12px 0}.item small{color:var(--muted);display:block;margin-top:6px}
-.item img,.item video{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-top:8px}
+.item img,.item video{width:100%;max-height:560px;object-fit:contain;background:#eef1f5;border-radius:12px;margin-top:8px}.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:8px}.pgi img{margin-top:0;max-height:340px}.pgi .sm.del{margin-top:6px;width:100%}
 .item img{cursor:zoom-in}
 .lb{position:fixed;inset:0;background:#000d;z-index:99;display:flex;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
 .lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
@@ -418,6 +418,21 @@ async function openP(id){
   if(S.cur===id)render();
 }
 async function setTab(k){S.tab=k;await loadE();render()}
+/* ملفات رُفعت دفعة واحدة بنفس النص: تُعرض تحت نص واحد بدل تكراره على كل صورة */
+function entGroups(list){
+  const out=[],open=new Map();
+  list.forEach(e=>{
+    const b=(e.body||"").trim();
+    if(!b||!e.file_path||e.ba||e.kind==="issues"){out.push([e]);return}
+    const k=e.kind+"|"+(e.author_role||"")+"|"+b,g=open.get(k),t=+new Date(e.created_at);
+    if(g&&Math.abs(t-g.t)<=120000){g.rows.push(e);g.t=t}else{const ng={rows:[e],t};open.set(k,ng);out.push(ng.rows)}
+  });
+  return out;
+}
+function entGroupHtml(rows,own){
+  const e=rows[0];
+  return `<div class="item"><div>${esc(e.body)}</div><div class="pgrid">${rows.map(r=>`<div class="pgi">${fileHtml(r)}${own||canDelMine(r)?`<button class="sm del" onclick="delE('${r.id}')">حذف</button>`:""}</div>`).join("")}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")} · ${rows.length} ملفات</small></div>`;
+}
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
   const t=e.file_type||"";
@@ -449,8 +464,9 @@ function proj(){
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
   const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
-  const items=S.entries.map(e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
-  ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`).join("");
+  const entOne=e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
+  const items=entGroups(S.entries).map(rows=>rows.length>1?entGroupHtml(rows,own):entOne(rows[0])).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
@@ -583,9 +599,9 @@ const RPCSS=`
 .rpg .uc .at{margin-top:5px;font-size:11px;color:#647589}
 .rpg .pr{display:flex;gap:14px;margin-bottom:14px}
 .rpg .pr.l3{gap:12px}
-.rpg .pf{flex:1;width:0;border:1px solid #e3e9ef;border-radius:10px;overflow:hidden;background:#fff}
-.rpg .pf img{display:block;width:100%}
-.rpg .pf.l1 img{height:440px}.rpg .pf.l2 img{height:261px}.rpg .pf.l3 img{height:171px}
+.rpg .pf{flex:1;width:0;border:1px solid #e3e9ef;border-radius:10px;overflow:hidden;background:#eef1f5}.rpg .pf .pc{background:#fff}
+.rpg .pf img{display:block;width:auto;max-width:100%;height:auto;margin:0 auto}
+.rpg .pf.l1 img{max-height:640px}.rpg .pf.l2 img{max-height:430px}.rpg .pf.l3 img{max-height:330px}
 .rpg .pf .pc{padding:8px 11px 9px;font-size:11.5px;line-height:1.7;min-height:52px}
 .rpg .pf.l3 .pc{padding:6px 8px 7px;font-size:10.5px;min-height:46px}
 .rpg .pf.l1 .pc{min-height:0;font-size:12.5px}
@@ -751,12 +767,19 @@ async function rpData(p,cfg){
   if(cfg.full){const ds=rows.map(e=>new Date(e.created_at));if(p.start_date)ds.push(new Date(p.start_date+"T00:00:00"));d.f=day0(ds.length?new Date(Math.min(...ds)):new Date())}
   return d;
 }
+/* صفوف رُفعت معًا بنفس النص (صورة لكل صف): الأول فقط يحمل النص ويُعلَّم الباقي _dup */
+function rpMarkDup(rows){
+  const last=new Map();
+  rows.forEach(e=>{const b=cleanTxt(e.body);if(!b)return;const k=e.kind+"|"+(e.author_role||"")+"|"+b,t=+new Date(e.created_at),p=last.get(k);
+    if(p&&t-p.t<=120000){e._dup=true;p.t=t}else last.set(k,{t})});
+}
 function rpClassify(rows,f,t){
+  rpMarkDup(rows);
   const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
   const issAll=rows.filter(e=>e.kind==="issues"),byId=new Map(rows.map(e=>[String(e.id),e]));
   const pairs=rows.filter(e=>e.ba==="after"&&e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&x.b.ba==="before"&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
   return {f,t,pairs,pairIds:new Set(),
-    ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)),
+    ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)&&!e._dup),
     atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
     pics:rows.filter(e=>(e.kind==="media"||e.kind==="reports")&&isImg(e)&&inP(e)),
     iss:issAll.filter(inP),issAll,issOld:issAll.filter(e=>new Date(e.created_at)<f&&e.resolved===false),
@@ -768,9 +791,11 @@ async function rpPrep(url,mode,L){
   const u=URL.createObjectURL(await r.blob());
   try{
     const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("decode"));i.src=u});
-    const cv=mode==="cover",W=cv?1428:L.W,H=cv?1000:L.H,c=document.createElement("canvas");c.width=W;c.height=H;
+    const cv=mode==="cover",nw=img.naturalWidth,nh=img.naturalHeight,ms=Math.min(1,Math.max(L.W,L.H)/Math.max(nw,nh));
+    /* الصورة العادية تحتفظ بنسبتها كاملة بلا قص ولا حواف رمادية؛ الغلاف فقط يُقصّ ليملأ الإطار */
+    const W=cv?1428:Math.max(1,Math.round(nw*ms)),H=cv?1000:Math.max(1,Math.round(nh*ms)),c=document.createElement("canvas");c.width=W;c.height=H;
     const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
-    const s=cv?Math.max(W/img.naturalWidth,H/img.naturalHeight):Math.min(W/img.naturalWidth,H/img.naturalHeight),w=img.naturalWidth*s,h=img.naturalHeight*s;
+    const s=cv?Math.max(W/nw,H/nh):W/nw,w=nw*s,h=nh*s;
     x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
     const out=c.toDataURL("image/jpeg",.84);c.width=c.height=0;return out;
   }finally{URL.revokeObjectURL(u)}
@@ -984,13 +1009,13 @@ function rpPages(p,cfg,d,root){
   /* أحدث الصور */
   if(cfg.pho&&d.pics.some(e=>!d.pairIds.has(String(e.id)))){
     const ph=d.pics.filter(e=>!d.pairIds.has(String(e.id))).slice(-3).reverse(),hh=Math.round(228*LC.H/LC.W);
-    const fr=e=>`<div class="pf l3"><img src="${d.img[e.file_path]}" alt="" style="height:${hh}px"><div class="pc" style="min-height:0"><small>${esc(dfmt(e.created_at))}</small></div></div>`;
+    const fr=e=>`<div class="pf l3"><img src="${d.img[e.file_path]}" alt=""><div class="pc" style="min-height:0"><small>${esc(dfmt(e.created_at))}</small></div></div>`;
     put(`<div style="margin-top:6px"><div class="st">أحدث صور الموقع</div><div class="pr l3" style="margin-bottom:12px">${ph.map(fr).join("")}${'<div class="pf" style="visibility:hidden;border:0"></div>'.repeat(3-ph.length)}</div></div>`);
   }
   /* 2) قبل وبعد (الصور التي حددها المستخدم) */
   if(cfg.ba&&d.pairs.length){
     const ph=Math.round(348*LC.H/LC.W),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
-    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt="" style="height:${ph}px"><div class="pc"><b>${cp(e)}</b></div></div>`;
+    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b>${cp(e)}</b></div></div>`;
     d.pairs.forEach((x,i)=>{
       const days=Math.max(0,Math.round((day0(x.a.created_at)-day0(x.b.created_at))/864e5));
       const row=`<div class="pr l2" style="margin-bottom:6px">${side(x.b,"bf","قبل")}${side(x.a,"af","بعد")}</div><div class="bagap">المدة بين الصورتين: ${days===0?"في نفس اليوم":days+" يوماً"}</div>`;
@@ -1011,7 +1036,7 @@ function rpPages(p,cfg,d,root){
   /* سجل الأعمال */
   let un=0,pn=0;
   const upHtml=(e,n,txt,cont)=>`<div class="uc"><div class="mt"><i>${String(n).padStart(2,"0")}</i><b>${esc(tfmt(e.created_at))}</b>${e.author_role?`<span>· ${esc(ROLES[e.author_role]||e.author_role)}</span>`:""}${cont?"<span>· (تابع)</span>":""}</div><p>${esc(txt)}</p>${!cont&&e.file_path&&!(e.file_type||"").startsWith("image")?'<div class="at">مرفق: ملف مرفوع مع هذا التحديث</div>':""}</div>`;
-  const picCard=(e,n)=>`<div class="pf l${LY}"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
+  const picCard=(e,n)=>`<div class="pf l${LY}"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${e._dup?"":esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
   const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push(`<div class="pr l${LY}">${h}</div>`)}return rows};
   if(G.list.length){
     let ttl=sec(reno?"سجل أعمال الترميم":"سجل الأعمال"),firstPut=true;
@@ -1729,7 +1754,7 @@ async function rgDecide(ok){await mOnce(async()=>{
 })}
 
 /* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
-const MRCSS=`.rpg .pf.m2 img{height:200px}.rpg .pf.m3 img{height:130px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
+const MRCSS=`.rpg .pf.m2 img{max-height:480px}.rpg .pf.m3 img{max-height:340px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
   const t=mT(id);if(!t)return;
   MT.rep={busy:true};render();
