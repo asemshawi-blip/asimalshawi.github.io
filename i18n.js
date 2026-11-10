@@ -29,7 +29,7 @@ var D={
 "العرض":"View","الحسابات":"Accounts","التنبيهات":"Alerts","خروج":"Log out","حسابك بدون صلاحيات":"Your account has no permissions","استخدم رابط الدعوة اللي وصلك":"Use the invitation link you received",
 "الإنجاز":"Progress","إجمالي المشاريع":"Total projects","قيد العمل":"Active","متأخرة":"Late","تم تسليمها":"Delivered","لا توجد نتائج مطابقة":"No matching results","لا توجد مشاريع":"No projects",
 "ابحث بالاسم أو الموقع":"Search by name or location","ابحث عن مشروع بالاسم أو الموقع":"Search for a project by name or location","مشروع جديد":"New project","فتح الملف":"Open file",
-"الحالة":"Status","نوع المشروع":"Project type","مدير المنطقة":"Area manager","جوال المقاول":"Contractor mobile","جوال مدير المنطقة":"Area manager mobile","تاريخ البداية":"Start date","تاريخ التسليم":"Delivery date","السعر":"Price",
+"الحالة":"Status","نوع المشروع":"Project type","مدير المنطقة":"Area manager","جوال المقاول":"Contractor mobile","جوال المقاول (اختياري)":"Contractor mobile (optional)","جوال مدير المنطقة":"Area manager mobile","تاريخ البداية":"Start date","تاريخ التسليم":"Delivery date","السعر":"Price",
 "تواصل مع مدير المشروع":"Contact the project manager","تواصل مع المقاول":"Contact the contractor","تواصل مع مدير المنطقة":"Contact the area manager",
 "تعديل المشروع":"Edit project","إنشاء حساب مقاول":"Create contractor account","كل المشاريع":"All projects","إصدار تقرير":"Generate report","لا يوجد شيء بعد":"Nothing here yet",
 "تم الحل":"Resolved","مفتوح":"Open","مسجّل":"Logged","قيد الحل":"Being resolved","إعادة فتح":"Reopen","مرحباً بك":"Welcome","المعوقات المفتوحة":"Open issues","لا توجد معوقات":"No issues",

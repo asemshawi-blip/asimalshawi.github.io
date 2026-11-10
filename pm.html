@@ -1166,7 +1166,7 @@ const mApprTxt=t=>{const a=mApprover(t);return a?(a.n?esc(a.n)+" · ":"")+esc(a.
 const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم"):"-";
 const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
 const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
-const mErr=e=>{const m=(e&&e.message)||String(e||"");alert(/column|schema cache/i.test(m)?(/cost_ok_by|cost_ok_role|mgmt_by|rq_/.test(m)?"يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.":"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً.")+"\n\n"+m:m)};
+const mErr=e=>{const m=(e&&e.message)||String(e||"");alert(/column|schema cache/i.test(m)?(/contractor_phone/i.test(m)?"شغّل supabase/maintenance_contractor_phone.sql في Supabase أولاً.":(/cost_ok_by|cost_ok_role|mgmt_by|rq_/.test(m)?"يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.":"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً."))+"\n\n"+m:m)};
 const mCover=t=>{const e=MT.e.find(e=>e.ticket_id===t.id&&e.file_path&&(e.file_type||"").startsWith("image"));return e?e.file_path:null};
 const mShow=t=>!t.closed_at||(Date.now()-new Date(t.closed_at))<30*864e5;   /* المغلقة تظهر في الرئيسية 30 يوما */
 const mCol=t=>t.closed_at?"done":(mStg(t)==="exec"?"run":"plan");
@@ -1226,7 +1226,7 @@ function mNewHtml(){
   const BR=[...new Set(MT.t.map(t=>t.branch).filter(Boolean))].sort();
   return `<div class="modal"><div class="box"><h3>🔧 طلب صيانة جديد</h3>
   <label class="lbl">الفرع *</label><input id="nbr" list="nbrl" placeholder="مثال: بريدة - طريق الملك"><datalist id="nbrl">${BR.map(b=>`<option value="${esc(b)}">`).join("")}</datalist>
-  <label class="lbl">وش المشكلة؟ *</label><input id="ntt" placeholder="مثال: تسريب ماء في المطبخ">
+  <label class="lbl">وش المشكلة؟ *</label><input id="ntt" placeholder="مثال: تسريب ماء في المطبخ"><label class="lbl">جوال المقاول (اختياري)</label><input id="ncp" dir="ltr" inputmode="tel" placeholder="9665XXXXXXXX">
   <label class="lbl">تفاصيل (اختياري)</label><textarea id="nds" rows="2" placeholder="وين المشكلة ومتى بدت؟"></textarea>
   <label class="lbl">مدير الموقع (يوصله إشعار للمعاينة) *</label><select id="nas">${MT.sm.length===1?"":'<option value="">اختر مدير الموقع</option>'}${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
   ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع. أنشئ حسابًا من «الحسابات».</div>'}
@@ -1238,12 +1238,12 @@ function mNewHtml(){
   <button class="btn big" id="nbt" onclick="mCreate()">إرسال الطلب</button><button class="btn alt" style="width:100%" onclick="modal(null)">إلغاء</button></div></div>`;
 }
 async function mCreate(){await mOnce(async()=>{
-  const br=$("nbr").value.trim(),title=$("ntt").value.trim(),ds=$("nds").value.trim(),as=$("nas").value,site=MT.sm.find(x=>String(x.user_id)===String(as));
-  if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");
+  const br=$("nbr").value.trim(),title=$("ntt").value.trim(),ds=$("nds").value.trim(),as=$("nas").value,site=MT.sm.find(x=>String(x.user_id)===String(as)),cpv=$("ncp")?.value.trim()||"",cpn=normP(cpv);
+  if(!br)return alert("اكتب اسم الفرع");if(!title)return alert("اكتب المشكلة");if(!site)return alert("اختر مدير الموقع");if(cpv&&!cpn)return alert("رقم جوال المقاول غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX");
   const b=$("nbt");b.disabled=true;b.textContent="جاري الإرسال...";
   const urgent=$("nur").checked;
   const row={branch:br,title,descr:ds||title,category:"other",priority:urgent?"urgent":"normal",place:null,created_by:S.user.id,created_by_role:ROLES[S.role],stage:"new",assignee_id:site.user_id,assignee:site.name,pm_name:($("npm")?.value||"").trim()||mMeName()};
-  const amv=($("nam")?.value||"").trim(),apv=($("nap")?.value||"").trim(),apn=normP(apv),mpv=($("nmp")?.value||"").trim();
+  if(cpn)row.contractor_phone=cpn; const amv=($("nam")?.value||"").trim(),apv=($("nap")?.value||"").trim(),apn=normP(apv),mpv=($("nmp")?.value||"").trim();
   if(apv&&!apn){b.disabled=false;b.textContent="إرسال الطلب";return alert("رقم جوال مدير المنطقة غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9665XXXXXXXX")}
   if(amv)row.area_name=amv;if(apn)row.area_phone=apn;if(mpv)row.map_url=mpv;
   const {data,error}=await sb.from("mnt_requests").insert(row).select().single();
@@ -1322,7 +1322,7 @@ function mGallery(id){
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
-  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("اعتمد التكلفة",mApprTxt(t))}${row("قرار الإدارة",t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||"")+(t.mgmt_by?" · "+esc(t.mgmt_by):""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${t.close_note&&t.outcome==="done"?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`;
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))+row("جوال المقاول",esc(t.contractor_phone||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("اعتمد التكلفة",mApprTxt(t))}${row("قرار الإدارة",t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||"")+(t.mgmt_by?" · "+esc(t.mgmt_by):""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${t.close_note&&t.outcome==="done"?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`;
 }
 /* ---------- قسم الصور: كل صور الطلب ظاهرة، حتى لو مرحلتها أو نوع ملفها غير محدد ---------- */
 /* ---------- مدير المنطقة + موقع الفرع على خرائط قوقل ---------- */
@@ -1795,6 +1795,7 @@ async function mPdf(id){
     putText("المشكلة"+(t.priority==="urgent"?" (مستعجل)":""),t.descr&&t.descr!==t.title?t.descr:t.title);
 if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <small style="display:inline">· '+esc(dfmt(t.insp_at))+'</small>':'');
     if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
+    if(t.contractor_phone)putText("جوال المقاول",t.contractor_phone);
     if(cost!=null&&cost!==""){
       const A=mApprover(t),ap=A?"اعتماد "+A.r+(A.n?" · "+A.n:"")+" · "+dfmt(A.at):"";
       put(`<div class="gh"><div><small>التكلفة الإجمالية</small><b>${esc(money(cost))} ر.س</b></div><div class="cn">${ap?`<span>${esc(ap)}</span>`:""}</div></div>`);
