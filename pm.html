@@ -1185,6 +1185,14 @@ async function loadM(){
   await sign(MT.t.filter(mShow).map(mCover).concat(MT.o.map(o=>o.file_path)).filter(Boolean));
 }
 function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
+async function mRequestSiteUpdate(id){
+  if(!mAdm())return;
+  const t=mT(id);if(!t)return;
+  if(!t.assignee_id&&!t.assignee)return alert("لا يوجد مدير موقع معيّن لهذا الطلب.");
+  const {error}=await sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:["site"],p_title:"🔔 مطلوب تحديث طلب الصيانة "+mNo(t),p_body:"يرجى تحديث حالة الطلب: "+(t.branch||"")+" · "+(t.title||"")});
+  if(error)return alert("تعذر إرسال الإشعار: "+error.message);
+  mToast("تم إشعار مدير الموقع بطلب تحديث الحالة");
+}
 async function mEvent(t,kind,body,phase,file){
   const row={ticket_id:t.id,kind,phase:phase||null,body:body||null,author_role:ROLES[S.role]};
   if(file){row.file_path=file.path;row.file_type=file.type}
@@ -1389,7 +1397,7 @@ function mTicketHtml(){
   ${mQuick(t)}
   ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mObsHtml(t)}${mPhotosHtml(t)}
   <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
-  <div class="acts" style="margin-top:12px">${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+  <div class="acts" style="margin-top:12px">${mAdm()?`<button class="btn" style="background:#0e7490" onclick="mRequestSiteUpdate('${t.id}')">🔔 طلب تحديث من مدير الموقع</button>`:""}${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 
 /* ---------- معوقات الطلب: أي عائق يؤخر الطلب ---------- */
