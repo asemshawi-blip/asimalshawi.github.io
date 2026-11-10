@@ -162,7 +162,8 @@ const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
 
 /* ===== 3) الدخول ===== */
 async function init(){
-  const kk=new URLSearchParams(location.search).get("k");if(kk)return mgLink(kk);   /* رابط الإدارة: بدون تسجيل دخول */
+  const kk=new URLSearchParams(location.search).get("k");if(kk)return mgLink(kk);
+  const rk=new URLSearchParams(location.search).get("r");if(rk)return rgLink(rk);   /* رابط الإدارة: بدون تسجيل دخول */
   const {data}=await sb.auth.getSession();
   S.user=data.session?.user||null;
   S.user?boot():loginView();
@@ -455,7 +456,7 @@ function proj(){
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
-  ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>${ed?siteBox():""}
+  ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>${renoQuoteBox(p)}${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
   <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
 }
@@ -978,6 +979,7 @@ function rpPages(p,cfg,d,root){
   /* الفريق */
   const tm2=[["مدير المشروع",p.pm_name],["المقاول",p.contractor_name],["مدير الموقع",p.site_manager],["مدير المنطقة",p.area_name]].filter(x=>x[1]);
   if(cfg.price&&p.price!=null&&p.price!=="")tm2.push(["قيمة المشروع",money(p.price)]);
+  if(cfg.price&&p.rq_status==="approved")tm2.push(["التسعيرة المعتمدة",money(p.rq_total)+" ر.س · اعتمدها "+(p.rq_dec_by||p.rq_dec_role||"")]);
   if(tm2.length)put(`<div><div class="st">فريق المشروع</div><div class="team">${tm2.map(x=>`<div><small>${x[0]}</small><b>${esc(x[1])}</b></div>`).join("")}</div></div>`);
   /* أحدث الصور */
   if(cfg.pho&&d.pics.some(e=>!d.pairIds.has(String(e.id)))){
@@ -1133,10 +1135,13 @@ const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_sta
 const mMine=t=>{const w=mWho(t);return !!w&&(w==="pm"?mAdm():S.role===w)};
 const mCan=t=>{const w=mWho(t);return !!w&&(mAdm()||S.role===w)};
 const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
+/* من اعتمد التكلفة: مدير المشروع/المالك (cost_ok_by) أو الإدارة (mgmt_by) */
+const mApprover=t=>{if(t.mgmt_status==="approved")return{n:t.mgmt_by||t.cost_ok_by||"",r:t.cost_ok_role||"الإدارة",at:t.mgmt_at||t.cost_ok_at};if(t.cost_ok_at)return{n:t.cost_ok_by||"",r:t.cost_ok_role||"مدير المشروع",at:t.cost_ok_at};return null};
+const mApprTxt=t=>{const a=mApprover(t);return a?(a.n?esc(a.n)+" · ":"")+esc(a.r)+" · "+dfmt(a.at):""};
 const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم"):"-";
 const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
 const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
-const mErr=e=>alert(/column|schema cache/i.test((e&&e.message)||"")?"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً.\n\n"+e.message:((e&&e.message)||e));
+const mErr=e=>{const m=(e&&e.message)||String(e||"");alert(/column|schema cache/i.test(m)?(/cost_ok_by|cost_ok_role|mgmt_by|rq_/.test(m)?"يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.":"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً.")+"\n\n"+m:m)};
 const mCover=t=>{const e=MT.e.find(e=>e.ticket_id===t.id&&e.file_path&&(e.file_type||"").startsWith("image"));return e?e.file_path:null};
 const mShow=t=>!t.closed_at||(Date.now()-new Date(t.closed_at))<30*864e5;   /* المغلقة تظهر في الرئيسية 30 يوما */
 const mCol=t=>t.closed_at?"done":(mStg(t)==="exec"?"run":"plan");
@@ -1244,7 +1249,7 @@ async function mShare(id){
 }
 function mClosed(t){
   const ok=t.outcome==="done";
-  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>${t.close_note?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
+  return `<div class="mout ${t.outcome||""}">${ok?"✅ ":""}${MOUT[t.outcome]||"مغلق"} · ${dfmt(t.closed_at)}</div>${ok?`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div><div class="lbl">المستلم: ${esc(t.receiver||"-")}</div>${mApprover(t)?`<div class="lbl">اعتمد التكلفة: ${mApprTxt(t)}</div>`:""}${t.close_note?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`:(t.close_note?`<div class="hlq">${esc(t.close_note)}</div>`:"")}${S.role==="owner"?`<button class="btn alt" onclick="mReopen('${t.id}')">إعادة فتح</button>`:""}`;
 }
 function mStageBody(t){
   if(t.closed_at)return mClosed(t);
@@ -1276,7 +1281,7 @@ function mStageBody(t){
   }else{   /* exec */
     if(!t.started_at){
       const CN=[...new Set(MT.t.map(x=>x.contractor).filter(Boolean))];
-      h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div><label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
+      h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div>${mApprover(t)?`<div class="lbl">✅ اعتمدها: ${mApprTxt(t)}</div>`:""}<label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
     }else{
       h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل"><label class="lbl">تقرير الإنجاز (اختياري)</label><textarea id="mrp" rows="3" placeholder="اكتب ملخص ما تم تنفيذه إن رغبت">${esc(t.close_note||"")}</textarea>${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
     }
@@ -1290,7 +1295,7 @@ function mGallery(id){
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
-  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("قرار الإدارة",t.mgmt_status==="approved"?"موافقة · "+dfmt(t.mgmt_at):t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${t.close_note&&t.outcome==="done"?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`;
+  return `<table class="mtb">${row("الفرع",esc(t.branch||""))}${row("الطلب",dfmt(t.created_at)+(t.pm_name?" · "+esc(t.pm_name):""))}${row("مدير الموقع",esc(t.assignee||""))}${row("مدير المنطقة",mAreaHtml(t))}${row("موقع الفرع",mMapLink(t))}${row("المقاول",esc(t.contractor||""))}${row("مدة العمل",t.work_qty?mDur(t):"")}${row("التكلفة",c!=null&&c!==""?money(c)+" ر.س":"")}${row("اعتمد التكلفة",mApprTxt(t))}${row("قرار الإدارة",t.mgmt_status==="rejected"?"رفض · "+esc(t.mgmt_note||"")+(t.mgmt_by?" · "+esc(t.mgmt_by):""):"")}</table>${t.descr&&t.descr!==t.title?`<div class="hlq mpre">${esc(t.descr)}</div>`:""}${t.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(t.diagnosis)}</div></div>`:""}${t.close_note&&t.outcome==="done"?`<div class="mrep"><b>تقرير الإنجاز</b><div class="mpre">${esc(t.close_note)}</div></div>`:""}`;
 }
 /* ---------- قسم الصور: كل صور الطلب ظاهرة، حتى لو مرحلتها أو نوع ملفها غير محدد ---------- */
 /* ---------- مدير المنطقة + موقع الفرع على خرائط قوقل ---------- */
@@ -1416,7 +1421,7 @@ async function mEditSave(id){await mOnce(async()=>{
   if(cs!==""&&!(cost>=0))return alert("التكلفة غير صحيحة");
   const p={title,branch:br,descr:g("mef_d")||title,diagnosis:g("mef_g")||null,contractor:g("mef_k")||null,receiver:g("mef_r")||null,pm_name:g("mef_pm")||null,area_name:g("mef_am")||null,area_phone:ap||null,map_url:g("mef_mp")||null,stage:s,back_note:null};
   if(i<3){p.cost_total=null;p.scope=null;p.priced_at=null}else{p.cost_total=cost;p.priced_at=cost==null?null:(t.priced_at||now)}
-  if(i<5){p.cost_ok_at=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
+  if(i<5){p.cost_ok_at=null;p.cost_ok_by=null;p.cost_ok_role=null;p.mgmt_by=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
   else{p.cost_ok_at=t.cost_ok_at||now}
   if(i<5){p.started_at=null;p.work_qty=null;p.work_unit=null}
   if(i===6){p.closed_at=t.closed_at||now;p.outcome="done";p.close_note=g("mef_cr")||null}else{p.closed_at=null;p.outcome=null;p.close_note=null}
@@ -1478,16 +1483,16 @@ async function mPriceSend(id){await mOnce(async()=>{
   if(!v||!(+v>0))return alert("اكتب التكلفة");
   const now=mNow();
   await sb.from("mnt_quotes").upsert({ticket_id:id,items:[{d:"إجمالي أعمال الصيانة",q:1,u:+v}],subtotal:+v,vat:0,total:+v,updated_at:now,status:"pending",note:note||null},{onConflict:"ticket_id"}).then(()=>{},()=>{});
-  await mUpd(id,{stage:"cost",cost_total:+v,scope:note||null,priced_at:now,mgmt_status:null,mgmt_note:null,back_note:null},"أُرسلت التكلفة "+money(v)+" ر.س",["owner","pm"],"تكلفة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+money(v)+" ر.س",toast:"أُرسلت التكلفة للاعتماد ✔"});
+  await mUpd(id,{stage:"cost",cost_total:+v,scope:note||null,priced_at:now,mgmt_status:null,mgmt_note:null,cost_ok_by:null,cost_ok_role:null,mgmt_by:null,back_note:null},"أُرسلت التكلفة "+money(v)+" ر.س",["owner","pm"],"تكلفة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+money(v)+" ر.س",toast:"أُرسلت التكلفة للاعتماد ✔"});
 })}
 async function mCostOk(id){await mOnce(async()=>{
   const t=mT(id);
   await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
-  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),mgmt_status:null,mgmt_token:null,back_note:null},"اعتُمدت التكلفة",["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
+  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),cost_ok_by:mMeName(),cost_ok_role:ROLES[S.role]||"",mgmt_status:null,mgmt_token:null,mgmt_by:null,back_note:null},"اعتُمدت التكلفة · "+mMeName()+" ("+(ROLES[S.role]||"")+")",["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
 })}
 async function mCostUp(id){await mOnce(async()=>{
   const t=mT(id);
-  await mUpd(id,{mgmt_status:"pending",mgmt_note:null,mgmt_token:crypto.randomUUID()},"رُفعت التكلفة للإدارة",["mgmt"],"طلب اعتماد تكلفة صيانة "+mNo(t),{body:t.branch+" · "+t.title+" · "+money(mCost(t))+" ر.س",keep:true,toast:"رُفعت للإدارة. شارك الرابط"});
+  await mUpd(id,{mgmt_status:"pending",mgmt_note:null,mgmt_by:null,mgmt_token:crypto.randomUUID()},"رُفعت التكلفة للإدارة",["mgmt"],"طلب اعتماد تكلفة صيانة "+mNo(t),{body:t.branch+" · "+t.title+" · "+money(mCost(t))+" ر.س",keep:true,toast:"رُفعت للإدارة. شارك الرابط"});
 })}
 async function mCostBack(id){await mOnce(async()=>{
   const n=prompt("ملاحظتك لمدير الموقع (لإعادة التسعير):");if(n===null||!n.trim())return;
@@ -1500,9 +1505,9 @@ async function mDecide(id,ok){await mOnce(async()=>{
   const now=mNow();
   if(ok){
     await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
-    await mUpd(id,{stage:"exec",mgmt_status:"approved",mgmt_at:now,cost_ok_at:now,mgmt_token:null,back_note:null},"وافقت الإدارة على التكلفة",["site","owner","pm"],"وافقت الإدارة "+mNo(t),{body:t.branch+" · "+money(mCost(t))+" ر.س",toast:"تمت الموافقة ✔"});
+    await mUpd(id,{stage:"exec",mgmt_status:"approved",mgmt_at:now,cost_ok_at:now,mgmt_by:mMeName(),cost_ok_by:mMeName(),cost_ok_role:ROLES[S.role]||"",mgmt_token:null,back_note:null},"وافقت الإدارة على التكلفة · "+mMeName()+" ("+(ROLES[S.role]||"")+")",["site","owner","pm"],"وافقت الإدارة "+mNo(t),{body:t.branch+" · "+money(mCost(t))+" ر.س",toast:"تمت الموافقة ✔"});
   }else{
-    await mUpd(id,{stage:"price",mgmt_status:"rejected",mgmt_note:r,mgmt_at:now,mgmt_token:null,back_note:"رفضت الإدارة التكلفة: "+r},"رفضت الإدارة التكلفة: "+r,["site","owner","pm"],"رفضت الإدارة التكلفة "+mNo(t),{body:r,toast:"تم الرفض"});
+    await mUpd(id,{stage:"price",mgmt_status:"rejected",mgmt_note:r,mgmt_at:now,mgmt_by:mMeName(),mgmt_token:null,back_note:"رفضت الإدارة التكلفة: "+r},"رفضت الإدارة التكلفة: "+r+" · "+mMeName(),["site","owner","pm"],"رفضت الإدارة التكلفة "+mNo(t),{body:r,toast:"تم الرفض"});
   }
 })}
 async function mExecStart(id){await mOnce(async()=>{
@@ -1559,14 +1564,168 @@ function mgDraw(){
   ${d.diagnosis?`<div class="mrep"><b>تقرير المعاينة</b><div class="mpre">${esc(d.diagnosis)}</div></div>`:""}
   ${pics?`<div class="mpics">${pics}</div>`:""}
   <div class="mcostbox"><span>التكلفة المطلوب اعتمادها</span><b>${money(d.cost)} ر.س</b></div>${d.scope?`<div class="lbl">${esc(d.scope)}</div>`:""}
-  ${d.pending?`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mgr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns"><button class="btn big" style="background:#16a34a" onclick="mgDecide(1)">✔ موافقة</button><button class="btn big" style="background:#dc2626" onclick="mgDecide(0)">✖ رفض</button></div>`:`<div class="mwait">تم اتخاذ القرار على هذا الطلب.</div>`}</div>`);
+  ${d.pending?`<label class="lbl">اسمك (يُسجَّل كمعتمد للقرار) *</label><input id="mgn" value="${esc(mgName())}" placeholder="الاسم الكامل"><label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mgr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns"><button class="btn big" style="background:#16a34a" onclick="mgDecide(1)">✔ موافقة</button><button class="btn big" style="background:#dc2626" onclick="mgDecide(0)">✖ رفض</button></div>`:`<div class="mwait">تم اتخاذ القرار على هذا الطلب.</div>`}</div>`);
 }
 async function mgDecide(ok){await mOnce(async()=>{
-  const r=($("mgr")?.value||"").trim();if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const r=($("mgr")?.value||"").trim(),nm=($("mgn")?.value||"").trim();
+  if(!nm)return alert("اكتب اسمك ليُسجَّل كمعتمد للقرار");if(!ok&&!r)return alert("اكتب سبب الرفض");
+  try{localStorage.setItem("pm_approver_name",nm)}catch(e){}
+  const nr=await sb.rpc("mnt_mgmt_name",{p_token:MG.k,p_name:nm});
+  if(nr.error)return alert("يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.\n\n"+nr.error.message);
   const {data,error}=await sb.rpc("mnt_mgmt_decide",{p_token:MG.k,p_ok:!!ok,p_reason:r});
   if(error)return alert(error.message);
   if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":"الرابط غير صالح");
   mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التكلفة":"❌ تم رفض التكلفة"}<br><small>تم إبلاغ مدير المشروع ومدير الموقع. تقدر تقفل الصفحة.</small></div>`);
+})}
+
+
+/* ===== تسعيرة الترميم: تسعير ← اعتماد (مدير المشروع أو الإدارة) مع تسجيل اسم المعتمِد ===== */
+const RQS={pending:["بانتظار الاعتماد","pending"],mgmt:["مرفوعة للإدارة","pending"],approved:["معتمدة","approved"],rejected:["مرفوضة","rejected"]};
+const rqSee=()=>["owner","pm","mgmt"].includes(S.role),rqEd=()=>["owner","pm"].includes(S.role);
+const rqItems=p=>Array.isArray(p.rq_items)?p.rq_items:[];
+const rqLine=x=>(Number(x.q)||0)*(Number(x.u)||0),rqSum=L=>L.reduce((n,x)=>n+rqLine(x),0);
+const rqP=id=>S.projects.find(x=>x.id===id);
+const rqLink=p=>location.origin+location.pathname+"?r="+(p.rq_token||"");
+const rqShareText=p=>`طلب اعتماد تسعيرة ترميم\n${p.name}${p.loc?" · "+p.loc:""}\nالإجمالي: ${money(p.rq_total)} ر.س\n${rqLink(p)}`;
+const rqDecTxt=p=>(p.rq_dec_by?esc(p.rq_dec_by)+" · ":"")+esc(p.rq_dec_role||"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"");
+const mgName=()=>{try{return localStorage.getItem("pm_approver_name")||""}catch(e){return""}};
+let RQ=null;
+function rqNotify(p,roles,body){if(!roles||!roles.length)return;try{sb.rpc("maint_notify",{p_project:p.id,p_ticket:null,p_roles:roles,p_title:"تسعيرة ترميم · "+p.name,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
+/* يحفظ على المشروع، يسجل في سجل النشاط، يشعر الأدوار، ويحدّث الشاشة */
+async function rqSave(p,patch,ev,roles,toast){
+  const {error}=await sb.from("projects").update(patch).eq("id",p.id);
+  if(error){mErr(error);return false}
+  Object.assign(p,patch);logA("quote",ev,p.id);rqNotify(p,roles,ev);
+  S.modal=null;render();if(toast)mToast(toast);return true;
+}
+function renoQuoteBox(p){
+  if(!isReno(p)||!rqSee())return "";
+  const st=p.rq_status,ed=rqEd(),id=p.id,big=(l,fn,c)=>`<button class="btn big" ${c?`style="background:${c}"`:""} onclick="${fn}">${l}</button>`;
+  const head='<h3 style="margin:0 0 6px">💰 تسعيرة الترميم</h3>';
+  if(!st)return `<div class="box">${head}<div class="lbl">لا توجد تسعيرة لهذا المشروع بعد.</div>${ed?big("＋ إضافة تسعيرة","rqOpen()"):""}</div>`;
+  const b=RQS[st]||["","pending"],L=rqItems(p);
+  const rows=L.map(x=>`<tr><td>${esc(x.d)}</td><td>${money(x.q)}</td><td>${money(x.u)}</td><td>${money(rqLine(x))}</td></tr>`).join("");
+  let h=`${head}<span class="mqs ${b[1]}">${b[0]}</span>
+  <div class="mcostbox"><span>إجمالي التسعيرة</span><b>${money(p.rq_total)} ر.س</b></div>
+  <div style="overflow:auto"><table class="mtb"><tr style="font-weight:700"><td>البند</td><td>الكمية</td><td>سعر الوحدة</td><td>الإجمالي</td></tr>${rows}</table></div>
+  ${p.rq_note?`<div class="hlq" style="white-space:pre-wrap">${esc(p.rq_note)}</div>`:""}
+  <div class="lbl">سعّرها: ${esc(p.rq_by||"-")}${p.rq_at?" · "+dfmt(p.rq_at):""}</div>`;
+  if(st==="approved")h+=`<div class="mwait" style="background:#f0fdf4;border:1px solid #16a34a;color:#166534">✅ اعتمدها: ${rqDecTxt(p)}</div>`;
+  if(st==="rejected")h+=`<div class="hlq"><b>رُفضت:</b> ${esc(p.rq_reject||"")} · ${rqDecTxt(p)}</div>`;
+  if(st==="pending")h+=ed?`<div class="mbtns">${big("✔ اعتماد التسعيرة",`rqApprove('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`rqUp('${id}')`,"#db2777")}<button class="btn alt" onclick="rqOpen()">✎ تعديل التسعيرة</button></div>`:`<div class="mwait">⏳ بانتظار اعتماد مدير المشروع</div>`;
+  if(st==="mgmt"){
+    h+=`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
+    if(["owner","mgmt"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="rqr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`rqDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`rqDecide('${id}',0)`,"#dc2626")}</div>`;
+    if(ed)h+=`<div class="link">${esc(rqLink(p))}</div><div class="acts"><button class="btn" onclick="rqShare('${id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",rqShareText(p))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="rqWithdraw('${id}')">↩ سحب من الإدارة</button></div>`;
+  }
+  if(ed&&(st==="approved"||st==="rejected"))h+=`<button class="btn alt" style="margin-top:8px" onclick="rqOpen()">✎ إعادة التسعير</button>`;
+  return `<div class="box">${h}</div>`;
+}
+function rqOpen(){
+  const p=rqP(S.cur);if(!p||!rqEd())return;
+  if(p.rq_status==="approved"&&!confirm("هذه التسعيرة معتمدة. تعديلها يلغي الاعتماد وتحتاج اعتمادًا جديدًا. تكمل؟"))return;
+  const L=rqItems(p).map(x=>({d:x.d||"",q:x.q??1,u:x.u??""}));
+  RQ={items:L.length?L:[{d:"",q:1,u:""}],note:p.rq_note||""};modal("rq");
+}
+function rqHtml(){
+  const r=RQ;if(!r)return "";
+  const sty='style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0"';
+  return `<div class="modal"><div class="box"><h3>💰 تسعيرة الترميم</h3>
+  ${S.role==="owner"?`<details ontoggle="rqLoadList(this)" style="margin:6px 0"><summary>📥 استيراد من تسعيرة محفوظة (💰 التسعير)</summary><div id="rqImp" class="lbl">جاري التحميل...</div></details>`:""}
+  ${r.items.map((x,i)=>`<div ${sty}><input placeholder="البند (مثال: إزالة البلاط القديم وتركيب جديد)" value="${esc(x.d)}" oninput="rqEdit(${i},'d',this.value)">
+    <div style="display:flex;gap:8px;margin-top:6px"><label class="lbl" style="flex:1">الكمية<input type="number" inputmode="decimal" min="0" step="any" value="${esc(x.q)}" oninput="rqEdit(${i},'q',this.value)"></label><label class="lbl" style="flex:1">سعر الوحدة (ر.س)<input type="number" inputmode="decimal" min="0" step="any" value="${esc(x.u)}" oninput="rqEdit(${i},'u',this.value)"></label></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><b id="rqL${i}">${money(rqLine(x))} ر.س</b>${r.items.length>1?`<button class="sm del" onclick="rqDel(${i})">حذف</button>`:""}</div></div>`).join("")}
+  <button class="btn alt" onclick="rqAdd()">＋ إضافة بند</button>
+  <div class="mcostbox"><span>الإجمالي</span><b id="rqTot">${money(rqSum(r.items))} ر.س</b></div>
+  <label class="lbl">ملاحظات (اختياري)</label><textarea rows="2" placeholder="مثال: الأسعار قبل الضريبة، تشمل المواد والعمالة" oninput="RQ.note=this.value">${esc(r.note)}</textarea>
+  <div class="mbtns"><button class="btn big" onclick="rqSend()">📤 حفظ التسعيرة وإرسالها للاعتماد</button><button class="btn alt" onclick="modal(null)">إلغاء</button></div></div></div>`;
+}
+function rqEdit(i,k,v){const x=RQ.items[i];if(!x)return;x[k]=v;const l=$("rqL"+i);if(l)l.textContent=money(rqLine(x))+" ر.س";const t=$("rqTot");if(t)t.textContent=money(rqSum(RQ.items))+" ر.س"}
+function rqAdd(){RQ.items.push({d:"",q:1,u:""});render()}
+function rqDel(i){RQ.items.splice(i,1);render()}
+async function rqLoadList(el){
+  if(!el.open||el.dataset.l)return;el.dataset.l="1";const box=$("rqImp");if(!box)return;
+  try{
+    const {data,error}=await sb.from("price_quotes").select("id,title,branch").order("updated_at",{ascending:false}).limit(30);if(error)throw error;
+    box.innerHTML=(data||[]).length?`<select id="rqpick">${data.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}${x.branch?" · "+esc(x.branch):""}</option>`).join("")}</select><button class="btn alt" onclick="rqImport()">استيراد البنود</button><div class="lbl">تُضاف للبنود الحالية، وتقدر تعدّلها بعد الاستيراد.</div>`:"لا توجد تسعيرات محفوظة";
+  }catch(e){box.textContent="تعذر التحميل: "+((e&&e.message)||e)}
+}
+async function rqImport(){
+  const id=$("rqpick")?.value;if(!id)return;
+  try{
+    const [h,it]=await Promise.all([sb.from("price_quotes").select("*").eq("id",id).single(),sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at")]);
+    if(h.error)throw h.error;if(it.error)throw it.error;
+    const keep=S.price;S.price={quote:h.data};let L;
+    try{L=(it.data||[]).map(x=>({d:x.name+(x.spec?" — "+x.spec:"")+(x.unit?" ("+x.unit+")":""),q:+priceQty(x).toFixed(3),u:+priceUnit(x).toFixed(2)}))}finally{S.price=keep}
+    RQ.items=RQ.items.filter(x=>String(x.d||"").trim()||Number(x.u)).concat(L);render();
+  }catch(e){alert((e&&e.message)||e)}
+}
+async function rqSend(){await mOnce(async()=>{
+  const p=rqP(S.cur);if(!p||!RQ)return;
+  const L=RQ.items.map(x=>({d:String(x.d||"").trim(),q:Number(x.q)||0,u:Number(x.u)||0})).filter(x=>x.d||x.q>0&&x.u>0);
+  if(!L.length)return alert("أضف بنداً واحداً على الأقل");
+  if(L.some(x=>!x.d))return alert("اكتب وصف كل بند");
+  if(L.some(x=>!(x.q>0)))return alert("الكمية يجب أن تكون أكبر من صفر");
+  const tot=+rqSum(L).toFixed(2);if(!(tot>0))return alert("الإجمالي يجب أن يكون أكبر من صفر");
+  await rqSave(p,{rq_items:L,rq_total:tot,rq_note:(RQ.note||"").trim()||null,rq_by:mMeName(),rq_at:new Date().toISOString(),rq_status:"pending",rq_reject:null,rq_dec_by:null,rq_dec_role:null,rq_dec_at:null,rq_token:null},"سُعّرت أعمال الترميم "+money(tot)+" ر.س وأُرسلت للاعتماد · "+mMeName(),[],"حُفظت التسعيرة ✔");
+})}
+async function rqApprove(id){await mOnce(async()=>{
+  const p=rqP(id);if(!p||!confirm("اعتماد التسعيرة بمبلغ "+money(p.rq_total)+" ر.س؟ سيُسجَّل اسمك كمعتمد."))return;
+  await rqSave(p,{rq_status:"approved",rq_reject:null,rq_dec_by:mMeName(),rq_dec_role:ROLES[S.role]||"",rq_dec_at:new Date().toISOString(),rq_token:null},"اعتُمدت تسعيرة الترميم "+money(p.rq_total)+" ر.س بواسطة "+mMeName()+" ("+(ROLES[S.role]||"")+")",[],"اعتُمدت التسعيرة ✔");
+})}
+async function rqUp(id){await mOnce(async()=>{
+  const p=rqP(id);if(!p)return;
+  await rqSave(p,{rq_status:"mgmt",rq_reject:null,rq_dec_by:null,rq_dec_role:null,rq_dec_at:null,rq_token:crypto.randomUUID()},"رُفعت تسعيرة الترميم للإدارة · "+money(p.rq_total)+" ر.س",["mgmt"],"رُفعت للإدارة. شارك الرابط");
+})}
+async function rqWithdraw(id){await mOnce(async()=>{
+  const p=rqP(id);if(!p)return;
+  await rqSave(p,{rq_status:"pending",rq_token:null},"سُحبت التسعيرة من الإدارة",[],"سُحبت من الإدارة");
+})}
+async function rqShare(id){
+  const p=rqP(id);if(!p)return;const tx=rqShareText(p);
+  if(navigator.share){try{await navigator.share({text:tx});return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(tx);mToast("نُسخ الرابط")}catch(e){prompt("انسخ الرابط",rqLink(p))}
+}
+async function rqDecide(id,ok){await mOnce(async()=>{
+  const p=rqP(id);if(!p)return;const r=($("rqr")?.value||"").trim();
+  if(!ok&&!r)return alert("اكتب سبب الرفض");
+  const nm=mMeName(),rl=ROLES[S.role]||"",now=new Date().toISOString();
+  if(S.role==="mgmt"){   /* الإدارة لا تعدّل المشروع مباشرة: القرار عبر دالة آمنة تسجل الاسم */
+    const {data,error}=await sb.rpc("reno_decide",{p_project:String(id),p_ok:!!ok,p_reason:r,p_name:nm});
+    if(error)return alert("يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.\n\n"+error.message);
+    if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":"تعذر تسجيل القرار ("+data+")");
+    const {data:row}=await sb.from("projects").select("*").eq("id",id).maybeSingle();if(row)Object.assign(p,row);
+    rqNotify(p,["owner","pm"],(ok?"وافقت الإدارة على":"رفضت الإدارة")+" تسعيرة الترميم · "+nm);
+    render();return mToast(ok?"تمت الموافقة ✔":"تم الرفض");
+  }
+  await rqSave(p,ok?{rq_status:"approved",rq_reject:null,rq_dec_by:nm,rq_dec_role:rl,rq_dec_at:now,rq_token:null}:{rq_status:"rejected",rq_reject:r,rq_dec_by:nm,rq_dec_role:rl,rq_dec_at:now,rq_token:null},
+    (ok?"اعتُمدت":"رُفضت")+" تسعيرة الترميم "+money(p.rq_total)+" ر.س بواسطة "+nm+" ("+rl+")"+(ok?"":": "+r),["pm"],ok?"تمت الموافقة ✔":"تم الرفض");
+})}
+
+/* ===== صفحة قرار الإدارة على تسعيرة الترميم (رابط بدون تسجيل دخول) ===== */
+let RG={k:"",d:null};
+async function rgLink(k){
+  RG.k=k;mgShell('<div class="note">جاري التحميل...</div>');
+  const {data,error}=await sb.rpc("reno_mgmt_view",{p_token:k});
+  if(error||!data)return mgShell('<div class="box note">الرابط غير صالح أو سبق استخدامه.</div>');
+  RG.d=data;rgDraw();
+}
+function rgDraw(){
+  const d=RG.d,rows=(d.items||[]).map(x=>`<tr><td>${esc(x.d)}</td><td>${money(x.q)}</td><td>${money(x.u)}</td><td>${money((+x.q||0)*(+x.u||0))}</td></tr>`).join("");
+  mgShell(`<div class="box"><h3 style="margin:0">🛠 ${esc(d.name)}</h3><div class="lbl" style="margin:4px 0 10px">تسعيرة ترميم${d.loc?" · "+esc(d.loc):""}${d.pm_name?" · "+esc(d.pm_name):""}</div>
+  <div style="overflow:auto"><table class="mtb"><tr style="font-weight:700"><td>البند</td><td>الكمية</td><td>سعر الوحدة</td><td>الإجمالي</td></tr>${rows}</table></div>
+  ${d.note?`<div class="hlq" style="white-space:pre-wrap">${esc(d.note)}</div>`:""}
+  <div class="mcostbox"><span>التكلفة المطلوب اعتمادها</span><b>${money(d.total)} ر.س</b></div>
+  ${d.pending?`<label class="lbl">اسمك (يُسجَّل كمعتمد للقرار) *</label><input id="rgn" value="${esc(mgName())}" placeholder="الاسم الكامل"><label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="rgr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns"><button class="btn big" style="background:#16a34a" onclick="rgDecide(1)">✔ موافقة</button><button class="btn big" style="background:#dc2626" onclick="rgDecide(0)">✖ رفض</button></div>`:`<div class="mwait">تم اتخاذ القرار على هذه التسعيرة.</div>`}</div>`);
+}
+async function rgDecide(ok){await mOnce(async()=>{
+  const n=($("rgn")?.value||"").trim(),r=($("rgr")?.value||"").trim();
+  if(!n)return alert("اكتب اسمك ليُسجَّل كمعتمد للقرار");if(!ok&&!r)return alert("اكتب سبب الرفض");
+  try{localStorage.setItem("pm_approver_name",n)}catch(e){}
+  const {data,error}=await sb.rpc("reno_mgmt_decide",{p_token:RG.k,p_ok:!!ok,p_reason:r,p_name:n});
+  if(error)return alert(error.message);
+  if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":data==="name"?"اكتب اسمك":"الرابط غير صالح");
+  mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التسعيرة":"❌ تم رفض التسعيرة"}<br><small>سُجّل القرار باسم: ${esc(n)}. تقدر تقفل الصفحة.</small></div>`);
 })}
 
 /* ---------- تقرير PDF مبسط: صفحة واحدة ---------- */
@@ -1598,7 +1757,7 @@ async function mPdf(id){
     if(t.diagnosis)put(`<div class="hl"><b>تقرير المعاينة</b>${t.insp_at?` <small style="display:inline">· ${esc(dfmt(t.insp_at))}</small>`:""}<br>${esc(t.diagnosis).replace(/\n/g,"<br>")}</div>`);
     if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
     if(cost!=null&&cost!==""){
-      const ap=t.mgmt_status==="approved"?"اعتماد الإدارة · "+dfmt(t.mgmt_at):t.cost_ok_at?"اعتماد مدير المشروع · "+dfmt(t.cost_ok_at):"";
+      const A=mApprover(t),ap=A?"اعتماد "+A.r+(A.n?" · "+A.n:"")+" · "+dfmt(A.at):"";
       put(`<div class="gh"><div><small>التكلفة الإجمالية</small><b>${esc(money(cost))} ر.س</b></div><div class="cn">${ap?`<span>${esc(ap)}</span>`:""}</div></div>`);
     }
     put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
@@ -1843,6 +2002,7 @@ function modalHtml(){
   if(m==="log")return logHtml();
   if(m==="users")return usersHtml();
   if(m==="orph")return orphHtml();
+  if(m==="rq")return rqHtml();
   if(m==="mtk")return mTicketHtml();
   if(m==="msite")return mSiteWelcomeHtml();
   if(m==="mnew")return mNewHtml();
