@@ -1144,7 +1144,7 @@ async function delProj(){
 
 /* ===== الصيانة: مسار خفيف، مرحلة واحدة ظاهرة في كل وقت =====
    طلب جديد ← معاينة ← اعتماد المعاينة ← تسعير ← اعتماد التكلفة (مدير المشروع أو الإدارة) ← تنفيذ ← تسليم */
-const MST=[["new","طلب جديد","#d97706","طلب"],["inspect","المعاينة","#7c3aed","معاينة"],["review","اعتماد المعاينة","#0891b2","اعتماد"],["price","التسعير","#ca8a04","تسعير"],["cost","اعتماد التكلفة","#db2777","تكلفة"],["exec","التنفيذ","#2563eb","تنفيذ"],["deliver","التسليم","#16a34a","تسليم"]];
+const MST=[["new","طلب جديد","#d97706","طلب"],["inspect","المعاينة","#7c3aed","معاينة"],["review","اعتماد المعاينة","#0891b2","اعتماد"],["approved","معاينة معتمدة","#0e7490","معتمدة"],["price","التسعير","#ca8a04","تسعير"],["cost","اعتماد التكلفة","#db2777","تكلفة"],["exec","التنفيذ","#2563eb","تنفيذ"],["deliver","التسليم","#16a34a","تسليم"]];
 const MPRI={urgent:["مستعجل","#dc2626"],high:["عاجل","#ea580c"],normal:["عادي","#94a3b8"]};
 const MOUT={done:"تم التسليم",nowork:"لا يحتاج عمل",rejected:"أُلغي الطلب"};
 const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"الإدارة"};
@@ -1154,9 +1154,9 @@ const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
 const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
 const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
 /* المرحلة الحالية (الطلبات القديمة بمرحلة "work" تُعرض كتنفيذ) */
-const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(MST.some(s=>s[0]===t.stage)?t.stage:"new"));
+const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(t.stage==="review"&&t.review_at?"approved":(MST.some(s=>s[0]===t.stage)?t.stage:"new")));
 /* من ينتظره الطلب الآن */
-const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_status==="pending")return"mgmt";return{new:"site",inspect:"site",review:"pm",price:"site",cost:"pm",exec:"site"}[s]||""};
+const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_status==="pending")return"mgmt";return{new:"site",inspect:"site",review:"pm",approved:"pm",price:"site",cost:"pm",exec:"site"}[s]||""};
 const mMine=t=>{const w=mWho(t);return !!w&&(w==="pm"?mAdm():S.role===w)};
 const mCan=t=>{const w=mWho(t);return !!w&&(mAdm()||S.role===w)};
 const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
@@ -1291,7 +1291,9 @@ function mStageBody(t){
   }else if(s==="inspect"){
     h=back+desc+(can?`<label class="lbl">تقرير المعاينة *</label><textarea id="mdg" rows="3" placeholder="وش لقيت؟ وش المطلوب؟">${esc(t.diagnosis||"")}</textarea><label class="lbl">صور المعاينة</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["before"])}${big("📤 إرسال المعاينة للاعتماد",`mInspSend('${id}')`)}`:wait);
   }else if(s==="review"){
-    h=desc+rep+mPics(id,["before"])+(can?`<div class="mbtns">${big("✔ اعتماد المعاينة",`mReviewOk('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
+    h=desc+rep+mPics(id,["before"])+(can?`<div class="mbtns">${big("✔ اعتماد المعاينة فقط وإشعار المدير",`mReviewOnly('${id}')`,"#0e7490")}${big("📨 اعتماد وتوجيه لمدير الموقع",`mReviewRoute('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
+  }else if(s==="approved"){
+    h=desc+rep+mPics(id,["before"])+`<div class="sinfo">تم اعتماد تقرير المعاينة فقط. لن يُرسل الطلب إلى مدير الموقع إلا إذا اخترت توجيهه.</div>`+(can?big("📨 توجيه لمدير الموقع للتسعير",`mReviewRoute('${id}')`,"#16a34a"):wait);
   }else if(s==="price"){
     h=back+rep+(can?`<label class="lbl">التكلفة (ر.س) *</label><input id="mcost" type="number" inputmode="decimal" min="0" step="any" value="${esc(t.cost_total??"")}" class="mcin" placeholder="0"><label class="lbl">ملاحظة (اختياري)</label><input id="msc" value="${esc(t.scope||"")}" placeholder="مثال: تشمل المواد والعمالة">${big("📤 إرسال التكلفة للاعتماد",`mPriceSend('${id}')`)}`:wait);
   }else if(s==="cost"){
@@ -1484,9 +1486,13 @@ async function mInspSend(id){await mOnce(async()=>{
   if(fs.length)await mUploadFiles(t,fs,"before");
   await mUpd(id,{stage:"review",diagnosis:rep,insp_at:mNow(),back_note:null},"أُرسلت المعاينة للاعتماد",["owner","pm"],"معاينة جاهزة للاعتماد "+mNo(t),{body:t.branch+" · "+t.title,toast:"أُرسلت المعاينة للاعتماد ✔"});
 })}
-async function mReviewOk(id){await mOnce(async()=>{
-  const t=mT(id);
-  await mUpd(id,{stage:"price",review_at:mNow(),back_note:null},"اعتُمدت المعاينة",["site"],"اعتُمدت المعاينة، حدّد التكلفة "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت المعاينة ✔"});
+async function mReviewOnly(id){await mOnce(async()=>{
+  const t=mT(id);if(!t||!mAdm())return;
+  await mUpd(id,{review_at:mNow(),back_note:null},"اعتُمدت المعاينة فقط، دون توجيه الطلب للتسعير",["site"],"اعتُمدت المعاينة فقط "+mNo(t),{body:"اعتمد المالك تقرير معاينة "+t.branch+" · "+t.title+". لم يُوجّه الطلب للتسعير.",toast:"اعتُمدت المعاينة وأُشعر مدير الموقع"});
+})}
+async function mReviewRoute(id){await mOnce(async()=>{
+  const t=mT(id);if(!t||!mAdm())return;
+  await mUpd(id,{stage:"price",review_at:mNow(),back_note:null},"اعتُمدت المعاينة ووُجّه الطلب لمدير الموقع",["site"],"اعتُمدت المعاينة، حدّد التكلفة "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت المعاينة ووُجّه الطلب لمدير الموقع"});
 })}
 async function mReviewBack(id){await mOnce(async()=>{
   const n=prompt("ملاحظتك لمدير الموقع:");if(n===null||!n.trim())return;
