@@ -1291,9 +1291,9 @@ function mStageBody(t){
   }else if(s==="inspect"){
     h=back+desc+(can?`<label class="lbl">تقرير المعاينة *</label><textarea id="mdg" rows="3" placeholder="وش لقيت؟ وش المطلوب؟">${esc(t.diagnosis||"")}</textarea><label class="lbl">صور المعاينة</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["before"])}${big("📤 إرسال المعاينة للاعتماد",`mInspSend('${id}')`)}`:wait);
   }else if(s==="review"){
-    h=desc+rep+mPics(id,["before"])+(can?`<div class="mbtns">${big("✔ اعتماد المعاينة فقط وإشعار المدير",`mReviewOnly('${id}')`,"#0e7490")}${big("📨 اعتماد وتوجيه لمدير الموقع",`mReviewRoute('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
+    h=desc+rep+mPics(id,["before"])+(can?`<label class="lbl">إذا رغبت بالتوجيه، اكتب المطلوب من مدير الموقع</label><textarea id="mri" rows="3" placeholder="مثال: عالج التسرب، أصلح السقف، وصوّر بعد التنفيذ"></textarea><div class="mbtns">${big("✔ اعتماد المعاينة فقط وإشعار المدير",`mReviewOnly('${id}')`,"#0e7490")}${big("📨 اعتماد وتوجيه لمدير الموقع",`mReviewRoute('${id}')`,"#16a34a")}<button class="btn alt" onclick="mReviewBack('${id}')">↩ إرجاع بملاحظة</button><button class="btn danger" onclick="mNoWork('${id}')">لا يحتاج عمل</button></div>`:wait);
   }else if(s==="approved"){
-    h=desc+rep+mPics(id,["before"])+`<div class="sinfo">تم اعتماد تقرير المعاينة فقط. لن يُرسل الطلب إلى مدير الموقع إلا إذا اخترت توجيهه.</div>`+(can?big("📨 توجيه لمدير الموقع للتسعير",`mReviewRoute('${id}')`,"#16a34a"):wait);
+    h=desc+rep+mPics(id,["before"])+`<div class="sinfo">تم اعتماد تقرير المعاينة فقط، وأُشعر مدير الموقع. اكتب له المطلوب إذا أردت توجيه الطلب الآن.</div>`+(can?`<label class="lbl">المطلوب من مدير الموقع *</label><textarea id="mri" rows="3" placeholder="مثال: عالج التسرب، أصلح السقف، وصوّر بعد التنفيذ"></textarea>${big("📨 توجيه لمدير الموقع",`mReviewRoute('${id}')`,"#16a34a")}`:wait);
   }else if(s==="price"){
     h=back+rep+(can?`<label class="lbl">التكلفة (ر.س) *</label><input id="mcost" type="number" inputmode="decimal" min="0" step="any" value="${esc(t.cost_total??"")}" class="mcin" placeholder="0"><label class="lbl">ملاحظة (اختياري)</label><input id="msc" value="${esc(t.scope||"")}" placeholder="مثال: تشمل المواد والعمالة">${big("📤 إرسال التكلفة للاعتماد",`mPriceSend('${id}')`)}`:wait);
   }else if(s==="cost"){
@@ -1492,7 +1492,8 @@ async function mReviewOnly(id){await mOnce(async()=>{
 })}
 async function mReviewRoute(id){await mOnce(async()=>{
   const t=mT(id);if(!t||!mAdm())return;
-  await mUpd(id,{stage:"price",review_at:mNow(),back_note:null},"اعتُمدت المعاينة ووُجّه الطلب لمدير الموقع",["site"],"اعتُمدت المعاينة، حدّد التكلفة "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت المعاينة ووُجّه الطلب لمدير الموقع"});
+  const instruction=$("mri")?.value.trim()||"";if(!instruction)return alert("اكتب المطلوب من مدير الموقع");
+  await mUpd(id,{stage:"price",review_at:mNow(),back_note:instruction},"اعتُمدت المعاينة ووُجّه الطلب لمدير الموقع: "+instruction,["site"],"توجيه جديد لمدير الموقع "+mNo(t),{body:t.branch+" · "+t.title+" · المطلوب: "+instruction,toast:"وُجّه الطلب لمدير الموقع"});
 })}
 async function mReviewBack(id){await mOnce(async()=>{
   const n=prompt("ملاحظتك لمدير الموقع:");if(n===null||!n.trim())return;
