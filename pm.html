@@ -489,7 +489,8 @@ const day0=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
 const cleanTxt=v=>String(v??"").replace(/\r\n?/g,"\n").split("\n").map(l=>l.replace(/[ \t]+/g," ").trim()).filter(Boolean).join("\n");
 const cut=(s,n)=>s.length>n?s.slice(0,n).trimEnd()+"…":s;
 const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
-const loadLib=src=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>rej(new Error("تعذر تحميل "+src));document.head.appendChild(s)});
+const LIBCDN={"html2canvas.min.js":"https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js","jspdf.umd.min.js":"https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"};
+const loadLib=src=>{const one=u=>new Promise((res,rej)=>{if(document.querySelector(`script[src="${u}"]`))return res();const s=document.createElement("script");s.src=u;s.onload=res;s.onerror=()=>{s.remove();rej(new Error("تعذر تحميل "+u))};document.head.appendChild(s)});const k=String(src).split("?")[0],cdn=LIBCDN[k];return one(src).catch(e=>cdn?one(cdn):Promise.reject(e))};
 const RPCSS=`
 .rpg{width:794px;height:1123px;background:#fff;position:relative;overflow:hidden;direction:rtl;text-align:right;font-family:'Tajawal',Tahoma,sans-serif;color:#182b3d;line-height:1.7;box-sizing:border-box;font-size:13px}
 .rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;box-sizing:border-box;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal;font-feature-settings:normal}
