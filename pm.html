@@ -657,7 +657,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 /* —— النافذة —— */
 function openReport(){
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
-  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",manual:{},projectInfo:{},projectInfoOn:false,stageByPhoto:rpLoadPhotoStages(p?.id),q:"hi",lay:"3",dur:"",du:"d"};
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",manual:{},projectInfo:{},projectInfoOn:false,coverOn:true,coverImageOn:true,executiveOn:false,executiveSummary:"",stageByPhoto:rpLoadPhotoStages(p?.id),q:"hi",lay:"3",dur:"",du:"d"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -689,6 +689,8 @@ function reportHtml(){
   <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
   ${per}
   <p class="lbl">يحتوي التقرير على فريق المشروع والصور المسجلة في الفترة المحددة.</p>
+  <div style="border:1px solid #e3e9ef;border-radius:12px;padding:10px 12px;margin:10px 0"><b>واجهة التقرير</b><label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input id="rpcov" type="checkbox" ${r.coverOn!==false?"checked":""} onchange="$('rpcovimgrow').style.display=this.checked?'flex':'none'" style="width:18px;height:18px">إضافة واجهة افتتاحية للتقرير</label><label id="rpcovimgrow" style="display:${r.coverOn!==false?"flex":"none"};align-items:center;gap:8px;margin:8px 0 2px"><input id="rpcovimg" type="checkbox" ${r.coverImageOn!==false?"checked":""} style="width:18px;height:18px">إظهار صورة العرض للمشروع</label></div>
+  <div style="border:1px solid #e3e9ef;border-radius:12px;padding:10px 12px;margin:10px 0"><b>الملخص التنفيذي</b><label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input id="rpexec" type="checkbox" ${r.executiveOn?"checked":""} onchange="$('rpexec_fields').style.display=this.checked?'block':'none'" style="width:18px;height:18px">إضافة ملخص تنفيذي (اختياري)</label><div id="rpexec_fields" style="display:${r.executiveOn?"block":"none"}"><textarea id="rpexec_text" rows="4" placeholder="اكتب الملخص التنفيذي هنا" style="width:100%;box-sizing:border-box">${esc(r.executiveSummary||"")}</textarea><small class="lbl">يظهر النص الذي تكتبه فقط.</small></div></div>
   <label style="display:flex;align-items:center;gap:8px;margin:10px 0"><input id="rpi" type="checkbox" ${r.projectInfoOn?"checked":""} onchange="$('rpi_fields').style.display=this.checked?'block':'none'" style="width:18px;height:18px">إضافة بيانات المشروع الاختيارية</label>
   <div id="rpi_fields" style="display:${r.projectInfoOn?"block":"none"}">${[["name","اسم المشروع"],["value","قيمة العقد"],["duration","المدة"],["area","المساحة"],["start","بداية العقد"],["end","نهاية العقد"],["actual","الانتهاء الفعلي"]].map(([k,l])=>`<label class="lbl">${l}<input id="rpi_${k}" value="${esc(r.projectInfo?.[k]||"")}" placeholder="اختياري"></label>`).join("")}</div>
   <div style="border-top:1px solid #e3e9ef;margin-top:12px;padding-top:8px"><b>أقسام اختيارية تكتبها بنفسك</b>
@@ -703,7 +705,7 @@ function reportHtml(){
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:"",dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
-    pho:true,upd:false,obs:false,wrk:false,ba:false,projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
+    pho:true,upd:false,obs:false,wrk:false,ba:false,coverOn:$("rpcov").checked,coverImageOn:$("rpcovimg").checked,executiveOn:$("rpexec").checked,executiveSummary:$("rpexec_text").value.trim(),projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
 }
 function rpLoadPhotoStages(projectId){try{return JSON.parse(localStorage.getItem("rp_photo_phases_"+projectId)||"{}")}catch(e){return {}}}
 function rpSavePhotoStage(photoId,phase){
@@ -805,7 +807,7 @@ async function rpPrep(url,mode,L){
 }
 async function rpImages(p,cfg,data,prog){
   const L=LAY[cfg.lay]||LAY[2];
-  const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),...(cfg.ba?data.pairs.flatMap(x=>[x.a.file_path,x.b.file_path]):[]),p.cover_path].filter(Boolean))],urls={};
+  const want=[...new Set([...(cfg.pho?data.pics.map(e=>e.file_path):[]),...(cfg.ba?data.pairs.flatMap(x=>[x.a.file_path,x.b.file_path]):[]),...(cfg.coverOn&&cfg.coverImageOn?[p.cover_path]:[])].filter(Boolean))],urls={};
   for(let i=0;i<want.length;i+=100){
     const {data:d}=await sb.storage.from("media").createSignedUrls(want.slice(i,i+100),3600);
     (d||[]).forEach(x=>{if(x.signedUrl)urls[x.path]=x.signedUrl});
@@ -816,7 +818,7 @@ async function rpImages(p,cfg,data,prog){
       try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit",L)}catch(e){fail++}
       prog(++done,jobs.length)}
   }));
-  data.cover=data.img[p.cover_path]||"";
+  data.cover=cfg.coverOn&&cfg.coverImageOn?(data.img[p.cover_path]||""):"";
   data.pics=data.pics.filter(e=>data.img[e.file_path]);
   data.pairs=cfg.ba?data.pairs.filter(x=>data.img[x.a.file_path]&&data.img[x.b.file_path]):[];
   data.pairIds=new Set(data.pairs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
@@ -936,8 +938,10 @@ function rpPages(p,cfg,d,root){
     root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
   };
   const put=h=>{const el=mk(h);box.appendChild(el);const overflow=box.children.length>1&&(box.scrollHeight>box.clientHeight+2||el.getBoundingClientRect().bottom>box.getBoundingClientRect().bottom-8);if(overflow){box.removeChild(el);fresh();box.appendChild(el)}return el};
+  if(cfg.coverOn){const cov=mk(`<div class="rpg rcv"><div class="tp"><div class="br"><img src="icon-192.png" alt=""><span>إدارة المشاريع</span></div><div class="ey">${reno?"تقرير المشروع":"تقرير إنجاز"}</div><h1>${esc(cfg.title)}</h1><div class="pj">${esc(p.name)}</div></div><div class="sp"></div><div class="pe"><div><small>الفترة</small><b>${esc(range||"كامل المشروع")}</b></div><div><small>تاريخ الإصدار</small><b>${esc(dfmt(today))}</b></div></div>${d.cover?`<div class="im"><img src="${d.cover}" alt="صورة عرض المشروع"></div>`:`<div style="margin:22px 46px 0;height:500px;border:1px solid #e3e9ef;border-radius:14px;background:#f6f9fc;display:flex;align-items:center;justify-content:center;color:#8996a5;font-size:18px">${cfg.coverImageOn?"لا توجد صورة عرض للمشروع":"صورة العرض غير مضافة"}</div>`}<div class="cf">${ref}</div></div>`);root.appendChild(cov);pages.push(cov)}
   /* بيانات المشروع والفريق، ثم الأقسام الاختيارية والصور */
   fresh();const tocEl=put('<div class="toc"></div>');
+  if(cfg.executiveOn&&cfg.executiveSummary?.trim()){const blocks=rpWriteBlocks(cfg.executiveSummary);if(blocks.length){put("<div>"+sec("الملخص التنفيذي")+blocks.join("")+"</div>");mark()}}
   const projectRows=Object.entries({"اسم المشروع":cfg.projectInfo?.name,"قيمة العقد":cfg.projectInfo?.value,"المدة":cfg.projectInfo?.duration,"المساحة":cfg.projectInfo?.area,"بداية العقد":cfg.projectInfo?.start,"نهاية العقد":cfg.projectInfo?.end,"الانتهاء الفعلي":cfg.projectInfo?.actual}).filter(([k,v])=>v?.trim());
   if(cfg.projectInfoOn&&projectRows.length){put(sec("بيانات المشروع"));mark();put('<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px">'+projectRows.map(x=>'<div style="border:1px solid #e3e9ef;border-radius:9px;padding:8px 10px"><small style="display:block;color:#8996a5">'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div>')}
   const teamRows=[["مدير المشروع",p.pm_name],["مدير الموقع",p.site_manager],["المقاول",p.contractor_name]].filter(x=>x[1]);
@@ -959,7 +963,7 @@ async function rpPdf(p,cfg,pages,prog){
   try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const sc=cfg.q==="hi"?2:1.4,ql=cfg.q==="hi"?.9:.8,N=pages.length;
-  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v26`});
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v27`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
