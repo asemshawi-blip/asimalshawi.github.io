@@ -688,14 +688,13 @@ function reportHtml(){
   <p class="lbl">المشروع: <b>${esc(p?.name)}</b> · ${esc(TYN[p?.ptype]||"إنشاء")}</p>
   <label class="lbl">عنوان التقرير</label><input id="rpn" value="${esc(r.title)}">
   ${per}
-  <label class="lbl">محتوى التقرير</label>
-  ${rpCk("rpu","التحديثات المكتوبة (من تبويب التقارير)",r.upd)}${rpCk("rpp","صور الأعمال",r.pho)}${rpCk("rpk","مراحل الأعمال ونسب إنجازها (من تبويب متابعة الأعمال)",r.wrk)}${rpCk("rpx","قبل وبعد (الصور التي حددتها في تبويب الصور)",r.ba)}${canPrice?rpCk("rpr","إظهار قيمة المشروع",r.price):""}
-  <div style="border-top:1px solid #e3e9ef;margin-top:12px;padding-top:8px"><b>أقسام تكتبها بنفسك (كلها اختيارية)</b>
-  ${[["ach","ما تم إنجازه"],["obs","المعوقات"],["notes","الملاحظات"],["written","التقرير المكتوب"]].map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" id="rpm_${k}" ${r.manual?.[k]?.on?"checked":""} style="width:18px;height:18px">${l}</label><textarea id="rpm_${k}_text" rows="3" placeholder="اكتب ${l} هنا إن رغبت" style="width:100%;box-sizing:border-box;margin-bottom:8px">${esc(r.manual?.[k]?.text||"")}</textarea>`).join("")}</div>
+  <p class="lbl">يحتوي التقرير على بيانات المشروع وفريقه، ثم الصور المسجلة في الفترة المحددة.</p>
+  <div style="border-top:1px solid #e3e9ef;margin-top:12px;padding-top:8px"><b>أقسام اختيارية تكتبها بنفسك</b>
+  ${[["obstacles","المعوقات التي واجهتنا بالمشروع"],["info","معلومات إضافية عن المشروع"]].map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" id="rpm_${k}" ${r.manual?.[k]?.on?"checked":""} style="width:18px;height:18px">${l}</label><textarea id="rpm_${k}_text" rows="3" placeholder="اكتب ${l} هنا إن رغبت" style="width:100%;box-sizing:border-box;margin-bottom:8px">${esc(r.manual?.[k]?.text||"")}</textarea>`).join("")}</div>
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("2","شبكة — صورتان في الصف")}${sel("1","كبيرة — صورة في كل صف")}${sel("3","مصغّرة — 3 صور في الصف")}</select>
-  <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">ربط صور الفترة بالمراحل</button>
-  ${r.photoList?.length?`<div style="margin:8px 0;max-height:220px;overflow:auto">${r.photoList.map(e=>`<label class="lbl" style="display:block;margin:6px 0">${esc(dfmt(e.created_at))} · ${esc(cut(cleanTxt(e.body)||"صورة من الموقع",50))}<select onchange="rpSavePhotoStage('${esc(String(e.id))}',this.value)" style="display:block;width:100%"><option value="">بدون مرحلة</option>${(r.phaseOptions||[]).map(f=>`<option value="${esc(f)}" ${r.stageByPhoto?.[e.id]===f?"selected":""}>${esc(f)}</option>`).join("")}</select></label>`).join("")}</div>`:`<p class="lbl">اربط صور الفترة بمرحلة أو اتركها بدون ربط. يمكنك إضافة أي عدد من الصور.</p>`}
-  <p class="lbl">الأقسام اليدوية أعلاه اختيارية بالكامل؛ لا يظهر أي قسم ما لم تحدده وتكتب محتواه.</p>
+  <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">إضافة أسماء المراحل أسفل الصور</button>
+  ${r.photoList?.length?`<div style="margin:8px 0;max-height:220px;overflow:auto">${r.photoList.map(e=>`<label class="lbl" style="display:block;margin:6px 0">${esc(dfmt(e.created_at))} · ${esc(cut(cleanTxt(e.body)||"صورة من الموقع",50))}<select onchange="rpSavePhotoStage('${esc(String(e.id))}',this.value)" style="display:block;width:100%"><option value="">بدون اسم مرحلة</option>${(r.phaseOptions||[]).map(f=>`<option value="${esc(f)}" ${r.stageByPhoto?.[e.id]===f?"selected":""}>${esc(f)}</option>`).join("")}</select></label>`).join("")}</div>`:`<p class="lbl">تظهر الصور كلها تلقائياً. اختر اسم مرحلة لكل صورة عند الرغبة.</p>`}
+  <p class="lbl">الأقسام الإضافية وأسماء المراحل اختيارية.</p>
   <label class="lbl">أُعدّ بواسطة (يظهر في الغلاف والاعتماد)</label><input id="rpb" value="${esc(r.by)}">
   <label class="lbl">الجودة</label><select id="rpq"><option value="hi" ${r.q==="hi"?"selected":""}>عالية (للعرض والطباعة)</option><option value="md" ${r.q==="md"?"selected":""}>متوسطة (حجم أصغر للمشاركة)</option></select>
   <button class="btn" onclick="rpRun()">إنشاء التقرير</button> <button class="btn alt" onclick="modal(null)">إلغاء</button></div></div>`;
@@ -703,7 +702,7 @@ function reportHtml(){
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:$("rpb").value.trim(),dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
-    upd:$("rpu").checked,pho:$("rpp").checked,obs:false,wrk:$("rpk").checked,ba:$("rpx").checked,manual:Object.fromEntries(["ach","obs","notes","written"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},price:$("rpr")?.checked??false,q:$("rpq").value,lay:$("rpl").value};
+    pho:true,upd:false,obs:false,wrk:false,ba:false,manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
 }
 function rpLoadPhotoStages(projectId){try{return JSON.parse(localStorage.getItem("rp_photo_phases_"+projectId)||"{}")}catch(e){return {}}}
 function rpSavePhotoStage(photoId,phase){
@@ -720,7 +719,6 @@ async function rpChoosePhotoStages(b){
 function rpCheck(cfg){
   if(!cfg.full){if(!cfg.from||!cfg.to)return "حدد تاريخ البداية وتاريخ النهاية";if(cfg.from>cfg.to)return "تاريخ البداية بعد تاريخ النهاية"}
   if(cfg.dur&&!(+cfg.dur>0))return "مدة التنفيذ يجب أن تكون رقماً أكبر من صفر";
-  if(!cfg.upd&&!cfg.pho&&!cfg.wrk&&!cfg.ba&&!Object.values(cfg.manual||{}).some(x=>x.on&&x.text))return "اختر محتوى واحداً على الأقل";
   return "";
 }
 async function rpRun(){
@@ -836,7 +834,7 @@ function rpGroups(d,cfg){
     cur=mode==="day"?addDays(cur,1):mode==="month"?new Date(cur.getFullYear(),cur.getMonth()+1,1):addDays(cur,7);
   }
   if(cfg.upd)d.ups.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.ups.push(e)});
-  if(cfg.pho)d.pics.forEach(e=>{if(d.pairIds&&d.pairIds.has(String(e.id))||cfg.stageByPhoto?.[e.id])return;const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
+  if(cfg.pho)d.pics.forEach(e=>{const b=map.get(keyOf(e.created_at));if(b)b.pics.push(e)});
   all.forEach((b,i)=>{
     if(mode==="day"){b.tag="يوم العمل";b.label=dfmt(b.s,RPNF);b.short=dfmt(b.s,{day:"numeric",month:"numeric"})}
     else if(mode==="month"){b.tag="الشهر";b.label=dfmt(b.s,{month:"long",year:"numeric"});b.short=dfmt(b.s,{month:"short"})}
@@ -926,7 +924,7 @@ function rpChunks(t,max=1150){
 }
 function rpPages(p,cfg,d,root){
   if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
-  const pages=[],today=new Date(),G=rpGroups(d,cfg),A=rpAnalyze(p,cfg,d,G),isDone=p.status==="done",reno=!!cfg.full;
+  const pages=[],today=new Date(),G=rpGroups(d,cfg),reno=!!cfg.full;
   const execTxt=rpDurTxt(cfg.dur,cfg.du),range=reno?(execTxt?`مدة التنفيذ: ${execTxt}`:""):`${dfmt(d.f)} – ${dfmt(d.t)}`,tm=timing(p),prog=clamp(p.progress),by=cfg.by?esc(cfg.by):"",ref=rpRef(p),LY=String(cfg.lay||"2"),LC=LAY[LY]||LAY[2];
   const mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
   let no=0;const marks=[];
@@ -946,98 +944,21 @@ function rpPages(p,cfg,d,root){
     root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc");
   };
   const put=h=>{const el=mk(h);box.appendChild(el);const overflow=box.children.length>1&&(box.scrollHeight>box.clientHeight+2||el.getBoundingClientRect().bottom>box.getBoundingClientRect().bottom-8);if(overflow){box.removeChild(el);fresh();box.appendChild(el)}return el};
-  /* 1) ملخص الإدارة */
-  fresh();const tocEl=put(`<div class="toc"></div>`);
-  put(sec("ملخص الإدارة"));mark();
-  put(`<div class="rag ${A.rag}"><span class="dt"></span><div><b>${esc(ST[p.status][0])}</b><span>نسبة الإنجاز المسجلة للمشروع: ${prog}%.</span></div></div>`);
-  const kc=(cls,big,lab,sub,sz)=>`<div class="k ${cls}"><b${sz?` style="font-size:${sz}px;padding:${Math.round((22-sz)/2)+2}px 0"`:""}>${big}</b><span>${lab}</span>${sub?`<em class="sub">${sub}</em>`:""}</div>`;
-  const dsh=v=>esc(dfmt(v,{day:"numeric",month:"long",year:"numeric"})),io=A.io,KP=[];
-  KP.push(kc("",prog+"%","الإنجاز الفعلي",isDone?"مكتمل":A.elp!==undefined?`المخطط حتى اليوم ${A.elp}%`:""));
-  if(reno){if(execTxt)KP.push(kc("",esc(execTxt),"مدة التنفيذ","",19))}else{
-  if(isDone)KP.push(kc("gd","تم التسليم","حالة المشروع",p.due?"الموعد المخطط "+dsh(p.due+"T00:00:00"):"",17));
-  else if(A.left===undefined)KP.push(kc("","—","المتبقي للتسليم","لم تُحدَّد تواريخ المشروع"));
-  else if(A.left<0)KP.push(kc("bd",`متأخر ${-A.left} يوم`,"موعد التسليم",dsh(p.due+"T00:00:00"),17));
-  else KP.push(kc("",`${A.left} يوم`,"المتبقي للتسليم","التسليم: "+dsh(p.due+"T00:00:00"),19));
-  if(isDone)KP.push(kc("",A.total!==undefined?A.total+" يوم":"—","مدة المشروع المخططة","",19));
-  else if(A.est)KP.push(kc(A.delta>0?"bd":A.delta<0?"gd":"",dsh(A.est),"التسليم المتوقع",A.delta>0?`بعد الموعد بـ ${A.delta} يوم`:A.delta<0?`قبل الموعد بـ ${-A.delta} يوم`:"في الموعد",15));
-  else KP.push(kc("","غير متاح بعد","التسليم المتوقع","يحتاج 7 أيام و5% إنجاز",15));
-  }
-  if(cfg.obs&&io.known)KP.push(kc(io.open?(io.oldest>14?"bd":""):"gd",io.open,"معوقات مفتوحة",io.open?`أقدمها منذ ${io.oldest} يوم`:"لا توجد معوقات مفتوحة"));
-  else KP.push(kc("",cfg.pho?d.pics.length:d.ups.length,cfg.pho?"صور موثقة":"تحديثات مكتوبة",reno?"منذ بداية المشروع":"خلال الفترة"));
-  put(`<div class="kp">${KP.join("")}</div>`);
-  put(`<div class="pbar"><div class="trk"><i style="width:${prog}%"></i>${A.elp!==undefined&&!isDone?`<b style="right:${A.elp}%"></b>`:""}</div><div class="lg3"><span>الإنجاز الفعلي ${prog}%</span>${A.elp!==undefined&&!isDone?`<span>العلامة الداكنة: المخطط حتى اليوم ${A.elp}%</span>`:"<span></span>"}</div></div>`);
-  /* أقسام يكتبها مُعدّ التقرير فقط، ولا تُنشأ لها صياغة تلقائية */
-  const manualLabels={ach:"ما تم إنجازه",obs:"المعوقات",notes:"الملاحظات",written:"التقرير المكتوب"};
-  Object.entries(cfg.manual||{}).forEach(([k,v])=>{if(!v?.on||!v.text?.trim())return;const blocks=rpWriteBlocks(v.text);if(!blocks.length)return;put(`<div>${sec(manualLabels[k]||k)}${blocks.join("")}</div>`);mark()});
-  /* مراحل الأعمال */
-  if(cfg.wrk&&d.works&&d.works.length){
-    const W=d.works;{const PH=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0);
-    const row=f=>{const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0),c=pc===100?"#1d7a4d":pc>0?"#ed8700":"#9aa8b6",st=pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ";
-      return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #eef1f5;font-size:12.5px"><span style="flex:1;color:#182b3d;font-weight:600">${esc(f)}<small style="color:#8996a5;font-weight:400;margin-right:6px">وزن ${Math.round(w/tot*1000)/10}%</small></span><span style="width:54px;color:${c};font-size:11.5px;font-weight:700">${st}</span><span style="width:170px;height:9px;border-radius:5px;background:#e6ebf1;overflow:hidden;display:block"><i style="display:block;height:100%;width:${pc}%;background:${c}"></i></span><b style="width:38px;text-align:left;color:#102944">${pc}%</b></div>`};
-    const dn=PH.filter(f=>wCalc(W.filter(i=>i.phase===f))===100).length;
-    PH.forEach((f,i)=>put(i?row(f):`<div style="margin-top:6px"><div class="st">مراحل الأعمال ونسب الإنجاز (${dn} من ${PH.length} مراحل مكتملة)</div>${row(f)}</div>`))}
-  }
-  /* أبرز ما تم */
-  if(cfg.upd&&d.ups.length){
-    const lastUp=[...d.ups].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,5);
-    const hd=`<div class="st" style="margin-top:12px">${reno?"آخر ما تم في المشروع":"أبرز ما تم خلال الفترة"} (${d.ups.length} تحديث${cfg.pho?` · ${d.pics.length} صورة`:""})</div>`;
-    const row=e=>`<div class="ac"><span class="d">${esc(dfmt(e.created_at,{day:"numeric",month:"short"}))}</span><span>${esc(cut(cleanTxt(e.body).replace(/\n/g," "),150))}</span></div>`;
-    lastUp.forEach((e,i)=>put(i?row(e):`<div>${hd}${row(e)}</div>`));
-    if(d.ups.length>lastUp.length)put(`<div class="more">و${d.ups.length-lastUp.length} تحديثات أخرى في سجل الأعمال.</div>`);
-  }
-  /* الفريق */
-  const tm2=[["مدير المشروع",p.pm_name],["المقاول",p.contractor_name],["مدير الموقع",p.site_manager],["مدير المنطقة",p.area_name]].filter(x=>x[1]);
-  if(cfg.price&&p.price!=null&&p.price!=="")tm2.push(["قيمة المشروع",money(p.price)]);
-  if(cfg.price&&p.rq_status==="approved")tm2.push(["التسعيرة المعتمدة",money(p.rq_total)+" ر.س · اعتمدها "+(p.rq_dec_by||p.rq_dec_role||"")]);
-  if(tm2.length)put(`<div><div class="st">فريق المشروع</div><div class="team">${tm2.map(x=>`<div><small>${x[0]}</small><b>${esc(x[1])}</b></div>`).join("")}</div></div>`);
-  /* 2) قبل وبعد (الصور التي حددها المستخدم) */
-  if(cfg.ba&&d.pairs.length){
-    const ph=Math.round(348*LC.H/LC.W),cp=e=>esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",90));
-    const side=(e,c,t)=>`<div class="pf l2"><div class="tg ${c}">${t} · ${esc(dfmt(e.created_at))}</div><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b>${cp(e)}</b></div></div>`;
-    d.pairs.forEach((x,i)=>{
-      const days=Math.max(0,Math.round((day0(x.a.created_at)-day0(x.b.created_at))/864e5));
-      const row=`<div class="pr l2" style="margin-bottom:6px">${side(x.b,"bf","قبل")}${side(x.a,"af","بعد")}</div><div class="bagap">المدة بين الصورتين: ${days===0?"في نفس اليوم":days+" يوماً"}</div>`;
-      put(i?`<div>${row}</div>`:`<div>${sec("قبل وبعد")}<div class="st">مقارنة بين حالة الموقع قبل العمل وبعده</div>${row}</div>`);
-      if(!i)mark();
-    });
-  }
-  /* سجل الأعمال */
-  let un=0,pn=0;
-  const upHtml=(e,n,txt,cont)=>`<div class="uc"><div class="mt"><i>${String(n).padStart(2,"0")}</i><b>${esc(tfmt(e.created_at))}</b>${e.author_role?`<span>· ${esc(ROLES[e.author_role]||e.author_role)}</span>`:""}${cont?"<span>· (تابع)</span>":""}</div><p>${esc(txt)}</p>${!cont&&e.file_path&&!(e.file_type||"").startsWith("image")?'<div class="at">مرفق: ملف مرفوع مع هذا التحديث</div>':""}</div>`;
-  const picCard=(e,n)=>`<div class="pf l${LY}"><img src="${d.img[e.file_path]}" alt=""><div class="pc"><b><i>${String(n).padStart(2,"0")}</i>${e._dup?"":esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`;
-  const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push(`<div class="pr l${LY}">${h}</div>`)}return rows};
-  if(G.list.length){
-    let ttl=sec(reno?"سجل أعمال الترميم":"سجل الأعمال"),firstPut=true;
-    const putT=h=>{put(h);if(firstPut){mark();firstPut=false}};
-    G.list.forEach(g=>{
-      const head=ttl+`<div class="gh"><div><small>${esc(g.tag)}</small><b>${esc(g.label)}</b></div><div class="cn">${cfg.upd?`<span>${g.ups.length} تحديث</span>`:""}${cfg.pho?`<span>${g.pics.length} صورة</span>`:""}</div></div>`;
-      const items=[];
-      g.ups.forEach(e=>{const ch=rpChunks(cleanTxt(e.body));un++;ch.forEach((c,i)=>items.push(upHtml(e,un,c,i>0)))});
-      ttl="";let first=true;
-      items.forEach(h=>{if(first){putT(`<div>${head}${h}</div>`);first=false}else put(h)});
-      if(g.pics.length){
-        picRows(g.pics).forEach((r,i)=>{
-          if(i===0){const lead=first?head:"";first=false;putT(`<div>${lead}<div class="st">صور الأعمال</div>${r}</div>`)}else put(r);
-        });
-      }
-      if(first)putT(head);
-    });
-  }else if((!cfg.upd||!d.ups.length)&&(!cfg.pho||!(d.pics||[]).some(e=>!cfg.stageByPhoto?.[e.id])))put(`<div class="em">لا توجد تحديثات أو صور مسجلة ${reno?"في المشروع":"في هذه الفترة"}.</div>`);
-  const assigned=new Map();
-  if(cfg.pho)(d.pics||[]).forEach(e=>{if(d.pairIds?.has(String(e.id)))return;const phase=cfg.stageByPhoto?.[e.id];if(phase){if(!assigned.has(phase))assigned.set(phase,[]);assigned.get(phase).push(e)}});
-  if(assigned.size){let first=true;for(const [phase,arr] of assigned){const rows=picRows(arr);rows.forEach((row,i)=>{put(i?row:`<div>${first?sec("صور الأعمال حسب المرحلة"):""}<div class="st">${esc(phase)} (${arr.length} صورة)</div>${row}</div>`);if(first){mark();first=false}})}}
-  /* المعوقات */
-  if(cfg.obs&&(d.iss.length||d.issOld.length)){
-    const oc=e=>{const [c,l]=rpStatus(e);return `<div class="oc"><div class="bd ${c}">${l}</div><div class="tx"><p>${esc(cleanTxt(e.body))}</p><small>سُجّل ${esc(dfmt(e.created_at))}${e.resolved&&e.resolved_at?` · حُلّ ${esc(dfmt(e.resolved_at))}`:""}${e.author_role?` · ${esc(ROLES[e.author_role]||e.author_role)}`:""}</small></div></div>`};
-    let ot=sec("سجل المعوقات"),op=true;
-    const lst=(title,arr)=>arr.forEach((e,i)=>{put(i?oc(e):`<div>${ot}<div class="st">${title} (${arr.length})</div>${oc(e)}</div>`);if(!i&&op){mark();op=false}ot=""});
-    if(d.iss.length)lst(reno?"جميع المعوقات المسجلة":"معوقات سُجّلت خلال الفترة",d.iss);
-    if(d.issOld.length)lst("معوقات مفتوحة من فترات سابقة",d.issOld);
-  }
-  /* الاعتماد */
-  const pBox=box,pEl=box.lastElementChild;
-  const sgEl=put(`<div class="sg"><div><b>أعدّه</b>${by||"&nbsp;"}<div class="ln">التوقيع / التاريخ</div></div><div><b>راجعه</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div><div><b>اعتمده</b>&nbsp;<div class="ln">التوقيع / التاريخ</div></div></div>`);
-  if(box!==pBox&&pEl&&pEl.parentNode===pBox){pBox.removeChild(pEl);box.insertBefore(pEl,sgEl)}
+  /* بيانات المشروع والفريق، ثم الأقسام الاختيارية والصور */
+  fresh();const tocEl=put('<div class="toc"></div>');
+  put(sec("بيانات المشروع"));mark();
+  const projectRows=[["اسم المشروع",p.name],["نوع المشروع",TYN[p.ptype]||""],["الموقع",p.loc||""],["فترة التقرير",range],["نسبة الإنجاز",prog+"%"],["حالة المشروع",ST[p.status][0]],["تاريخ البداية",p.start_date?dfmt(p.start_date+"T00:00:00"):""],["موعد التسليم",p.due?dfmt(p.due+"T00:00:00"):""]].filter(x=>x[1]);
+  put('<div class="team">'+projectRows.map(x=>'<div><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div>');
+  const teamRows=[["مدير المشروع",p.pm_name],["مدير الموقع",p.site_manager],["المقاول",p.contractor_name]].filter(x=>x[1]);
+  if(teamRows.length)put('<div><div class="st">فريق المشروع</div><div class="team">'+teamRows.map(x=>'<div><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div></div>');
+  const manualLabels={obstacles:"المعوقات التي واجهتنا بالمشروع",info:"معلومات إضافية عن المشروع"};
+  Object.entries(cfg.manual||{}).forEach(([k,v])=>{if(!v?.on||!v.text?.trim())return;const blocks=rpWriteBlocks(v.text);if(!blocks.length)return;put('<div>'+sec(manualLabels[k]||k)+blocks.join('')+'</div>');mark()});
+  let pn=0;
+  const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc"><b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
+  const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push('<div class="pr l'+LY+'">'+h+'</div>')}return rows};
+  const allPics=[...(d.pics||[])].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  if(allPics.length){put('<div>'+sec("صور الفترة المحددة")+'<div class="st">'+allPics.length+' صورة</div></div>');mark();picRows(allPics).forEach(put)}
+  else put('<div class="em">لا توجد صور مسجلة في الفترة المحددة.</div>');
   /* الفهرس */
   tocEl.innerHTML=marks.filter(m=>m[2]).map(m=>`<span><b>${m[0]}.</b> ${m[1].split(" ").map(w=>`<b><u>${w}</u></b>`).join("")}<em>ص ${m[2]}</em></span>`).join("");
   pages.total=pages.length;return pages;
@@ -1047,7 +968,7 @@ async function rpPdf(p,cfg,pages,prog){
   try{Intl.Segmenter=undefined}catch(e){}
   const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4",compress:true}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const sc=cfg.q==="hi"?2:1.4,ql=cfg.q==="hi"?.9:.8,N=pages.length;
-  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v24`});
+  pages.forEach((pg,i)=>{const n=pg.querySelector(".pnum");if(n)n.textContent=`صفحة ${i+1} من ${N} · v25`});
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
