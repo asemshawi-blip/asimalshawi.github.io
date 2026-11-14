@@ -155,7 +155,7 @@ function timing(p){
   const d=Math.round((new Date(p.due+"T00:00:00")-new Date().setHours(0,0,0,0))/864e5);
   return d<0?{late:1,t:`متأخر ${-d} يوم`}:{late:0,t:d===0?"على الموعد · التسليم اليوم":`على الموعد · باقي ${d} يوم`};
 }
-const TYN={new:"إنشاء بالموقع",kiosk:"كشك جاهز",reno:"ترميم"},TYE={new:"🏗",kiosk:"☕",reno:"🛠"};
+const TYN={new:"إنشاء",kiosk:"كشك جاهز",reno:"ترميم"},TYE={new:"🏗",kiosk:"☕",reno:"🛠"};
 const chip=p=>{const t=timing(p),y=TYN[p.ptype]?TYE[p.ptype]+" "+TYN[p.ptype]:"";return t||y?`<div class="cw">${t?`<span class="chip ${t.late?"late":"ok"}">${t.t}</span>`:""}${y?`<span class="chip ty">${y}</span>`:""}</div>`:""};
 const normP=v=>{const d=String(v).replace(/\D/g,"").replace(/^00/,"");return d.length>=10&&!d.startsWith("0")?d:""};
 const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
@@ -291,7 +291,7 @@ const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.roun
 function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
 async function seedW(){
   const pj=S.projects.find(x=>x.id===S.cur),T=WTPLS[pj&&pj.ptype]||WTPL;
-  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":pj&&pj.ptype==="kiosk"?"تحميل قالب مراحل الكشك الجاهز من المصنع؟":"تحميل قالب مراحل الإنشاء بالموقع؟"))return;
+  if(!confirm(pj&&pj.ptype==="reno"?"تحميل قالب مراحل الترميم؟":pj&&pj.ptype==="kiosk"?"تحميل قالب مراحل الكشك الجاهز من المصنع؟":"تحميل قالب مراحل الإنشاء؟"))return;
   let n=0;const rows=[];
   T.forEach(([ph,it])=>it.forEach(([name,weight])=>rows.push({project_id:S.cur,phase:ph,name,weight,sort:n++})));
   const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
@@ -461,7 +461,7 @@ function home(){
     const L=all.filter(x=>x.col===k);
     return `<section class="col ${ST[k][1]}"><h3>${ST[k][0]}<b>${L.length}</b></h3>${L.map(x=>x.h).join("")}<div class="empty" data-empty-for="${k}" style="${L.length?"display:none":""}">${S.q?"لا توجد نتائج مطابقة":"لا توجد مشاريع"}</div></section>`;
   }).join("");
-  const chips=[["","الكل"],["new","🏗 إنشاء بالموقع"],["kiosk","☕ كشك جاهز"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
+  const chips=[["","الكل"],["new","🏗 إنشاء"],["kiosk","☕ كشك جاهز"],["reno","🛠 ترميم"]].concat(mSee()?[["maint","🔧 صيانة"]]:[]);
   return `<div class="dashTools"><h2>المشاريع</h2><input class="dashSearch" id="projectSearch" type="search" value="${esc(S.q)}" placeholder="ابحث بالاسم أو الموقع" aria-label="ابحث عن مشروع بالاسم أو الموقع" oninput="filterProjects(this.value)">${["owner","pm"].includes(S.role)?`<button class="btn" onclick="modal('new')">＋ مشروع جديد</button>`:""}${mCreateOk()&&!MT.err?`<button class="btn" style="background:#d97706" onclick="modal('mnew')">＋ طلب صيانة</button>`:""}</div>${MT.err&&mSee()&&mAdm()?`<div class="hlq">الصيانة غير مفعّلة بعد: شغّل maintenance_v2.sql في Supabase.</div>`:""}<div class="tfs">${chips.map(([k,n])=>`<button class="${tf===k?"on":""}" onclick="S.tf='${k}';render();filterProjects(S.q||'')">${n}</button>`).join("")}</div>${stats}<div class="cols">${cols}</div>`;
 }
 function filterProjects(value){
@@ -505,6 +505,16 @@ function fileHtml(e){
   if(t.startsWith("video"))return `<video src="${u}" controls preload="none"></video>`;
   return `<p><a href="${u}" target="_blank" rel="noopener">📎 فتح الملف</a></p>`;
 }
+/* طلب تحديث من مدير الموقع (إنشاء / ترميم / كشك) */
+async function reqSiteUpd(id){
+  if(!["owner","pm"].includes(S.role))return;
+  const p=S.projects.find(x=>x.id===id);if(!p)return;
+  if(!p.site_manager&&!p.site_phone)return alert("لا يوجد مدير موقع محدد لهذا المشروع. أضفه من «تعديل المشروع».");
+  const {error}=await sb.rpc("maint_notify",{p_project:p.id,p_ticket:null,p_roles:["site"],p_title:"🔔 مطلوب تحديث المشروع · "+p.name,p_body:("يرجى تحديث نسبة الإنجاز وإضافة آخر المستجدات والصور للمشروع «"+p.name+"»").slice(0,200)});
+  if(error)return alert("تعذر إرسال الإشعار: "+error.message);
+  logA("work","طلب تحديث من مدير الموقع");
+  mToast("تم إشعار مدير الموقع بطلب تحديث المشروع");
+}
 function proj(){
   const p=S.projects.find(x=>x.id===S.cur);if(!p){S.cur=null;return home()}
   const T=TABS.filter(t=>t.see.includes(S.role)),t=TABS.find(x=>x.k===S.tab),own=S.role==="owner",ed=own||S.role==="pm",u=S.urls[p.cover_path];
@@ -528,7 +538,7 @@ function proj(){
   const toSM=p.site_phone&&["owner","pm","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.site_phone,`السلام عليكم${p.site_manager?" "+p.site_manager:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير الموقع</a>`:"";
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
   const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
-  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button></div>`:"";
+  const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button><button class="btn" style="background:#0e7490" onclick="reqSiteUpd('${p.id}')">🔔 طلب تحديث من مدير الموقع</button></div>`:"";
   const entOne=e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
   const items=entGroups(S.entries).map(rows=>rows.length>1?entGroupHtml(rows,own):entOne(rows[0])).join("");
@@ -2037,7 +2047,7 @@ function projForm(p){
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
   <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
   <input id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
-  <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${(!p.ptype||p.ptype==="new")?"selected":""}>إنشاء بالموقع</option><option value="kiosk" ${p.ptype==="kiosk"?"selected":""}>كشك جاهز من المصنع</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
+  <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${(!p.ptype||p.ptype==="new")?"selected":""}>إنشاء</option><option value="kiosk" ${p.ptype==="kiosk"?"selected":""}>كشك جاهز من المصنع</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
   <label class="lbl">تاريخ البداية</label><input id="mb" type="date" value="${esc(p.start_date)}" onchange="calcDue()">
