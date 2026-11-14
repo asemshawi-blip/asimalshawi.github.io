@@ -302,16 +302,70 @@ async function setW(id,v){
   const i=S.works.find(x=>x.id===id);logA("work",`${i.name}: ${i.pct}% ← ${+v}%`);i.pct=+v;i.updated_at=new Date().toISOString();
   wSync(S.projects.find(x=>x.id===S.cur));render();
 }
-async function addW(){
-  const ph=$("wph").value.trim(),nm=$("wnm").value.trim(),w=parseFloat($("wwt").value)||1;
-  if(!ph||!nm)return alert("اكتب المرحلة واسم البند");
-  const {error}=await sb.from("work_items").insert({project_id:S.cur,phase:ph,name:nm,weight:w,sort:S.works.length+1000});
-  if(error)return alert(error.message);logA("work","إضافة بند: "+nm+" ("+ph+")");await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
-}
+/* ===== أوزان البنود: المجموع المرجعي 100 نقطة ===== */
+const WTOT=100,r2=n=>Math.round(n*100)/100,wSum=a=>r2(a.reduce((x,i)=>x+Number(i.weight),0)),wFmt=n=>String(r2(n));
+const wStatus=()=>{const t=wSum(S.works);return {t,d:r2(WTOT-t)}};
+const wStatusText=()=>{const {t,d}=wStatus();return d>0?`مجموع الأوزان ${wFmt(t)} من 100 — ينقص ${wFmt(d)} نقطة لتكتمل`:d<0?`مجموع الأوزان ${wFmt(t)} — زاد ${wFmt(-d)} نقطة عن 100`:"مجموع الأوزان 100 ✅"};
+function wSplit(total,n){const base=Math.floor(total/n*100)/100,a=Array(n).fill(base);a[n-1]=r2(total-base*(n-1));return a}
+const wDone=async(msg)=>{await loadW();wSync(S.projects.find(x=>x.id===S.cur));S.wmsg={p:S.cur,t:msg};render();mToast(msg+" · "+wStatusText())};
 async function delW(id){
-  if(!confirm("حذف البند؟"))return;
-  logA("work","حذف بند: "+((S.works.find(x=>x.id===id)||{}).name||""));
-  await sb.from("work_items").delete().eq("id",id);await loadW();wSync(S.projects.find(x=>x.id===S.cur));render();
+  const it=S.works.find(x=>x.id===id);if(!it)return;
+  if(!confirm(`حذف البند «${it.name}» (وزنه ${wFmt(it.weight)} نقطة)؟`))return;
+  logA("work","حذف بند: "+it.name);
+  const {error}=await sb.from("work_items").delete().eq("id",id);if(error)return alert(error.message);
+  await wDone(`تم حذف «${it.name}» (وزنه ${wFmt(it.weight)})`);
+}
+async function setWt(id,v){
+  const i=S.works.find(x=>x.id===id),x=parseFloat(v);if(!i)return;if(!(x>=0)){alert("اكتب وزناً صحيحاً");return render()}
+  const {error}=await sb.from("work_items").update({weight:r2(x)}).eq("id",id);if(error){alert(error.message);return render()}
+  logA("work",`وزن ${i.name}: ${i.weight} ← ${r2(x)}`);i.weight=r2(x);await wDone(`تم تعديل وزن «${i.name}»`);
+}
+async function renW(id){
+  const i=S.works.find(x=>x.id===id);if(!i)return;const n=prompt("اسم البند",i.name);if(n==null||!n.trim()||n.trim()===i.name)return;
+  const {error}=await sb.from("work_items").update({name:n.trim()}).eq("id",id);if(error)return alert(error.message);
+  logA("work",`تعديل اسم بند: ${i.name} ← ${n.trim()}`);i.name=n.trim();render();
+}
+async function renP(k){
+  const f=[...new Set(S.works.map(x=>x.phase))][k];if(f==null)return;const n=prompt("اسم البند الرئيسي",f);if(n==null||!n.trim()||n.trim()===f)return;
+  const {error}=await sb.from("work_items").update({phase:n.trim()}).eq("project_id",S.cur).eq("phase",f);if(error)return alert(error.message);
+  logA("work",`تعديل اسم مرحلة: ${f} ← ${n.trim()}`);S.works.forEach(x=>{if(x.phase===f)x.phase=n.trim()});render();
+}
+async function scaleW(){
+  const W=S.works,t=wSum(W);if(!t)return;
+  if(!confirm(`سيتم تعديل أوزان كل البنود بالتناسب ليصبح المجموع 100 (الحالي ${wFmt(t)}). متابعة؟`))return;
+  const ws=W.map(i=>r2(i.weight*WTOT/t));ws[ws.length-1]=r2(ws[ws.length-1]+r2(WTOT-ws.reduce((a,b)=>a+b,0)));
+  const r=await Promise.all(W.map((i,k)=>sb.from("work_items").update({weight:ws[k]}).eq("id",i.id)));
+  const er=r.find(q=>q.error);if(er)return alert(er.error.message);
+  W.forEach((i,k)=>i.weight=ws[k]);logA("work","إعادة توزيع الأوزان لتصبح 100");await wDone("تم توزيع الأوزان لتصبح 100");
+}
+/* نموذج إضافة بند رئيسي + فروعه */
+const wfInit=()=>S.wf=S.wf||{ph:"",pw:"",rows:[{n:"",w:""}]};
+function wfPlan(){
+  const f=wfInit(),num=v=>{const x=parseFloat(v);return x>0?x:0},rows=f.rows.filter(r=>r.n.trim());
+  const ex=r2(rows.reduce((s,r)=>s+num(r.w),0)),blank=rows.filter(r=>!num(r.w)),pw=num(f.pw);
+  const avail=r2((pw||WTOT-wSum(S.works))-ex);let sh=[],warn="";
+  if(blank.length){
+    if(avail>0)sh=wSplit(avail,blank.length);
+    else{sh=blank.map(()=>1);warn=pw?"وزن البند الرئيسي مستهلك بالكامل بالفروع المحددة؛ سيأخذ كل فرع بلا وزن نقطة واحدة، عدّلها بعد الحفظ.":"لا يوجد متبقٍ من 100؛ سيأخذ كل فرع بلا وزن نقطة واحدة، ويمكنك تعديل الأوزان أو الضغط على «وزّع تلقائياً» بعد الحفظ."}
+  }else if(pw&&Math.abs(avail)>0.001)warn=`مجموع الفروع ${wFmt(ex)} لا يساوي وزن البند الرئيسي ${wFmt(pw)}.`;
+  else if(!pw&&avail<-0.001)warn=`الأوزان تتجاوز المتاح من 100 بمقدار ${wFmt(-avail)} نقطة.`;
+  let k=0;return {items:rows.map(r=>num(r.w)?{n:r.n.trim(),w:num(r.w),auto:false}:{n:r.n.trim(),w:sh[k++],auto:true}),warn};
+}
+function wfPrevHtml(){
+  const P=wfPlan(),d=wStatus().d;
+  return `المتاح حالياً من 100: <b>${wFmt(Math.max(d,0))}</b> نقطة`+(P.items.length?"<br>"+P.items.map(x=>`${esc(x.n)}: <b>${wFmt(x.w)}</b>${x.auto?" (تلقائي)":""}`).join(" · "):"")+(P.warn?`<br>⚠️ ${esc(P.warn)}`:"");
+}
+function wfPrev(){const e=$("wfPrev");if(e)e.innerHTML=wfPrevHtml()}
+function wfRow(i,k,v){S.wf.rows[i][k]=v;wfPrev()}
+function wfAdd(){S.wf.rows.push({n:"",w:""});render()}
+function wfDel(i){S.wf.rows.splice(i,1);render()}
+async function addW(){
+  const f=wfInit(),ph=f.ph.trim();if(!ph)return alert("اكتب البند الرئيسي (المرحلة)");
+  const P=wfPlan();if(!P.items.length)return alert("أضف بنداً فرعياً واحداً على الأقل");
+  let n=Math.max(-1,...S.works.map(x=>x.sort||0))+1;
+  const rows=P.items.map(x=>({project_id:S.cur,phase:ph,name:x.n,weight:x.w,sort:n++}));
+  const {error}=await sb.from("work_items").insert(rows);if(error)return alert(error.message);
+  logA("work",`إضافة بند رئيسي: ${ph} (${rows.length} فرعي)`);S.wf=null;await wDone(`تمت إضافة «${ph}» و${rows.length} بند فرعي`);
 }
 async function moveP(i,d){
   const ph=[...new Set(S.works.map(x=>x.phase))],j=i+d;if(j<0||j>=ph.length)return;
@@ -326,14 +380,25 @@ function worksHtml(p){
   if(!W.length)return `<div class="empty">لم تُحدد مراحل الأعمال لهذا المشروع بعد</div>${adm?`<button class="btn" onclick="seedW()">تحميل مراحل المشروع الجاهزة</button>`:""}`;
   const ph=[...new Set(W.map(i=>i.phase))],tot=W.reduce((x,i)=>x+Number(i.weight),0),dn=W.filter(i=>i.pct===100).length;
   const opts=v=>[0,10,20,30,40,50,60,70,80,90,100].map(n=>`<option ${n===v?"selected":""} value="${n}">${n}%</option>`).join("");
+  const {d}=wStatus(),msg=S.wmsg&&S.wmsg.p===S.cur?S.wmsg.t:"";
+  const banner=`<div class="hlq" style="${d===0?"background:#ecfdf5;border-color:#16a34a":""}">${msg?`<b>${esc(msg)}</b><br>`:""}${esc(wStatusText())} ${adm&&d!==0?`<button class="sm" style="margin:4px 0 0" onclick="scaleW()">وزّع تلقائياً على 100</button>`:""}</div>`;
   const blocks=ph.map(f=>{
     const it=W.filter(i=>i.phase===f),pc=wCalc(it),w=it.reduce((x,i)=>x+Number(i.weight),0);
-    return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>${esc(f)} <small style="font-weight:500;color:${pc===100?"var(--done)":pc>0?"var(--run)":"var(--muted)"}">· ${pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ"}</small></span><span>${ed?`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},-1)" aria-label="أعلى">▲</button> <button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},1)" aria-label="أسفل">▼</button> `:""}${pc}%</span></div>
-    <div class="bar ${pc===100?"s-done":"s-run"}"><i style="width:${pc}%"></i></div><div class="lbl">وزن المرحلة ${Math.round(w/tot*1000)/10}% من المشروع</div>
-    ${it.map(i=>`<div class="item" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:200px">${i.pct===100?"✅ ":""}${esc(i.name)}<small>الوزن ${i.weight}${i.pct?" · آخر تحديث "+new Date(i.updated_at).toLocaleDateString("ar"):""}</small></div>
-    ${ed?`<select style="width:90px;margin:0" onchange="setW('${i.id}',this.value)">${opts(i.pct)}</select>`:`<b>${i.pct}%</b>`}${adm?`<button class="sm del" style="margin:0" onclick="delW('${i.id}')">حذف</button>`:""}</div>`).join("")}</div>`}).join("");
-  return `<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>بنود مكتملة</span><b>${dn} / ${W.length}</b></div><div><span>المراحل</span><b>${ph.length}</b></div></div>${blocks}
-  ${adm?`<div class="box"><b>إضافة بند</b><input id="wph" list="wphl" placeholder="المرحلة"><datalist id="wphl">${ph.map(f=>`<option value="${esc(f)}">`).join("")}</datalist><input id="wnm" placeholder="اسم البند"><input id="wwt" type="number" min="0.5" step="0.5" value="1" placeholder="الوزن"><button class="btn" onclick="addW()">إضافة</button></div>`:""}`;
+    return `<div class="box" style="margin-bottom:12px"><div class="row" style="color:var(--text);font-weight:700;font-size:16px"><span>${esc(f)} <small style="font-weight:500;color:${pc===100?"var(--done)":pc>0?"var(--run)":"var(--muted)"}">· ${pc===100?"مكتملة":pc>0?"جارية":"لم تبدأ"}</small></span><span>${adm?`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="renP(${ph.indexOf(f)})" aria-label="تعديل الاسم">✏️</button> `:""}${ed?`<button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},-1)" aria-label="أعلى">▲</button> <button class="sm" style="background:#e2e8f0;color:#1b2a3b" onclick="moveP(${ph.indexOf(f)},1)" aria-label="أسفل">▼</button> `:""}${pc}%</span></div>
+    <div class="bar ${pc===100?"s-done":"s-run"}"><i style="width:${pc}%"></i></div><div class="lbl">وزن المرحلة ${wFmt(w)} نقطة (${tot?Math.round(w/tot*1000)/10:0}% من المشروع)</div>
+    ${it.map(i=>`<div class="item" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div style="flex:1;min-width:200px">${i.pct===100?"✅ ":""}${esc(i.name)}<small>${adm?"":`الوزن ${wFmt(i.weight)}`}${i.pct?(adm?"":" · ")+"آخر تحديث "+new Date(i.updated_at).toLocaleDateString("ar"):""}</small></div>
+    ${adm?`<label class="lbl" style="display:flex;align-items:center;gap:4px">الوزن <input type="number" min="0" step="any" style="width:76px;margin:0" value="${wFmt(i.weight)}" onchange="setWt('${i.id}',this.value)" aria-label="وزن البند"></label>`:""}${ed?`<select style="width:90px;margin:0" onchange="setW('${i.id}',this.value)">${opts(i.pct)}</select>`:`<b>${i.pct}%</b>`}${adm?`<button class="sm" style="margin:0;background:#e2e8f0;color:#1b2a3b" onclick="renW('${i.id}')" aria-label="تعديل الاسم">✏️</button><button class="sm del" style="margin:0" onclick="delW('${i.id}')">حذف</button>`:""}</div>`).join("")}</div>`}).join("");
+  const f=wfInit();
+  const form=adm?`<div class="box"><b>إضافة بند رئيسي وبنوده الفرعية</b>
+    <input id="wph" list="wphl" placeholder="البند الرئيسي (المرحلة)" value="${esc(f.ph)}" oninput="S.wf.ph=this.value"><datalist id="wphl">${ph.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+    <input type="number" min="0" step="any" placeholder="وزن البند الرئيسي بالنقاط (اختياري)" value="${esc(f.pw)}" oninput="S.wf.pw=this.value;wfPrev()">
+    <div class="lbl" style="margin:8px 0 2px">البنود الفرعية — اترك الوزن فارغاً ليُحسب تلقائياً من المتبقي</div>
+    ${f.rows.map((r,i)=>`<div style="display:flex;gap:6px;align-items:center"><input style="flex:1;margin:4px 0" placeholder="البند الفرعي" value="${esc(r.n)}" oninput="wfRow(${i},'n',this.value)"><input type="number" min="0" step="any" style="width:90px;margin:4px 0" placeholder="تلقائي" value="${esc(r.w)}" oninput="wfRow(${i},'w',this.value)">${f.rows.length>1?`<button class="sm del" style="margin:0" onclick="wfDel(${i})" aria-label="حذف الفرع">✕</button>`:""}</div>`).join("")}
+    <button class="btn alt" onclick="wfAdd()">＋ بند فرعي</button>
+    <div id="wfPrev" class="hlq">${wfPrevHtml()}</div>
+    <button class="btn" onclick="addW()">حفظ البند وفروعه</button></div>`:"";
+  return `<div class="box det" style="margin-top:0"><div><span>إنجاز المشروع (محسوب تلقائيا)</span><b>${wCalc(W)}%</b></div><div><span>بنود مكتملة</span><b>${dn} / ${W.length}</b></div><div><span>المراحل</span><b>${ph.length}</b></div></div>${banner}${blocks}
+  ${form}`;
 }
 
 /* ===== الإشعارات ===== */
