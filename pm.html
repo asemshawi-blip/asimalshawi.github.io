@@ -163,7 +163,8 @@ const wa=(ph,m)=>"https://wa.me/"+ph+"?text="+encodeURIComponent(m);
 /* ===== 3) الدخول ===== */
 async function init(){
   const kk=new URLSearchParams(location.search).get("k");if(kk)return mgLink(kk);
-  const rk=new URLSearchParams(location.search).get("r");if(rk)return rgLink(rk);   /* رابط الإدارة: بدون تسجيل دخول */
+  const rk=new URLSearchParams(location.search).get("r");if(rk)return rgLink(rk);
+  const qk=new URLSearchParams(location.search).get("q");if(qk)return qgLink(qk);   /* رابط الإدارة: بدون تسجيل دخول */
   const {data}=await sb.auth.getSession();
   S.user=data.session?.user||null;
   S.user?boot():loginView();
@@ -547,7 +548,7 @@ function proj(){
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
-  ${det}${talk}${acts}${["owner","pm"].includes(S.role)?`<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>`:""}${renoQuoteBox(p)}${ed?siteBox():""}
+  ${det}${talk}${acts}${["owner","pm"].includes(S.role)?`<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>`:""}${renoQuoteBox(p)}${qxBox("p",p.id)}${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
   <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
 }
@@ -1361,7 +1362,7 @@ function mTicketHtml(){
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
   ${mQuick(t)}
   ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mObsHtml(t)}${mPhotosHtml(t)}
-  <details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
+  ${qxBox("t",t.id)}<details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
   <div class="acts" style="margin-top:12px">${mAdm()?`<button class="btn" style="background:#0e7490" onclick="mRequestSiteUpdate('${t.id}')">🔔 طلب تحديث من مدير الموقع</button>`:""}${repChk}${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 
@@ -1767,6 +1768,125 @@ async function rgDecide(ok){await mOnce(async()=>{
   mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تمت الموافقة على التسعيرة":"❌ تم رفض التسعيرة"}<br><small>سُجّل القرار باسم: ${esc(n)}. تقدر تقفل الصفحة.</small></div>`);
 })}
 
+/* ===== عروض أسعار متعددة (PDF) تُرسل للإدارة برابط ===== */
+const QX={d:{},ld:{},open:{},f:{}};
+const qxSee=()=>["owner","pm","mgmt"].includes(S.role),qxEd=()=>["owner","pm"].includes(S.role);
+const qxKey=(k,id)=>k+":"+id,qxCol=k=>k==="t"?"ticket_id":"project_id";
+const qxLink=r=>location.origin+location.pathname+"?q="+r.token;
+const QXS={draft:["مسودة","pending"],sent:["مرسلة للإدارة","pending"],approved:["معتمدة","approved"],rejected:["مرفوضة","rejected"]};
+const qxTitle=(k,id)=>k==="t"?(mT(id)?.title||""):(S.projects.find(x=>String(x.id)===String(id))?.name||"");
+async function qxLoad(k,id,force){
+  const key=qxKey(k,id);if(QX.ld[key]&&!force)return;QX.ld[key]=1;
+  const {data,error}=await sb.from("quote_rounds").select("*,quote_offers(*)").eq(qxCol(k),String(id)).order("created_at",{ascending:false});
+  QX.d[key]=error?{err:error.message||String(error)}:{rounds:data||[]};
+  if(!error)await sign((data||[]).flatMap(r=>(r.quote_offers||[]).map(o=>o.file_path)));
+  render();
+}
+function qxNotify(k,id,title,body){try{sb.rpc("maint_notify",{p_project:k==="p"?id:"",p_ticket:k==="t"?id:null,p_roles:["mgmt"],p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
+function qxToggle(k,id,v){QX.open[qxKey(k,id)]=!!v;render()}
+function qxF(key,f,v){(QX.f[key]=QX.f[key]||{})[f]=v}
+function qxBox(k,id){
+  if(!qxSee())return "";
+  const key=qxKey(k,id),D=QX.d[key],head='<h3 style="margin:0 0 6px">📑 عروض الأسعار</h3>';
+  if(!D){qxLoad(k,id);return `<div class="box">${head}<div class="lbl">جاري التحميل...</div></div>`}
+  if(D.err)return qxEd()?`<div class="box">${head}<div class="hlq">${/relation|schema cache|does not exist/i.test(D.err)?"شغّل ملف quotes_multi.sql في Supabase أولاً.":esc(D.err)}</div></div>`:"";
+  const R=D.rounds,cur=R[0],old=R.slice(1);
+  if(!cur)return qxEd()?`<div class="box">${head}<div class="lbl">أضف عروض الأسعار الواردة (ملف PDF لكل عرض) ثم أرسلها للإدارة ليختاروا منها.</div>${qxForm(k,id)}</div>`:"";
+  return `<div class="box">${head}${qxRound(cur,k,id)}${old.length?`<details style="margin-top:8px"><summary>جولات سابقة (${old.length})</summary>${old.map(r=>qxRound(r,k,id,1)).join("")}</details>`:""}</div>`;
+}
+function qxForm(k,id){
+  const key=qxKey(k,id),f=QX.f[key]||{};
+  if(!QX.open[key])return `<button class="btn alt" onclick="qxToggle('${k}','${id}',1)">＋ إضافة عرض سعر</button>`;
+  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0"><input placeholder="اسم المقاول / الجهة" value="${esc(f.s||"")}" oninput="qxF('${key}','s',this.value)"><label class="lbl">إجمالي العرض (ر.س)<input type="number" inputmode="decimal" min="0" step="any" value="${esc(f.a||"")}" oninput="qxF('${key}','a',this.value)"></label><input placeholder="ملاحظة (اختياري)" value="${esc(f.n||"")}" oninput="qxF('${key}','n',this.value)"><label class="lbl">ملف العرض (PDF أو صورة، حتى 5 ميجا)<input id="qxf" type="file" accept="application/pdf,image/*"></label><div class="mbtns"><button class="btn big" onclick="qxAdd('${k}','${id}')">حفظ العرض</button><button class="btn alt" onclick="qxToggle('${k}','${id}',0)">إلغاء</button></div></div>`;
+}
+function qxRound(r,k,id,old){
+  const ed=qxEd(),O=(r.quote_offers||[]).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)),b=QXS[r.status]||["",""];
+  const min=O.length>1?Math.min(...O.map(o=>+o.amount)):null;
+  const cards=O.map(o=>{const u=S.urls[o.file_path],pk=r.picked===o.id;
+    return `<div style="border:1px solid ${pk?"#16a34a":"var(--line)"};border-radius:12px;padding:10px;margin:8px 0;${pk?"background:#f0fdf4":""}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(o.supplier)}</b><b>${money(o.amount)} ر.س</b></div>${min!=null&&+o.amount===min?'<span class="mqs approved">أقل سعر</span> ':""}${pk?'<span class="mqs approved">✅ المعتمد</span>':""}${o.note?`<div class="lbl">${esc(o.note)}</div>`:""}<div class="acts">${u?`<a class="btn alt" href="${u}" target="_blank" rel="noopener">📄 ${esc(o.file_name||"فتح العرض")}</a>`:'<span class="lbl">تعذر فتح الملف</span>'}${ed&&r.status==="draft"?`<button class="sm del" onclick="qxDelOffer('${k}','${id}','${o.id}')">حذف</button>`:""}</div></div>`}).join("");
+  let h=`<div style="margin:8px 0"><span class="mqs ${b[1]}">${b[0]}</span> <span class="lbl">${dfmt(r.created_at)}${r.created_by_name?" · "+esc(r.created_by_name):""}</span></div>${cards||'<div class="lbl">لا توجد عروض في هذه الجولة بعد.</div>'}`;
+  if(r.status==="draft"&&ed&&!old)h+=qxForm(k,id)+(O.length?`<button class="btn big" style="background:#db2777;margin-top:8px" onclick="qxSend('${k}','${id}','${r.id}')">📨 إرسال ${O.length} ${O.length===1?"عرض":"عروض"} للإدارة</button>`:"");
+  if(r.status==="sent"){
+    h+=`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 بانتظار قرار الإدارة</div>`;
+    if(ed&&!old)h+=`<div class="link">${esc(qxLink(r))}</div><div class="acts"><button class="btn" onclick="qxShare('${k}','${id}','${r.id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",qxText(k,id,r))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="qxWithdraw('${k}','${id}','${r.id}')">↩ سحب من الإدارة</button></div>`;
+  }
+  if(r.status==="approved")h+=`<div class="mwait" style="background:#f0fdf4;border:1px solid #16a34a;color:#166534">✅ اعتمدها: ${esc(r.decided_by||"")}${r.decided_at?" · "+dfmt(r.decided_at):""}</div>`;
+  if(r.status==="rejected")h+=`<div class="hlq"><b>رفضت الإدارة العروض:</b> ${esc(r.decided_reason||"")} · ${esc(r.decided_by||"")}</div>`;
+  if(ed&&!old&&(r.status==="approved"||r.status==="rejected"))h+=`<button class="btn alt" style="margin-top:8px" onclick="qxNew('${k}','${id}')">＋ جولة عروض جديدة</button>`;
+  return h;
+}
+const qxText=(k,id,r)=>`طلب اختيار عرض سعر\n${qxTitle(k,id)}\n${(r.quote_offers||[]).length} عروض\n${qxLink(r)}`;
+const qxRound1=(k,id,rid)=>(QX.d[qxKey(k,id)]?.rounds||[]).find(x=>x.id===rid);
+async function qxNew(k,id){await mOnce(async()=>{
+  const {error}=await sb.from("quote_rounds").insert({[qxCol(k)]:String(id),created_by_name:mMeName()});
+  if(error)return mErr(error);await qxLoad(k,id,true);
+})}
+async function qxAdd(k,id){await mOnce(async()=>{
+  const key=qxKey(k,id),f=QX.f[key]||{},fl=$("qxf")?.files[0],sup=(f.s||"").trim(),amt=+f.a;
+  if(!sup)return alert("اكتب اسم المقاول أو الجهة");if(!(amt>0))return alert("اكتب إجمالي العرض");if(!fl)return alert("ارفع ملف العرض (PDF)");
+  if(!(fl.type||"").startsWith("image/")&&fl.size>5*1024*1024)return alert("حجم الملف "+(fl.size/1048576).toFixed(1)+" ميجا والحد 5 ميجا");
+  let r=(QX.d[key]?.rounds||[]).find(x=>x.status==="draft");
+  if(!r){const {data,error}=await sb.from("quote_rounds").insert({[qxCol(k)]:String(id),created_by_name:mMeName()}).select().single();if(error)return mErr(error);r=data}
+  const path=await up(k==="t"?"maint":String(id),fl);if(!path)return;
+  const {error}=await sb.from("quote_offers").insert({round_id:r.id,supplier:sup,amount:amt,note:(f.n||"").trim()||null,file_path:path,file_name:fl.name.slice(0,120)});
+  if(error)return mErr(error);
+  QX.f[key]={};QX.open[key]=false;await qxLoad(k,id,true);mToast("أُضيف العرض ✔");
+})}
+async function qxDelOffer(k,id,oid){if(!confirm("حذف هذا العرض؟"))return;await mOnce(async()=>{
+  const o=(QX.d[qxKey(k,id)]?.rounds||[]).flatMap(r=>r.quote_offers||[]).find(x=>x.id===oid);
+  const {error}=await sb.from("quote_offers").delete().eq("id",oid);if(error)return mErr(error);
+  if(o&&o.file_path){try{await sb.storage.from("media").remove([o.file_path])}catch(_){}}
+  await qxLoad(k,id,true);
+})}
+async function qxSend(k,id,rid){await mOnce(async()=>{
+  const r=qxRound1(k,id,rid);if(!r)return;const n=(r.quote_offers||[]).length;
+  if(!n)return alert("أضف عرضاً واحداً على الأقل");
+  if(n===1&&!confirm("يوجد عرض واحد فقط. تريد الإرسال؟"))return;
+  const {error}=await sb.from("quote_rounds").update({status:"sent",token:crypto.randomUUID(),sent_at:new Date().toISOString()}).eq("id",rid);
+  if(error)return mErr(error);
+  qxNotify(k,id,"طلب اختيار عرض سعر",qxTitle(k,id)+" · "+n+" عروض");
+  if(k==="p")logA("quote","أُرسلت "+n+" عروض أسعار للإدارة",id);
+  await qxLoad(k,id,true);mToast("أُرسلت للإدارة. شارك الرابط");
+})}
+async function qxWithdraw(k,id,rid){await mOnce(async()=>{
+  const {error}=await sb.from("quote_rounds").update({status:"draft",token:null,sent_at:null}).eq("id",rid);
+  if(error)return mErr(error);await qxLoad(k,id,true);mToast("سُحبت من الإدارة");
+})}
+async function qxShare(k,id,rid){
+  const r=qxRound1(k,id,rid);if(!r)return;const tx=qxText(k,id,r);
+  if(navigator.share){try{await navigator.share({text:tx});return}catch(e){if(e&&e.name==="AbortError")return}}
+  try{await navigator.clipboard.writeText(tx);mToast("نُسخ الرابط")}catch(e){prompt("انسخ الرابط",qxLink(r))}
+}
+/* صفحة الإدارة عبر الرابط (بدون تسجيل دخول) */
+const QG={k:"",d:null};
+async function qgLink(k){
+  QG.k=k;mgShell('<div class="note">جاري التحميل...</div>');
+  const {data,error}=await sb.rpc("quote_view",{p_token:k});
+  if(error||!data)return mgShell('<div class="box note">الرابط غير صالح أو تم سحبه.</div>');
+  QG.d=data;const ps=(data.offers||[]).map(o=>o.file_path).filter(Boolean);
+  if(ps.length){try{const {data:u}=await sb.storage.from("media").createSignedUrls(ps,7200);(u||[]).forEach(x=>{if(x.signedUrl)S.urls[x.path]=x.signedUrl})}catch(e){}}
+  qgDraw();
+}
+function qgDraw(){
+  const d=QG.d,t=d.target||{},O=d.offers||[],open=d.status==="sent",min=O.length>1?Math.min(...O.map(o=>+o.amount)):null;
+  const cards=O.map(o=>{const u=S.urls[o.file_path],pk=d.picked===o.id;
+    return `<div style="border:1px solid ${pk?"#16a34a":"var(--line)"};border-radius:12px;padding:12px;margin:10px 0;${pk?"background:#f0fdf4":""}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${esc(o.supplier)}</b><b>${money(o.amount)} ر.س</b></div>${min!=null&&+o.amount===min?'<span class="mqs approved">أقل سعر</span> ':""}${pk?'<span class="mqs approved">✅ المعتمد</span>':""}${o.note?`<div class="lbl">${esc(o.note)}</div>`:""}<div class="acts">${u?`<a class="btn alt" href="${u}" target="_blank" rel="noopener">📄 فتح ملف العرض</a>`:'<span class="lbl">تعذر فتح الملف</span>'}</div>${open?`<button class="btn big" style="background:#16a34a" onclick="qgDecide(1,'${o.id}')">✔ اعتماد هذا العرض</button>`:""}</div>`}).join("");
+  mgShell(`<div class="box"><h3 style="margin:0">📑 عروض أسعار · ${esc(t.title||"")}</h3><div class="lbl" style="margin:4px 0 10px">${t.kind==="maint"?"صيانة · ":""}${esc(t.sub||"")}</div>
+  ${open?`<div class="lbl">افتح كل عرض وقارن، ثم اعتمد عرضاً واحداً أو ارفض الكل مع ذكر السبب.</div><label class="lbl">اسمك (يُسجَّل كمعتمد للقرار) *</label><input id="qgn" value="${esc(mgName())}" placeholder="الاسم الكامل">`:""}
+  ${cards}
+  ${open?`<label class="lbl">سبب الرفض (إجباري عند رفض كل العروض)</label><input id="qgr" placeholder="اكتب السبب إذا ترفض كل العروض"><div class="mbtns"><button class="btn big" style="background:#dc2626" onclick="qgDecide(0)">✖ رفض كل العروض</button></div>`:`<div class="mwait">${d.status==="approved"?"✅ تم اعتماد عرض بواسطة "+esc(d.by||""):"❌ رُفضت العروض"+(d.reason?": "+esc(d.reason):"")}</div>`}</div>`);
+}
+async function qgDecide(ok,oid){await mOnce(async()=>{
+  const n=($("qgn")?.value||"").trim(),r=($("qgr")?.value||"").trim(),o=(QG.d.offers||[]).find(x=>x.id===oid);
+  if(!n)return alert("اكتب اسمك ليُسجَّل كمعتمد للقرار");if(!ok&&!r)return alert("اكتب سبب الرفض");
+  if(ok&&!confirm("اعتماد عرض «"+(o?o.supplier:"")+"» بمبلغ "+(o?money(o.amount):"")+" ر.س؟"))return;
+  try{localStorage.setItem("pm_approver_name",n)}catch(e){}
+  const {data,error}=await sb.rpc("quote_decide",{p_token:QG.k,p_offer:ok?oid:null,p_ok:!!ok,p_reason:r,p_name:n});
+  if(error)return alert(error.message);
+  if(data!=="ok")return alert(data==="done"?"سبق اتخاذ القرار":data==="name"?"اكتب اسمك":data==="reason"?"اكتب سبب الرفض":"الرابط غير صالح");
+  mgShell(`<div class="box note" style="font-size:18px">${ok?"✅ تم اعتماد العرض":"❌ تم رفض العروض"}<br><small>سُجّل القرار باسم: ${esc(n)}. تقدر تقفل الصفحة.</small></div>`);
+})}
+
 const mRepPriceOk=()=>["owner","pm","mgmt"].includes(S.role);
 function mRepPrice(v){MT.rp=!!v;if(MT.rep&&MT.rep.url)URL.revokeObjectURL(MT.rep.url);MT.rep=null;render()}
 function mPdfTextChunks(value,max=650){
@@ -1870,7 +1990,7 @@ async function scanOrph(){
       const {data,error}=await sb.from("entries").select("file_path").not("file_path","is",null).range(o,o+999);
       if(error)throw error;(data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
     const {data:pr,error:pe}=await sb.from("projects").select("cover_path");if(pe)throw pe;
-    for(const tb of ["mnt_events","maint_events","mnt_obstacles"])for(let o=0;;o+=1000){   /* صور الصيانة (الجديد + الأرشيف القديم): إذا الجدول غير موجود نتجاهله، وأي خطأ آخر يوقف الفحص */
+    for(const tb of ["mnt_events","maint_events","mnt_obstacles","quote_offers"])for(let o=0;;o+=1000){   /* صور الصيانة (الجديد + الأرشيف القديم): إذا الجدول غير موجود نتجاهله، وأي خطأ آخر يوقف الفحص */
       const {data,error}=await sb.from(tb).select("file_path").not("file_path","is",null).range(o,o+999);
       if(error){if(/does not exist|schema cache|PGRST205|42P01/i.test(error.message+(error.code||"")))break;throw error}
       (data||[]).forEach(e=>refs.add(e.file_path));if(!data||data.length<1000)break}
