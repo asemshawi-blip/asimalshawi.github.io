@@ -1783,6 +1783,8 @@ async function qxLoad(k,id,force){
   render();
 }
 function qxNotify(k,id,title,body){try{sb.rpc("maint_notify",{p_project:k==="p"?id:"",p_ticket:k==="t"?id:null,p_roles:["mgmt"],p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
+/* يقبل الفواصل والأرقام العربية: 12,500 أو ١٢٬٥٠٠ أو 12500.75 */
+const qxNum=v=>{const t=String(v||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[۰-۹]/g,d=>"۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[,٬،\s]/g,"").replace(/٫/g,".");const n=parseFloat(t);return isFinite(n)?n:0};
 function qxToggle(k,id,v){QX.open[qxKey(k,id)]=!!v;render()}
 function qxF(key,f,v){(QX.f[key]=QX.f[key]||{})[f]=v}
 function qxBox(k,id){
@@ -1797,7 +1799,7 @@ function qxBox(k,id){
 function qxForm(k,id){
   const key=qxKey(k,id),f=QX.f[key]||{};
   if(!QX.open[key])return `<button class="btn alt" onclick="qxToggle('${k}','${id}',1)">＋ إضافة عرض سعر</button>`;
-  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0"><input placeholder="اسم المقاول / الجهة" value="${esc(f.s||"")}" oninput="qxF('${key}','s',this.value)"><label class="lbl">إجمالي العرض (ر.س)<input type="number" inputmode="decimal" min="0" step="any" value="${esc(f.a||"")}" oninput="qxF('${key}','a',this.value)"></label><input placeholder="ملاحظة (اختياري)" value="${esc(f.n||"")}" oninput="qxF('${key}','n',this.value)"><label class="lbl">ملف العرض (PDF أو صورة، حتى 5 ميجا)<input id="qxf" type="file" accept="application/pdf,image/*"></label><div class="mbtns"><button class="btn big" onclick="qxAdd('${k}','${id}')">حفظ العرض</button><button class="btn alt" onclick="qxToggle('${k}','${id}',0)">إلغاء</button></div></div>`;
+  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0"><input placeholder="اسم المقاول / الجهة" value="${esc(f.s||"")}" oninput="qxF('${key}','s',this.value)"><label class="lbl">إجمالي العرض (ر.س)<input type="text" inputmode="decimal" placeholder="مثال: 12,500" value="${esc(f.a||"")}" oninput="qxF('${key}','a',this.value)"></label><input placeholder="ملاحظة (اختياري)" value="${esc(f.n||"")}" oninput="qxF('${key}','n',this.value)"><label class="lbl">ملف العرض (PDF أو صورة، حتى 25 ميجا)<input id="qxf" type="file" accept="application/pdf,image/*"></label><div class="mbtns"><button class="btn big" onclick="qxAdd('${k}','${id}')">حفظ العرض</button><button class="btn alt" onclick="qxToggle('${k}','${id}',0)">إلغاء</button></div></div>`;
 }
 function qxRound(r,k,id,old){
   const ed=qxEd(),O=(r.quote_offers||[]).slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)),b=QXS[r.status]||["",""];
@@ -1822,9 +1824,9 @@ async function qxNew(k,id){await mOnce(async()=>{
   if(error)return mErr(error);await qxLoad(k,id,true);
 })}
 async function qxAdd(k,id){await mOnce(async()=>{
-  const key=qxKey(k,id),f=QX.f[key]||{},fl=$("qxf")?.files[0],sup=(f.s||"").trim(),amt=+f.a;
+  const key=qxKey(k,id),f=QX.f[key]||{},fl=$("qxf")?.files[0],sup=(f.s||"").trim(),amt=qxNum(f.a);
   if(!sup)return alert("اكتب اسم المقاول أو الجهة");if(!(amt>0))return alert("اكتب إجمالي العرض");if(!fl)return alert("ارفع ملف العرض (PDF)");
-  if(!(fl.type||"").startsWith("image/")&&fl.size>5*1024*1024)return alert("حجم الملف "+(fl.size/1048576).toFixed(1)+" ميجا والحد 5 ميجا");
+  if(!(fl.type||"").startsWith("image/")&&fl.size>25*1024*1024)return alert("حجم الملف "+(fl.size/1048576).toFixed(1)+" ميجا والحد 25 ميجا");
   let r=(QX.d[key]?.rounds||[]).find(x=>x.status==="draft");
   if(!r){const {data,error}=await sb.from("quote_rounds").insert({[qxCol(k)]:String(id),created_by_name:mMeName()}).select().single();if(error)return mErr(error);r=data}
   const path=await up(k==="t"?"maint":String(id),fl);if(!path)return;
