@@ -547,7 +547,7 @@ function proj(){
   <div class="banner ${ST[p.status][1]}" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
   <div class="top" style="margin-top:16px"><h2>${esc(p.name)} · ${esc(p.loc)}</h2></div>
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
-  ${det}${talk}${acts}<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>${renoQuoteBox(p)}${ed?siteBox():""}
+  ${det}${talk}${acts}${["owner","pm"].includes(S.role)?`<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>`:""}${renoQuoteBox(p)}${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
   <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
 }
@@ -731,6 +731,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 
 /* —— النافذة —— */
 function openReport(){
+  if(!["owner","pm"].includes(S.role))return;
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
   S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",manual:{},projectInfo:{},projectInfoOn:false,coverOn:true,coverImageOn:true,executiveOn:false,executiveSummary:"",stageByPhoto:rpLoadPhotoStages(p?.id),q:"hi",lay:"3",dur:"",du:"d"};
   RP.cancel=false;modal("report");
@@ -1113,14 +1114,14 @@ const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"ال�
 const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
 let MT={t:[],e:[],q:{},sm:[],o:[],oerr:"",id:null,err:"",rep:null};
 const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
-const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm","mgmt"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
+const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
 const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
 /* المرحلة الحالية (الطلبات القديمة بمرحلة "work" تُعرض كتنفيذ) */
 const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(t.stage==="review"&&t.review_at?"approved":(MST.some(s=>s[0]===t.stage)?t.stage:"new")));
 /* من ينتظره الطلب الآن */
 const mWho=t=>{if(t.closed_at)return"";const s=mStg(t);if(s==="cost"&&t.mgmt_status==="pending")return"mgmt";return{new:"site",inspect:"site",review:"pm",approved:"pm",price:"site",cost:"pm",exec:"site"}[s]||""};
-const mMine=t=>{const w=mWho(t);return !!w&&(w==="pm"?mAdm():S.role===w)};
-const mCan=t=>{const w=mWho(t);return !!w&&(mAdm()||S.role===w)};
+const mMine=t=>{const w=mWho(t);return !!w&&w!=="mgmt"&&(w==="pm"?mAdm():S.role===w)};
+const mCan=t=>{const w=mWho(t);return !!w&&w!=="mgmt"&&(mAdm()||S.role===w)};
 const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
 /* من اعتمد التكلفة: مدير المشروع/المالك (cost_ok_by) أو الإدارة (mgmt_by) */
 const mApprover=t=>{if(t.mgmt_status==="approved")return{n:t.mgmt_by||t.cost_ok_by||"",r:t.cost_ok_role||"الإدارة",at:t.mgmt_at||t.cost_ok_at};if(t.cost_ok_at)return{n:t.cost_ok_by||"",r:t.cost_ok_role||"مدير المشروع",at:t.cost_ok_at};return null};
@@ -1271,7 +1272,7 @@ function mStageBody(t){
     const sum=`<div class="mcostbox"><span>التكلفة</span><b>${money(mCost(t))} ر.س</b></div>${t.scope?`<div class="lbl">${esc(t.scope)}</div>`:""}`+rep+mPics(id,["before"])+(typeof prPanel==="function"?prPanel(t):"");
     if(t.mgmt_status==="pending"){
       h=sum+`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
-      if(["mgmt","owner"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mrs" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`mDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`mDecide('${id}',0)`,"#dc2626")}</div>`;
+      if(S.role==="owner")h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="mrs" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`mDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`mDecide('${id}',0)`,"#dc2626")}</div>`;
       if(mAdm())h+=`<div class="link">${esc(mLink(t))}</div><div class="acts"><button class="btn" onclick="mShare('${id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",mShareText(t))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`;
     }else{
       h=sum+(can?`<div class="mbtns">${big("✔ اعتماد التكلفة",`mCostOk('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`mCostUp('${id}')`,"#db2777")}<button class="btn alt" onclick="mCostBack('${id}')">↩ إعادة للتسعير</button></div>`:wait);
@@ -1354,8 +1355,8 @@ async function mPicAdd(id){await mOnce(async()=>{
 function mTicketHtml(){
   const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
   const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
-  const repChk=mRepPriceOk()&&!(rep&&rep.busy)?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rp!==false?"checked":""} onchange="mRepPrice(this.checked)"> إظهار التكلفة في التقرير</label>`:"";
-  const repBtn=rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
+  const repChk=mAdm()&&mRepPriceOk()&&!(rep&&rep.busy)?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rp!==false?"checked":""} onchange="mRepPrice(this.checked)"> إظهار التكلفة في التقرير</label>`:"";
+  const repBtn=!mAdm()?"":rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
   ${mQuick(t)}
@@ -1366,7 +1367,7 @@ function mTicketHtml(){
 
 /* ---------- معوقات الطلب: أي عائق يؤخر الطلب ---------- */
 const mObsN=id=>(MT.o||[]).filter(o=>o.ticket_id===id&&!o.resolved).length;
-const mObsAddOk=()=>["owner","pm","mgmt","site"].includes(S.role),mObsResOk=()=>["owner","pm","site"].includes(S.role);
+const mObsAddOk=()=>["owner","pm","site"].includes(S.role),mObsResOk=()=>["owner","pm","site"].includes(S.role);
 function mObsHtml(t){
   if(MT.oerr)return mAdm()?`<div class="hlq">المعوقات غير مفعّلة بعد: شغّل ملف migrate_maintenance_v3.sql في Supabase.</div>`:"";
   const L=(MT.o||[]).filter(o=>o.ticket_id===t.id),n=L.filter(o=>!o.resolved).length;
@@ -1653,7 +1654,7 @@ function renoQuoteBox(p){
   if(st==="pending")h+=ed?`<div class="mbtns">${big("✔ اعتماد التسعيرة",`rqApprove('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`rqUp('${id}')`,"#db2777")}<button class="btn alt" onclick="rqOpen()">✎ تعديل التسعيرة</button></div>`:`<div class="mwait">⏳ بانتظار اعتماد مدير المشروع</div>`;
   if(st==="mgmt"){
     h+=`<div class="mwait" style="background:#fdf2f8;border-color:#db2777;color:#9d174d">📨 مرفوعة للإدارة، بانتظار قرارها</div>`;
-    if(["owner","mgmt"].includes(S.role))h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="rqr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`rqDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`rqDecide('${id}',0)`,"#dc2626")}</div>`;
+    if(S.role==="owner")h+=`<label class="lbl">سبب الرفض (إجباري عند الرفض)</label><input id="rqr" placeholder="اكتب السبب إذا ترفض"><div class="mbtns">${big("✔ موافقة",`rqDecide('${id}',1)`,"#16a34a")}${big("✖ رفض",`rqDecide('${id}',0)`,"#dc2626")}</div>`;
     if(ed)h+=`<div class="link">${esc(rqLink(p))}</div><div class="acts"><button class="btn" onclick="rqShare('${id}')">📤 مشاركة الرابط</button><a class="wa" href="${wa("",rqShareText(p))}" target="_blank" rel="noopener">واتساب</a><button class="btn alt" onclick="rqWithdraw('${id}')">↩ سحب من الإدارة</button></div>`;
   }
   if(ed&&(st==="approved"||st==="rejected"))h+=`<button class="btn alt" style="margin-top:8px" onclick="rqOpen()">✎ إعادة التسعير</button>`;
@@ -1777,6 +1778,7 @@ function mPdfTextChunks(value,max=650){
 /* ---------- تقرير PDF متعدد الصفحات ---------- */
 const MRCSS=`.rpg .pf.m2 img{max-height:480px}.rpg .pf.m3 img{max-height:340px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
+  if(!mAdm())return;
   const t=mT(id);if(!t)return;
   MT.rep={busy:true};render();
   const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0";document.body.appendChild(root);
@@ -1962,6 +1964,7 @@ addEventListener("online",()=>{qUpd();syncQ()});addEventListener("offline",qUpd)
 setInterval(()=>syncQ(),60000);setTimeout(()=>{qUpd();syncQ()},3000);
 
 async function addE(){
+  {const _t=TABS.find(x=>x.k===S.tab);if(!_t||!_t.add.includes(S.role))return alert("لا تملك صلاحية الإضافة هنا")}
   const body=$("tx").value.trim(),fs=[...($("fl")?.files||[])];
   if(!body&&!fs.length)return;
   const isVid=f=>(f.type&&f.type.startsWith("video/"))||/\.(mp4|mov|m4v|avi|mkv|webm|3gp|wmv)$/i.test(f.name||"");
