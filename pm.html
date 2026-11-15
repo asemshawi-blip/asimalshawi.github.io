@@ -1829,7 +1829,8 @@ async function qxAdd(k,id){await mOnce(async()=>{
   if(!(fl.type||"").startsWith("image/")&&fl.size>25*1024*1024)return alert("حجم الملف "+(fl.size/1048576).toFixed(1)+" ميجا والحد 25 ميجا");
   let r=(QX.d[key]?.rounds||[]).find(x=>x.status==="draft");
   if(!r){const {data,error}=await sb.from("quote_rounds").insert({[qxCol(k)]:String(id),created_by_name:mMeName()}).select().single();if(error)return mErr(error);r=data}
-  const path=await up(k==="t"?"maint":String(id),fl);if(!path)return;
+  let fb=fl;try{const ty=fl.type||(/\.pdf$/i.test(fl.name)?"application/pdf":"application/octet-stream");fb=new File([await fl.arrayBuffer()],fl.name,{type:ty})}catch(e){return alert("تعذر قراءة الملف من الجهاز. نزّله أولاً على التابلت (من «الملفات» أو «التنزيلات») ثم اخترته من هناك.")}
+  const path=await up(k==="t"?"maint":String(id),fb);if(!path)return;
   const {error}=await sb.from("quote_offers").insert({round_id:r.id,supplier:sup,amount:amt,note:(f.n||"").trim()||null,file_path:path,file_name:fl.name.slice(0,120)});
   if(error)return mErr(error);
   QX.f[key]={};QX.open[key]=false;await qxLoad(k,id,true);mToast("أُضيف العرض ✔");
