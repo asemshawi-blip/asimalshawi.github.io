@@ -2169,7 +2169,7 @@ function priceRows(){
     if(x.hidden&&!p.showHidden)continue;
     const t=x.trade||"متفرقات";
     if(p.trade!=="الكل"&&t!==p.trade)continue;
-    if(words.length){const h=priceNorm(x.name+" "+x.spec+" "+x.category+" "+t);if(!words.every(w=>h.includes(w)))continue}
+    if(words.length){const h=priceNorm(x.code+" "+x.name+" "+x.spec+" "+x.category+" "+t);if(!words.every(w=>h.includes(w)))continue}
     const k=priceFamKey(x.code);let r=map.get(k);
     if(!r){r={key:k,name:String(x.name).split(" – ")[0],trade:t,unit:x.unit,items:[]};map.set(k,r)}
     r.items.push(x);
@@ -2182,7 +2182,7 @@ function priceChipsHtml(){
   const trades=PR_TRADES.filter(t=>cnt.has(t)).concat([...cnt.keys()].filter(t=>!PR_TRADES.includes(t)));
   const chip=(t,n)=>`<button class="${p.trade===t?"on":""}" data-t="${esc(t)}" onclick="priceTrade(this.dataset.t)">${esc(t)} <small>${n}</small></button>`;
   const bulk=p.trade!=="الكل"?`<div class="prBulk">تعديل كل أسعار «${esc(p.trade)}» دفعة واحدة: <input id="pbPct" type="number" step="any" inputmode="decimal" placeholder="٪ مثال 5 أو -3"><button class="btn alt" onclick="priceBulk()">تطبيق</button></div>`:"";
-  return `<div class="prChips">${chip("الكل",seen.size)}${trades.map(t=>chip(t,cnt.get(t))).join("")}</div>${bulk}`;
+  return `<div class="note" style="margin:0 0 8px">إجمالي البنود: <b>${p.catalog.length}</b> بند في <b>${seen.size}</b> عائلة · البنود المتشابهة (R26) مجمّعة في كارت واحد</div><div class="prChips">${chip("الكل",seen.size)}${trades.map(t=>chip(t,cnt.get(t))).join("")}</div>${bulk}`;
 }
 function priceRowHtml(r){
   const p=S.price,x=priceCurOf(r.key,r.items),fam=r.items.length>1,eff=priceEff(x),mine=priceMine(x),k=esc(r.key);
