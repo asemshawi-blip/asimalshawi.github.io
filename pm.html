@@ -536,17 +536,17 @@ function proj(){
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
     ${["owner","pm","contr"].includes(S.role)?tel("جوال مدير الموقع",p.site_phone):""}
     ${["owner","pm","site"].includes(S.role)?`<div><span>موظف التنسيق مع المالك</span><b>${esc(p.coord_name)||"-"}</b></div>`+tel("جوال موظف التنسيق",p.coord_phone):""}
-    ${p.map_url?`<div><span>موقع المشروع</span><b>${mMapLink(p)}</b></div>`:""}
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
   const cm=`بخصوص مشروع «${p.name}»${p.loc?" ("+p.loc+")":""}`;
+  const mapAction=p.map_url?`<a class="wa" target="_blank" rel="noopener" href="${esc(mMapUrl(p.map_url))}">📍 موقع المشروع</a>`:"";
   const toPM=p.pm_phone&&["owner","mgmt","contr","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.pm_phone,`السلام عليكم${p.pm_name?" "+p.pm_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المشروع</a>`:"";
   const toCT=p.contractor_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.contractor_phone,`السلام عليكم${p.contractor_name?" "+p.contractor_name:""}،\nأتواصل معكم ${cm}.`)}">📲 تواصل مع المقاول</a>`:"";
   const toAM=p.area_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.area_phone,`السلام عليكم${p.area_name?" "+p.area_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير المنطقة</a>`:"";
   const toSM=p.site_phone&&["owner","pm","mgmt","contr"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.site_phone,`السلام عليكم${p.site_manager?" "+p.site_manager:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع مدير الموقع</a>`:"";
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
-  const talk=toPM||toCT||toAM||toSM||toCO?`<div class="acts">${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
+  const talk=mapAction||toPM||toCT||toAM||toSM||toCO?`<div class="acts">${mapAction}${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button><button class="btn" style="background:#0e7490" onclick="reqSiteUpd('${p.id}')">🔔 طلب تحديث من مدير الموقع</button></div>`:"";
   const entOne=e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
