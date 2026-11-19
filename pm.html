@@ -37,6 +37,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 .col{background:#e9eef5;border-radius:18px;padding:12px;border-top:6px solid var(--c)}
 .col h3{margin:4px 4px 12px;display:flex;justify-content:space-between;align-items:center;font-size:18px}
 .col h3 b{background:var(--c);color:#fff;border-radius:20px;padding:0 12px;font-size:15px}
+.pmap{margin:4px 0!important;font-size:12px}.pmap a{color:var(--blue,#2e69ad);text-decoration:underline}
 .card{background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 4px 14px #0f274214;cursor:pointer;margin-bottom:12px}
 .img{height:170px;background:linear-gradient(135deg,#cbd5e1,#94a3b8) center/cover;position:relative}
 .cw{position:absolute;top:12px;right:12px;display:flex;gap:6px;flex-wrap:wrap}
@@ -454,7 +455,7 @@ function render(){
 function card(p){
   const u=S.urls[p.cover_path];
   return `<div class="card ${ST[p.status][1]}" data-search="${esc((String(p.name||"")+" "+String(p.loc||"")).toLocaleLowerCase())}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
-  <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p><div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
+  <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p>${p.map_url?`<p class="pmap" onclick="event.stopPropagation()">${mMapLink(p)}</p>`:""}<div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
   <div class="row"><span>الإنجاز ${clamp(p.progress)}%</span><span>التسليم ${esc(p.due)||"-"}</span></div></div></div>`;
 }
 function home(){
@@ -535,6 +536,7 @@ function proj(){
     <div><span>مدير الموقع</span><b>${esc(p.site_manager)||"-"}</b></div>
     ${["owner","pm","contr"].includes(S.role)?tel("جوال مدير الموقع",p.site_phone):""}
     ${["owner","pm","site"].includes(S.role)?`<div><span>موظف التنسيق مع المالك</span><b>${esc(p.coord_name)||"-"}</b></div>`+tel("جوال موظف التنسيق",p.coord_phone):""}
+    ${p.map_url?`<div><span>موقع المشروع</span><b>${mMapLink(p)}</b></div>`:""}
     <div><span>تاريخ البداية</span><b>${esc(p.start_date)||"-"}</b></div>
     <div><span>تاريخ التسليم</span><b>${esc(p.due)||"-"}</b></div>
     ${!["contr","site"].includes(S.role)?`<div><span>السعر</span><b>${money(p.price)}</b></div>`:""}</div>`;
@@ -1086,7 +1088,8 @@ async function saveProj(){
   if(s&&d&&d<s)return alert("تاريخ التسليم قبل تاريخ البداية");
   const pp=normP($("mpp").value),cp=normP($("mcp").value),ap=normP($("map").value),sp=normP($("msp").value),co=normP($("mcph").value);
   if(($("mpp").value.trim()&&!pp)||($("mcp").value.trim()&&!cp)||($("map").value.trim()&&!ap)||($("msp").value.trim()&&!sp)||($("mcph").value.trim()&&!co))return alert("رقم الجوال غير صحيح، اكتبه مع رمز الدولة بدون + أو أصفار، مثال: 9655XXXXXXX");
-  const row={name,loc:$("ml").value.trim(),contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,coord_name:$("mcn").value.trim()||null,coord_phone:co||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
+  const mapUrl=$("mmapurl").value.trim();
+  const row={name,loc:$("ml").value.trim(),map_url:mapUrl||null,contractor_name:$("mct").value.trim()||null,site_manager:$("msm").value.trim()||null,site_phone:sp||null,coord_name:$("mcn").value.trim()||null,coord_phone:co||null,pm_name:$("mpn").value.trim()||null,pm_phone:pp||null,contractor_phone:cp||null,area_name:$("mam").value.trim()||null,area_phone:ap||null,ptype:$("mty").value,status:$("ms").value,progress:clamp($("mp").value),start_date:s||null,due:d||null,price:$("mpr").value===""?null:Number($("mpr").value)};
   $("mbtn").disabled=true;$("mbtn").textContent="جاري الحفظ...";
   const q=S.modal==="edit"?sb.from("projects").update(row).eq("id",S.cur):sb.from("projects").insert(row);
   const {data,error}=await q.select().single();
@@ -2293,6 +2296,7 @@ function projForm(p){
   const edit=S.modal==="edit";
   return `<div class="modal"><div class="box"><h3>${edit?"تعديل المشروع":"مشروع جديد"}</h3>
   <input id="mn" placeholder="اسم المشروع" value="${esc(p.name)}"><input id="ml" placeholder="الموقع / المدينة" value="${esc(p.loc)}">
+  <label class="lbl">رابط موقع المشروع على خرائط قوقل (اختياري)</label><input id="mmapurl" dir="ltr" placeholder="الصق رابط قوقل ماب أو الإحداثيات" value="${esc(p.map_url)}">
   <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}"><input id="msp" dir="ltr" inputmode="tel" placeholder="جوال مدير الموقع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.site_phone)}">
   <input id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
   <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
