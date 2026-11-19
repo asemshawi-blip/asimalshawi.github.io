@@ -1362,17 +1362,31 @@ async function mPicAdd(id){await mOnce(async()=>{
   const n=await mUploadFiles(t,fs,$("mpph")?.value||"before");
   await loadM();await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));render();if(n)mToast("رُفعت "+n+" صورة");
 })}
+const mDirs=id=>MT.e.filter(e=>String(e.ticket_id)===String(id)&&e.kind==="directive"&&e.body);
+function mDirHtml(t){
+  const L=mDirs(t.id),rows=L.map(e=>`<div class="mor dir"><b>📌 ${esc(e.author_role||"")} · ${dfmt(e.created_at)}</b><div class="mpre">${esc(e.body)}</div></div>`).join("");
+  const add=mAdm()&&!t.closed_at?`<label class="lbl">توجيه أو ملاحظة لمدير الموقع</label><textarea id="mdir_${t.id}" rows="3" placeholder="اكتب التوجيه المطلوب من مدير الموقع..."></textarea><button class="btn" style="background:#16a34a;width:100%" onclick="mDirAdd('${t.id}')">📌 إرسال التوجيه لمدير الموقع</button>`:"";
+  return `<details class="mdt"><summary>📌 توجيهات مدير المشروع${L.length?` (${L.length})`:""}</summary>${rows||'<div class="lbl">لا توجد توجيهات</div>'}${add}</details>`;
+}
+async function mDirAdd(id){await mOnce(async()=>{
+  const t=mT(id),body=($("mdir_"+id)?.value||"").trim();if(!t||!mAdm())return;if(!body)return alert("اكتب التوجيه أولاً");
+  if(!await mEvent(t,"directive",body))return;
+  mPush(t,"📌 توجيه من مدير المشروع "+mNo(t),t.branch+" · "+body,["site"]);
+  await loadM();render();mToast("تم إرسال التوجيه لمدير الموقع");
+})}
+function mRepDir(v){MT.rdir=!!v;if(MT.rep&&MT.rep.url)URL.revokeObjectURL(MT.rep.url);MT.rep=null;render()}
 function mTicketHtml(){
   const t=mT(MT.id);if(!t)return `<div class="modal"><div class="box"><p>الطلب غير موجود</p><button class="btn" onclick="modal(null)">إغلاق</button></div></div>`;
   const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
   const repChk=mAdm()&&mRepPriceOk()&&!(rep&&rep.busy)?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rp!==false?"checked":""} onchange="mRepPrice(this.checked)"> إظهار التكلفة في التقرير</label>`:"";
+  const repDirChk=mAdm()&&mDirs(t.id).length?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rdir===true?"checked":""} onchange="mRepDir(this.checked)"> إظهار التوجيهات في التقرير</label>`:"";
   const repBtn=!mAdm()?"":rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
   ${mQuick(t)}
-  ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mObsHtml(t)}${mPhotosHtml(t)}
+  ${MT.edit===t.id?mEditHtml(t):mSteps(t)+'<div class="mstage">'+mStageBody(t)+'</div>'}${mDirHtml(t)}${mObsHtml(t)}${mPhotosHtml(t)}
   ${qxBox("t",t.id)}<details class="mdt"><summary>تفاصيل الطلب</summary>${mDetails(t)}</details>
-  <div class="acts" style="margin-top:12px">${mAdm()?`<button class="btn" style="background:#0e7490" onclick="mRequestSiteUpdate('${t.id}')">🔔 طلب تحديث من مدير الموقع</button>`:""}${repChk}${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
+  <div class="acts" style="margin-top:12px">${mAdm()?`<button class="btn" style="background:#0e7490" onclick="mRequestSiteUpdate('${t.id}')">🔔 طلب تحديث من مدير الموقع</button>`:""}${repChk}${repDirChk}${repBtn}${mAdm()&&MT.edit!==t.id?`<button class="btn" onclick="MT.edit='${t.id}';render()">✏️ تعديل الطلب</button>`:""}${mAdm()&&!t.closed_at?`<button class="btn alt" onclick="mCancel('${t.id}')">إلغاء الطلب</button>`:""}${S.role==="owner"?`<button class="btn danger" onclick="mDel('${t.id}')">حذف</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div></div>`;
 }
 
 /* ---------- معوقات الطلب: أي عائق يؤخر الطلب ---------- */
@@ -1536,8 +1550,9 @@ async function mPriceSend(id){await mOnce(async()=>{
 })}
 async function mCostOk(id){await mOnce(async()=>{
   const t=mT(id);
+  const approver=t.pm_name||mMeName(),role=t.pm_name?"مدير المشروع":(ROLES[S.role]||"");
   await sb.from("mnt_quotes").update({status:"approved"}).eq("ticket_id",id).then(()=>{},()=>{});
-  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),cost_ok_by:mMeName(),cost_ok_role:ROLES[S.role]||"",mgmt_status:null,mgmt_token:null,mgmt_by:null,back_note:null},"اعتُمدت التكلفة · "+mMeName()+" ("+(ROLES[S.role]||"")+")",["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
+  await mUpd(id,{stage:"exec",cost_ok_at:mNow(),cost_ok_by:approver,cost_ok_role:role,mgmt_status:null,mgmt_token:null,mgmt_by:null,back_note:null},"اعتُمدت التكلفة · "+approver+(role?" ("+role+")":""),["site"],"اعتُمدت التكلفة، ابدأ التنفيذ "+mNo(t),{body:t.branch+" · "+t.title,toast:"اعتُمدت التكلفة ✔"});
 })}
 async function mCostUp(id){await mOnce(async()=>{
   const t=mT(id);
@@ -1936,6 +1951,7 @@ async function mPdf(id){
     put(`<div><div class="rt"><span class="no">🔧</span><span>${esc(t.title)}</span><i class="l2"></i></div><table class="info"><tr><td class="a">الفرع</td><td class="b">${esc(t.branch||"")}</td><td class="a">رقم الطلب</td><td class="b">${esc(ref)}</td></tr><tr><td class="a">تاريخ الطلب</td><td class="b">${esc(dfmt(t.created_at))}</td><td class="a">${done?"تاريخ التسليم":"الحالة"}</td><td class="b">${done?esc(dfmt(t.closed_at)):t.closed_at?esc(MOUT[t.outcome]||"مغلق"):esc(MST.find(s=>s[0]===mStg(t))[1])}</td></tr></table></div>`);
     putText("المشكلة"+(t.priority==="urgent"?" (مستعجل)":""),t.descr&&t.descr!==t.title?t.descr:t.title);
 if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <small style="display:inline">· '+esc(dfmt(t.insp_at))+'</small>':'');
+    if(MT.rdir===true)mDirs(id).forEach(e=>putText("توجيه مدير المشروع · "+dfmt(e.created_at),e.body));
     if(t.contractor||t.work_qty)put(`<table class="info"><tr><td class="a">المقاول</td><td class="b">${esc(t.contractor||"-")}</td><td class="a">مدة العمل</td><td class="b">${esc(mDur(t))}</td></tr>${t.receiver?`<tr><td class="a">المستلم</td><td class="b">${esc(t.receiver)}</td><td class="a">بدء العمل</td><td class="b">${t.started_at?esc(dfmt(t.started_at)):"-"}</td></tr>`:""}</table>`);
     if(t.contractor_phone)putText("جوال المقاول",t.contractor_phone);
     if(showP&&cost!=null&&cost!==""){
