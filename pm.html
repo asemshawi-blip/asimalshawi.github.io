@@ -2182,12 +2182,12 @@ const PR_SEED_SRC=[
 const PR_SEED=PR_SEED_SRC.map(([code,si,name,unit,low,avg,high],i)=>({code,section:PR_SECTIONS[si],name,unit,scope:PR_SCOPES[code]||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:low||0,market_fair:avg||0,market_high:high||0,sort:i+1,hidden:false,source:"نطاق يحدده المالك"}));
 
 async function openPricing(){
-  S.price={loading:true,error:"",items:[],index:[],quotes:[],query:"",section:"الكل",tab:"ref",showHidden:false,editing:null,quote:{id:null,title:"تسعيرة جديدة",branch:"",items:[]}};modal("pricing");
-  const [a,b,q]=await Promise.all([sb.from("price_items").select("*").order("sort").limit(2000),sb.from("price_index").select("*").order("period").limit(500),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30)]);
-  S.price.loading=false;if(a.error||b.error||q.error){S.price.error=(a.error||b.error||q.error).message;render();return}
+  S.price={loading:true,error:"",items:[],quotes:[],query:"",section:"الكل",tab:"ref",showHidden:false,editing:null,quote:{id:null,title:"تسعيرة جديدة",branch:"",items:[]}};modal("pricing");
+  const [a,q]=await Promise.all([sb.from("price_items").select("*").order("sort").limit(2000),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30)]);
+  S.price.loading=false;if(a.error||q.error){S.price.error=(a.error||q.error).message;render();return}
   let items=a.data||[];const present=new Set(items.map(x=>x.code)),missing=PR_SEED.filter(x=>!present.has(x.code));
   if(missing.length){const r=await sb.from("price_items").upsert(missing,{onConflict:"code",ignoreDuplicates:true});if(r.error){S.price.error=r.error.message;render();return}items=items.concat(missing)}
-  S.price.items=items;S.price.index=b.data||[];S.price.quotes=q.data||[];render();
+  S.price.items=items;S.price.quotes=q.data||[];render();
 }
 function priceFmt(v){return Number(v||0).toLocaleString("ar-SA",{maximumFractionDigits:2})}
 function priceNorm(s){return String(s||"").toLowerCase().replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/[ًٌٍَُِّْـ]/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim()}
@@ -2271,42 +2271,6 @@ function priceRefHtml(){
   return `<div class="note">المرجع يعتمد على بنود شاملة بنطاق عمل واضح (توريد وتركيب وتنظيف) حتى تقارن العروض بنفس الأساس. إذا جاء عرض أعلى من الحد الأعلى بـ ${PR_ALERT*100}٪ أو أكثر يظهر تنبيه مباشرة في التسعيرة. البنود ذات النطاق الفارغ تنتظر أن تحدد أسعارها.</div><div class="prRefTop"><input id="priceSearch" placeholder="ابحث في البنود..." value="${esc(p.query)}" oninput="S.price.query=this.value;priceRefresh()"><label class="mtg"><input type="checkbox" ${p.showHidden?"checked":""} onchange="S.price.showHidden=this.checked;priceRefresh()"> إظهار المخفي</label></div><div id="priceChips">${priceChipsHtml()}</div><div id="priceList" class="prCards">${priceListHtml()}</div><details class="prCustom"><summary>＋ إضافة بند</summary><select id="pcsec">${PR_SECTIONS.map(t=>`<option ${t===p.section?"selected":""}>${esc(t)}</option>`).join("")}</select><input id="pcname" placeholder="اسم البند"><input id="pcunit" placeholder="الوحدة: م²، نقطة، حبة" value="م²"><div class="prDims"><input id="pclow" type="number" inputmode="decimal" placeholder="أقل سعر"><input id="pcavg" type="number" inputmode="decimal" placeholder="متوسط"><input id="pchigh" type="number" inputmode="decimal" placeholder="أعلى سعر معقول"></div><textarea id="pcscope" rows="4" style="width:100%" placeholder="نطاق العمل: ما الذي يشمله السعر؟"></textarea><button class="btn" onclick="priceAddCustom()">إضافة</button></details>`;
 }
 
-/* الرقم القياسي لتكاليف البناء (الهيئة العامة للإحصاء) */
-function priceIdxInfo(){
-  const ix=S.price.index||[],last=ix[ix.length-1],base=[...ix].reverse().find(x=>x.applied);
-  const pct=last&&base&&Number(base.value)>0?(Number(last.value)/Number(base.value)-1)*100:null;
-  return{ix,last,base,pct};
-}
-function priceIndexHtml(){
-  const {ix,last,base,pct}=priceIdxInfo();
-  const summary=!ix.length?"أضف أول قراءة من نشرة الرقم القياسي لتكاليف البناء.":!base?`اختر القراءة التي بُنيت عليها أسعارك الحالية بزر «أساس الأسعار».`:last.id===base.id?`الأسعار محدّثة حتى آخر قراءة (${esc(last.period)}).`:`التغير منذ ${esc(base.period)} حتى ${esc(last.period)}: <b dir="ltr">${pct>=0?"+":""}${priceFmt(pct)}٪</b>`;
-  return `<div class="note">يُستخدم الرقم القياسي لتكاليف البناء للهيئة العامة للإحصاء لمتابعة تغير تكاليف المدخلات بمرور الوقت، وتُستخدم نشرات أسعار مواد البناء كمرجع عند ضبط النطاقات. أدخل قراءة كل فترة من النشرة المنشورة.<br><a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء</a> · <a href="https://www.stats.gov.sa" target="_blank" rel="noopener">موقع الهيئة (نشرات أسعار مواد البناء)</a></div>
-  <div class="prTotals"><div>${summary}</div>${base&&last&&last.id!==base.id&&pct!==null?`<button class="btn" onclick="priceIdxApply()">تحديث كل النطاقات بنسبة ${priceFmt(pct)}٪</button>`:""}</div>
-  <div class="prMeta"><label>الفترة (مثال: 2026-Q3)<input id="pxPeriod" placeholder="2026-Q3"></label><label>قيمة الرقم القياسي<input id="pxVal" type="number" step="any" inputmode="decimal"></label><label>ملاحظة<input id="pxNote" placeholder="اختياري"></label><button class="btn" onclick="priceIdxAdd()">إضافة قراءة</button></div>
-  ${[...ix].reverse().map((x,i,a)=>{const prev=a[i+1],ch=prev&&Number(prev.value)>0?(Number(x.value)/Number(prev.value)-1)*100:null;return `<div class="prLine"><div class="prLineHead"><b>${esc(x.period)} · ${priceFmt(x.value)}</b><span>${x.applied?'<span class="prBadge">أساس الأسعار</span> ':""}${ch!==null?`<small dir="ltr">${ch>=0?"+":""}${priceFmt(ch)}٪ عن السابقة</small>`:""}</span></div>${x.note?`<small>${esc(x.note)}</small>`:""}<div class="prRowActs">${x.applied?"":`<button class="btn alt" onclick="priceIdxBase('${esc(x.id)}')">أساس الأسعار</button>`}<button class="sm del" onclick="priceIdxDel('${esc(x.id)}')">حذف</button></div></div>`}).join("")||'<div class="empty">لا توجد قراءات بعد</div>'}`;
-}
-async function priceIdxAdd(){
-  const period=$("pxPeriod").value.trim(),value=parseFloat($("pxVal").value);
-  if(!period||!(value>0))return alert("اكتب الفترة وقيمة الرقم القياسي");
-  const {data,error}=await sb.from("price_index").insert({period,value,note:$("pxNote").value.trim()}).select().single();
-  if(error)return alert(error.message);
-  S.price.index.push(data);S.price.index.sort((a,b)=>String(a.period).localeCompare(String(b.period)));render();
-}
-async function priceIdxDel(id){if(!confirm("حذف هذه القراءة؟"))return;const {error}=await sb.from("price_index").delete().eq("id",id);if(error)return alert(error.message);S.price.index=S.price.index.filter(x=>x.id!==id);render()}
-async function priceIdxBase(id){
-  const r1=await sb.from("price_index").update({applied:false}).eq("applied",true);if(r1.error)return alert(r1.error.message);
-  const r2=await sb.from("price_index").update({applied:true}).eq("id",id);if(r2.error)return alert(r2.error.message);
-  S.price.index.forEach(x=>x.applied=x.id===id);render();
-}
-async function priceIdxApply(){
-  const {last,pct}=priceIdxInfo();if(!last||pct===null)return;
-  const rows=S.price.items.filter(x=>Number(x.market_high)>0);
-  if(!rows.length||!confirm("تعديل نطاقات "+rows.length+" بند بنسبة "+priceFmt(pct)+"٪ حسب الرقم القياسي؟ ستصبح قراءة "+last.period+" أساس الأسعار."))return;
-  const k=1+pct/100,r2=n=>Math.round(n*100)/100;
-  if(!(await priceUpsert(rows.map(x=>({...x,market_low:r2(x.market_low*k),market_fair:r2(x.market_fair*k),market_high:r2(x.market_high*k)})))))return;
-  await priceIdxBase(last.id);
-}
-
 /* التسعيرة ومقارنة العروض */
 function priceAdd(code,quiet){
   const x=S.price.items.find(v=>v.code===code);if(!x)return;
@@ -2348,7 +2312,7 @@ function pricingHtml(){
   if(p.loading)return '<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><p class="note">جاري تحميل البنود...</p></div></div>';
   if(p.error)return `<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><div class="hlq">يلزم تشغيل ملف <b>pricing_v3.sql</b> مرة واحدة في SQL Editor داخل Supabase.<br><small dir="ltr">${esc(p.error)}</small></div><button class="btn" onclick="openPricing()">إعادة المحاولة</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
   const tab=p.tab||"ref",q=p.quote;
-  return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>مرجع الأسعار والتسعير</h3><div>${tab==="quote"?`<button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><div class="prTabs"><button class="${tab==="ref"?"on":""}" onclick="priceTab('ref')">📚 المرجع</button><button class="${tab==="index"?"on":""}" onclick="priceTab('index')">📈 الرقم القياسي</button><button class="${tab==="quote"?"on":""}" onclick="priceTab('quote')">🧮 مقارنة العروض (<span id="prQCount">${q.items.length}</span>)</button></div>${tab==="ref"?priceRefHtml():tab==="index"?priceIndexHtml():priceQuoteHtml()}<small class="prFoot">الأسعار مرجعية يحددها المالك للاسترشاد وليست عرضًا ملزمًا، وقد لا تشمل الضريبة أو ظروف الموقع. مراجع: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء - الهيئة العامة للإحصاء</a> · نشرات أسعار مواد البناء.</small></div></div>`;
+  return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>مرجع الأسعار والتسعير</h3><div>${tab==="quote"?`<button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><div class="prTabs"><button class="${tab==="ref"?"on":""}" onclick="priceTab('ref')">📚 المرجع</button><button class="${tab==="quote"?"on":""}" onclick="priceTab('quote')">🧮 مقارنة العروض (<span id="prQCount">${q.items.length}</span>)</button></div>${tab==="ref"?priceRefHtml():priceQuoteHtml()}<small class="prFoot">الأسعار مرجعية يحددها المالك للاسترشاد وليست عرضًا ملزمًا، وقد لا تشمل الضريبة أو ظروف الموقع. مراجع: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء - الهيئة العامة للإحصاء</a> · نشرات أسعار مواد البناء.</small></div></div>`;
 }
 
 /* ===== 7) النوافذ ===== */
