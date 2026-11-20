@@ -449,7 +449,7 @@ navigator.serviceWorker?.addEventListener("message",e=>{if(e.data&&e.data.open&&
 /* ===== 5) العرض ===== */
 function render(){
   const hd=`<header><h1>إدارة المشاريع</h1><div class="hb"><span class="rl">${ROLES[S.role]||""}</span>
-  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openPricing()">💰 التسعير</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
+  ${S.role==="owner"?`<button class="sm" onclick="openUsers()">الحسابات</button>`:""}${S.role==="owner"?`<button class="sm" onclick="openOrph()">🧹 المساحة</button>`:""}${isMg()?`<button class="sm" onclick="openWelcome()">التنبيهات${S.wl.obs.length?" ("+S.wl.obs.length+")":""}</button>`:""}${pushBtn()}<button class="sm" onclick="out()">خروج</button></div></header>`;
   const b=S.role==="none"?'<div class="box note">حسابك بدون صلاحيات. استخدم رابط الدعوة اللي وصلك.</div>':S.cur?proj():home();
   $("app").innerHTML=hd+'<div class="wrap">'+b+'</div>'+(S.modal?modalHtml():"");
 }
@@ -1696,7 +1696,6 @@ function rqHtml(){
   const r=RQ;if(!r)return "";
   const sty='style="border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0"';
   return `<div class="modal"><div class="box"><h3>💰 تسعيرة الترميم</h3>
-  ${S.role==="owner"?`<details ontoggle="rqLoadList(this)" style="margin:6px 0"><summary>📥 استيراد من تسعيرة محفوظة (💰 التسعير)</summary><div id="rqImp" class="lbl">جاري التحميل...</div></details>`:""}
   ${r.items.map((x,i)=>`<div ${sty}><input placeholder="البند (مثال: إزالة البلاط القديم وتركيب جديد)" value="${esc(x.d)}" oninput="rqEdit(${i},'d',this.value)">
     <div style="display:flex;gap:8px;margin-top:6px"><label class="lbl" style="flex:1">الكمية<input type="number" inputmode="decimal" min="0" step="any" value="${esc(x.q)}" oninput="rqEdit(${i},'q',this.value)"></label><label class="lbl" style="flex:1">سعر الوحدة (ر.س)<input type="number" inputmode="decimal" min="0" step="any" value="${esc(x.u)}" oninput="rqEdit(${i},'u',this.value)"></label></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><b id="rqL${i}">${money(rqLine(x))} ر.س</b>${r.items.length>1?`<button class="sm del" onclick="rqDel(${i})">حذف</button>`:""}</div></div>`).join("")}
@@ -1708,23 +1707,6 @@ function rqHtml(){
 function rqEdit(i,k,v){const x=RQ.items[i];if(!x)return;x[k]=v;const l=$("rqL"+i);if(l)l.textContent=money(rqLine(x))+" ر.س";const t=$("rqTot");if(t)t.textContent=money(rqSum(RQ.items))+" ر.س"}
 function rqAdd(){RQ.items.push({d:"",q:1,u:""});render()}
 function rqDel(i){RQ.items.splice(i,1);render()}
-async function rqLoadList(el){
-  if(!el.open||el.dataset.l)return;el.dataset.l="1";const box=$("rqImp");if(!box)return;
-  try{
-    const {data,error}=await sb.from("price_quotes").select("id,title,branch").order("updated_at",{ascending:false}).limit(30);if(error)throw error;
-    box.innerHTML=(data||[]).length?`<select id="rqpick">${data.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}${x.branch?" · "+esc(x.branch):""}</option>`).join("")}</select><button class="btn alt" onclick="rqImport()">استيراد البنود</button><div class="lbl">تُضاف للبنود الحالية، وتقدر تعدّلها بعد الاستيراد.</div>`:"لا توجد تسعيرات محفوظة";
-  }catch(e){box.textContent="تعذر التحميل: "+((e&&e.message)||e)}
-}
-async function rqImport(){
-  const id=$("rqpick")?.value;if(!id)return;
-  try{
-    const [h,it]=await Promise.all([sb.from("price_quotes").select("*").eq("id",id).single(),sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at")]);
-    if(h.error)throw h.error;if(it.error)throw it.error;
-    const keep=S.price;S.price={quote:h.data};let L;
-    try{L=(it.data||[]).map(x=>({d:x.name+(x.spec?" — "+x.spec:"")+(x.unit?" ("+x.unit+")":""),q:+priceQty(x).toFixed(3),u:+priceUnit(x).toFixed(2)}))}finally{S.price=keep}
-    RQ.items=RQ.items.filter(x=>String(x.d||"").trim()||Number(x.u)).concat(L);render();
-  }catch(e){alert((e&&e.message)||e)}
-}
 async function rqSend(){await mOnce(async()=>{
   const p=rqP(S.cur);if(!p||!RQ)return;
   const L=RQ.items.map(x=>({d:String(x.d||"").trim(),q:Number(x.q)||0,u:Number(x.u)||0})).filter(x=>x.d||x.q>0&&x.u>0);
@@ -2157,167 +2139,6 @@ async function delE(id){
   await loadE();render();
 }
 
-/* ===== مرجع التسعير v3: 10 أقسام · نطاق سعري (أقل/متوسط/أعلى) · تنبيه العروض · الرقم القياسي ===== */
-const PR_SECTIONS=["الأعمال المدنية","الأرضيات","الأسقف","الدهانات","الأبواب والنوافذ","الكهرباء","التكييف","السباكة","أنظمة السلامة","اللوحات والهوية التجارية"];
-const PR_ALERT=0.2;
-const PR_SCOPES={
- "CIV-CONC":"توريد وصب خرسانة جاهزة (غير مسلحة).\nيشمل الصب والدمك والتنظيف.\nالوحدة: م³.",
- "PNT-INT":"توريد وتركيب دهان جوتن Fenomastic أو ما يعادله.\nمعالجة الشروخ والعيوب.\nمعجون وجهين.\nبرايمر طبقة واحدة.\nدهان ثلاث أوجه نهائية.\nيشمل السقالات والتنظيف.\nالوحدة: م².",
- "CEI-GYP":"توريد وتركيب سقف جبس بورد عادي بهيكل معدني مجلفن.\nيشمل المعجون والتشطيب والتنظيف.\nالوحدة: م².",
- "FLR-PORC":"توريد وتركيب بورسلان.\nيشمل اللاصق والروبة والوزرة والتنظيف.\nالوحدة: م².",
- "DOR-GLASS":"توريد وتركيب واجهة زجاج سيكوريت 12 مم.\nتشمل الإكسسوارات والتثبيت والتنظيف.\nالوحدة: م².",
- "DOR-ALU":"توريد وتركيب باب ألمنيوم وزجاج.\nيشمل الإكسسوارات والقفل والتنظيف.\nالوحدة: م²."
-};
-const PR_SEED_SRC=[
- ["CIV-DEM",0,"إزالة وقص وتكسير","م²"],["CIV-BLOCK",0,"بناء بلوك","م²"],["CIV-PLASTER",0,"لياسة","م²"],["CIV-CONC",0,"صبة خرسانية","م³"],["CIV-ROOFWP",0,"عزل أسطح","م²"],["CIV-WETWP",0,"عزل دورات مياه","م²"],
- ["FLR-PORC",1,"بورسلان توريد وتركيب","م²",75,120,170],["FLR-CER",1,"سيراميك توريد وتركيب","م²"],["FLR-VINYL",1,"فينيل","م²"],["FLR-EPOXY",1,"إيبوكسي","م²"],
- ["CEI-GYP",2,"جبس بورد عادي","م²",45,65,85],["CEI-GYP-WR",2,"جبس بورد مقاوم للرطوبة","م²"],["CEI-METAL",2,"سقف معدني 60x60","م²"],
- ["PNT-INT",3,"دهان داخلي جوتن","م²",12,18,25],["PNT-EXT",3,"دهان خارجي","م²"],["PNT-DEC",3,"دهان زخرفي","م²"],
- ["DOR-ALU",4,"باب ألمنيوم وزجاج","م²",700,1100,1500],["DOR-GLASS",4,"واجهة سيكوريت 12 مم","م²",450,650,900],["DOR-WOOD",4,"أبواب خشبية","باب"],["DOR-IRON",4,"أبواب حديد","م²"],
- ["ELE-POINT",5,"نقاط كهرباء","نقطة"],["ELE-PANEL",5,"لوحات كهرباء","لوحة"],["ELE-LED",5,"إضاءة LED","وحدة"],["ELE-CABLE",5,"كابلات","م.ط"],
- ["HVC-SPLIT",6,"سبليت","وحدة"],["HVC-CASS",6,"كاسيت","وحدة"],["HVC-DUCT",6,"دكت","وحدة"],["HVC-AIR",6,"مجاري هواء","م²"],
- ["PLB-WATER",7,"تمديدات مياه","نقطة"],["PLB-DRAIN",7,"صرف صحي","نقطة"],["PLB-HEATER",7,"سخانات","حبة"],["PLB-FIX",7,"أطقم صحية","طقم"],
- ["SAF-FIRE",8,"إنذار حريق","نقطة"],["SAF-CCTV",8,"كاميرات","كاميرا"],["SAF-ACCESS",8,"تحكم دخول","نقطة"],
- ["SGN-EXT",9,"لوحات خارجية","م²"],["SGN-STICK",9,"استيكرات","م²"],["SGN-STEEL",9,"ستانلس ستيل","م²"],["SGN-CLAD",9,"كلادينج","م²"]
-];
-const PR_EST={"CIV-DEM":[20,35,60],"CIV-BLOCK":[55,80,115],"CIV-PLASTER":[25,38,55],"CIV-CONC":[350,500,700],"CIV-ROOFWP":[35,55,85],"CIV-WETWP":[40,65,100],"FLR-CER":[55,85,125],"FLR-VINYL":[60,95,150],"FLR-EPOXY":[70,110,170],"CEI-GYP-WR":[60,85,115],"CEI-METAL":[55,80,115],"PNT-EXT":[15,24,35],"PNT-DEC":[45,80,140],"DOR-WOOD":[700,1200,2200],"DOR-IRON":[350,550,850],"ELE-POINT":[80,130,200],"ELE-PANEL":[1500,3000,6000],"ELE-LED":[40,80,160],"ELE-CABLE":[8,15,30],"HVC-SPLIT":[2200,3200,4500],"HVC-CASS":[5500,7500,10500],"HVC-DUCT":[9000,13000,19000],"HVC-AIR":[120,180,270],"PLB-WATER":[150,250,400],"PLB-DRAIN":[200,320,500],"PLB-HEATER":[450,750,1300],"PLB-FIX":[1200,2200,4500],"SAF-FIRE":[150,280,500],"SAF-CCTV":[350,600,1000],"SAF-ACCESS":[1200,2200,4000],"SGN-EXT":[600,1000,1700],"SGN-STICK":[70,120,200],"SGN-STEEL":[900,1500,2400],"SGN-CLAD":[250,420,700]};
-const PR_EST_TAG="تقدير للمراجعة";
-const PR_SEED=PR_SEED_SRC.map(([code,si,name,unit,low,avg,high],i)=>({code,section:PR_SECTIONS[si],name,unit,scope:PR_SCOPES[code]||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:low||(PR_EST[code]||[])[0]||0,market_fair:avg||(PR_EST[code]||[])[1]||0,market_high:high||(PR_EST[code]||[])[2]||0,sort:i+1,hidden:false,source:high||!PR_EST[code]?"نطاق يحدده المالك":PR_EST_TAG}));
-
-async function openPricing(){
-  S.price={loading:true,error:"",items:[],quotes:[],query:"",section:"الكل",tab:"ref",showHidden:false,editing:null,quote:{id:null,title:"تسعيرة جديدة",branch:"",items:[]}};modal("pricing");
-  const [a,q]=await Promise.all([sb.from("price_items").select("*").order("sort").limit(2000),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30)]);
-  S.price.loading=false;if(a.error||q.error){S.price.error=(a.error||q.error).message;render();return}
-  let items=a.data||[];const present=new Set(items.map(x=>x.code)),missing=PR_SEED.filter(x=>!present.has(x.code));
-  if(missing.length){const r=await sb.from("price_items").upsert(missing,{onConflict:"code",ignoreDuplicates:true});if(r.error){S.price.error=r.error.message;render();return}items=items.concat(missing)}
-  S.price.items=items;S.price.quotes=q.data||[];render();
-}
-function priceFmt(v){return Number(v||0).toLocaleString("ar-SA",{maximumFractionDigits:2})}
-function priceNorm(s){return String(s||"").toLowerCase().replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/[ًٌٍَُِّْـ]/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim()}
-function priceScope(x){return x.scope||x.spec||""}
-function priceQty(x){const L=Number(x.length_m)||0,W=Number(x.width_m)||0,D=Number(x.depth_m)||0;if(L&&x.unit==="م.ط")return L;if(L&&W&&x.unit==="م²")return L*W;if(L&&W&&D&&x.unit==="م³")return L*W*D;return Number(x.quantity)||0}
-function priceHasOffer(x){return x.custom_unit_price!==null&&x.custom_unit_price!==undefined&&x.custom_unit_price!==""&&Number(x.custom_unit_price)>0}
-function priceUnit(x){return priceHasOffer(x)?Number(x.custom_unit_price):Number(x.market_fair||0)}
-function priceCheck(x){
-  if(!priceHasOffer(x))return{s:"none"};
-  const o=Number(x.custom_unit_price),hi=Number(x.market_high)||0,lo=Number(x.market_low)||0;
-  if(!(hi>0))return{s:"norange"};
-  const pct=(o/hi-1)*100;
-  if(o>=hi*(1+PR_ALERT))return{s:"alert",pct};
-  if(o>hi)return{s:"high",pct};
-  if(lo>0&&o<lo)return{s:"low"};
-  return{s:"ok"};
-}
-function priceStatusHtml(x){
-  const c=priceCheck(x);
-  if(c.s==="alert")return `<div class="prAlert">⚠ تنبيه: العرض أعلى من الحد الأعلى المعقول بنسبة ${priceFmt(c.pct)}٪ (الحد ${priceFmt(x.market_high)} ر.س)</div>`;
-  if(c.s==="high")return `<div class="prWarn">العرض فوق الحد الأعلى بنسبة ${priceFmt(c.pct)}٪ (أقل من حد التنبيه ${PR_ALERT*100}٪)</div>`;
-  if(c.s==="low")return `<div class="prWarn">العرض أقل من الحد الأدنى المرجعي؛ تأكد من شمول النطاق كاملًا</div>`;
-  if(c.s==="ok")return `<div class="prOk">ضمن النطاق المرجعي ✔</div>`;
-  if(c.s==="norange")return `<div class="prWarn">لم تحدد نطاقًا سعريًا لهذا البند في المرجع</div>`;
-  return "";
-}
-function priceRows(){
-  const p=S.price,words=priceNorm(p.query||"").split(" ").filter(Boolean);
-  return p.items.filter(x=>{
-    if(x.hidden&&!p.showHidden)return false;
-    if(p.section!=="الكل"&&x.section!==p.section)return false;
-    if(words.length){const h=priceNorm(x.name+" "+x.scope+" "+x.section);if(!words.every(w=>h.includes(w)))return false}
-    return true;
-  });
-}
-function priceChipsHtml(){
-  const p=S.price,cnt=new Map();
-  for(const x of p.items){if(x.hidden&&!p.showHidden)continue;cnt.set(x.section,(cnt.get(x.section)||0)+1)}
-  const tot=[...cnt.values()].reduce((a,b)=>a+b,0),secs=PR_SECTIONS.filter(s=>cnt.has(s)).concat([...cnt.keys()].filter(s=>!PR_SECTIONS.includes(s)));
-  const chip=(t,n)=>`<button class="${p.section===t?"on":""}" data-t="${esc(t)}" onclick="priceSec(this.dataset.t)">${esc(t)} <small>${n}</small></button>`;
-  return `<div class="prChips">${chip("الكل",tot)}${secs.map(t=>chip(t,cnt.get(t))).join("")}</div>`;
-}
-function priceRowHtml(x){
-  const p=S.price,c=esc(x.code),has=Number(x.market_high)>0,
-  range=has?`<div class="prRange"><span>أقل<b>${priceFmt(x.market_low)}</b></span><span>متوسط<b>${priceFmt(x.market_fair)}</b></span><span>أعلى<b>${priceFmt(x.market_high)}</b></span></div><small>ر.س / ${esc(x.unit)} · تنبيه عند عرض ≥ ${priceFmt(Number(x.market_high)*(1+PR_ALERT))}</small>`:`<div class="prPrice"><span style="font-size:16px;color:#946200">حدّد النطاق السعري</span></div><small>الوحدة: ${esc(x.unit)}</small>`;
-  let ed="";
-  if(p.editing===x.code)ed=`<div class="prEdit"><label>الوحدة<input id="peUnit" value="${esc(x.unit)}"></label><div class="prDims"><label>أقل سعر<input id="peLow" type="number" min="0" step="any" inputmode="decimal" value="${x.market_low||""}"></label><label>متوسط<input id="peAvg" type="number" min="0" step="any" inputmode="decimal" value="${x.market_fair||""}"></label><label>أعلى سعر معقول<input id="peHigh" type="number" min="0" step="any" inputmode="decimal" value="${x.market_high||""}"></label></div><label>نطاق العمل (ما يشمله السعر)<textarea id="peScope" rows="6" style="width:100%">${esc(priceScope(x))}</textarea></label><div class="prRowActs"><button class="btn" onclick="priceSaveItem('${c}')">حفظ</button><button class="btn alt" onclick="S.price.editing=null;priceRefresh()">إلغاء</button></div></div>`;
-  return `<div class="prCard" data-c="${c}"><div class="prCardHead"><b>${esc(x.name)}</b>${x.hidden?'<span class="prBadge h">مخفي</span>':""}${x.source===PR_EST_TAG?'<span class="prBadge h" title="تقدير أولي، راجعه بعروض فعلية">تقدير</span>':""}</div><small class="prTrade">${esc(x.section)}</small>${range}<details><summary>نطاق العمل</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details>${ed}<div class="prRowActs"><button class="btn" onclick="priceAddRow('${c}',this)">＋ للتسعيرة</button><button class="btn alt" onclick="priceEditOpen('${c}')">✎ تعديل</button><button class="btn alt" onclick="priceToggleHide('${c}')">${x.hidden?"إظهار":"إخفاء"}</button>${String(x.code).startsWith("USR-")?`<button class="btn alt" onclick="priceDelItem('${c}')">حذف</button>`:""}</div></div>`;
-}
-function priceListHtml(){return priceRows().map(priceRowHtml).join("")||'<div class="empty">لا توجد بنود مطابقة</div>'}
-function priceRefresh(){const a=$("priceChips"),b=$("priceList");if(a)a.innerHTML=priceChipsHtml();if(b)b.innerHTML=priceListHtml()}
-function priceSec(t){S.price.section=t;S.price.editing=null;priceRefresh()}
-function priceTab(t){S.price.tab=t;render()}
-function priceEditOpen(c){S.price.editing=S.price.editing===c?null:c;priceRefresh()}
-async function priceUpsert(rows){
-  const now=new Date().toISOString();
-  const {error}=await sb.from("price_items").upsert(rows.map(x=>({...x,updated_at:now})),{onConflict:"code"});
-  if(error){alert(error.message);return false}
-  for(const r of rows){const cur=S.price.items.find(v=>v.code===r.code);if(cur)Object.assign(cur,r)}
-  return true;
-}
-async function priceSaveItem(code){
-  const x=S.price.items.find(v=>v.code===code);if(!x)return;
-  const lo=Number($("peLow").value)||0,av=Number($("peAvg").value)||0,hi=Number($("peHigh").value)||0,unit=$("peUnit").value.trim()||x.unit;
-  if([lo,av,hi].some(v=>v<0))return alert("الأسعار لا تكون سالبة");
-  if(lo&&av&&lo>av||av&&hi&&av>hi||lo&&hi&&lo>hi)return alert("رتّب الأسعار: أقل ≤ متوسط ≤ أعلى");
-  if(await priceUpsert([{...x,unit,market_low:lo,market_fair:av,market_high:hi,source:"نطاق يحدده المالك",scope:$("peScope").value.trim()}])){S.price.editing=null;priceRefresh()}
-}
-async function priceToggleHide(code){const x=S.price.items.find(v=>v.code===code);if(x&&await priceUpsert([{...x,hidden:!x.hidden}]))priceRefresh()}
-async function priceDelItem(code){if(!confirm("حذف هذا البند نهائيًا؟"))return;const {error}=await sb.from("price_items").delete().eq("code",code);if(error)return alert(error.message);S.price.items=S.price.items.filter(x=>x.code!==code);priceRefresh()}
-async function priceAddCustom(){
-  const name=$("pcname").value.trim(),section=$("pcsec").value,unit=$("pcunit").value.trim()||"م²",lo=Number($("pclow").value)||0,av=Number($("pcavg").value)||0,hi=Number($("pchigh").value)||0;
-  if(!name)return alert("اكتب اسم البند");
-  if(lo&&av&&lo>av||av&&hi&&av>hi||lo&&hi&&lo>hi)return alert("رتّب الأسعار: أقل ≤ متوسط ≤ أعلى");
-  const row={code:"USR-"+Date.now(),section,name,unit,scope:$("pcscope").value.trim()||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:lo,market_fair:av,market_high:hi,sort:9000+S.price.items.length,hidden:false,source:"بند أضافه المالك"};
-  const {error}=await sb.from("price_items").insert(row);if(error)return alert(error.message);
-  S.price.items.push(row);render();
-}
-function priceRefHtml(){
-  const p=S.price;
-  return `<div class="note">المرجع يعتمد على بنود شاملة بنطاق عمل واضح (توريد وتركيب وتنظيف) حتى تقارن العروض بنفس الأساس. إذا جاء عرض أعلى من الحد الأعلى بـ ${PR_ALERT*100}٪ أو أكثر يظهر تنبيه مباشرة في التسعيرة. البنود ذات النطاق الفارغ تنتظر أن تحدد أسعارها.</div><div class="prRefTop"><input id="priceSearch" placeholder="ابحث في البنود..." value="${esc(p.query)}" oninput="S.price.query=this.value;priceRefresh()"><label class="mtg"><input type="checkbox" ${p.showHidden?"checked":""} onchange="S.price.showHidden=this.checked;priceRefresh()"> إظهار المخفي</label></div><div id="priceChips">${priceChipsHtml()}</div><div id="priceList" class="prCards">${priceListHtml()}</div><details class="prCustom"><summary>＋ إضافة بند</summary><select id="pcsec">${PR_SECTIONS.map(t=>`<option ${t===p.section?"selected":""}>${esc(t)}</option>`).join("")}</select><input id="pcname" placeholder="اسم البند"><input id="pcunit" placeholder="الوحدة: م²، نقطة، حبة" value="م²"><div class="prDims"><input id="pclow" type="number" inputmode="decimal" placeholder="أقل سعر"><input id="pcavg" type="number" inputmode="decimal" placeholder="متوسط"><input id="pchigh" type="number" inputmode="decimal" placeholder="أعلى سعر معقول"></div><textarea id="pcscope" rows="4" style="width:100%" placeholder="نطاق العمل: ما الذي يشمله السعر؟"></textarea><button class="btn" onclick="priceAddCustom()">إضافة</button></details>`;
-}
-
-/* التسعيرة ومقارنة العروض */
-function priceAdd(code,quiet){
-  const x=S.price.items.find(v=>v.code===code);if(!x)return;
-  S.price.quote.items.push({code:x.code,category:x.section,name:x.name,spec:priceScope(x),unit:x.unit,market_low:x.market_low,market_fair:x.market_fair,market_high:x.market_high,source:x.source,id:crypto.randomUUID(),quantity:1,length_m:null,width_m:null,depth_m:null,custom_unit_price:null,pricing_method:"market",note:""});
-  if(!quiet)render();
-}
-function priceAddRow(code,btn){
-  priceAdd(code,true);const c=$("prQCount");if(c)c.textContent=S.price.quote.items.length;
-  if(btn){const o=btn.textContent;btn.textContent="✔ أُضيف";setTimeout(()=>{btn.textContent=o},1200)}
-}
-function priceEdit(i,k,v){const x=S.price.quote.items[i];if(!x)return;x[k]=["quantity","length_m","width_m","depth_m","custom_unit_price"].includes(k)?(v===""?null:Number(v)):v;if(k==="length_m"||k==="width_m"||k==="depth_m")x.quantity=priceQty(x);render()}
-function priceRemove(i){S.price.quote.items.splice(i,1);render()}
-function priceNew(){S.price.quote={id:null,title:"تسعيرة جديدة",branch:"",items:[]};render()}
-async function priceLoadQuote(id){const {data,error}=await sb.from("price_quotes").select("*").eq("id",id).single();if(error)return alert(error.message);const r=await sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at");if(r.error)return alert(r.error.message);S.price.quote={...data,items:(r.data||[]).map(x=>({...x,id:x.id}))};render()}
-async function priceSave(){
-  const q=S.price.quote;if(!q.title.trim())return alert("اكتب اسم التسعيرة");if(!q.items.length)return alert("أضف بنداً واحداً على الأقل");
-  const b=$("priceSave");if(b)b.disabled=true;
-  const head={title:q.title.trim(),branch:(q.branch||"").trim(),updated_at:new Date().toISOString()};
-  let res=q.id?await sb.from("price_quotes").update(head).eq("id",q.id).select().single():await sb.from("price_quotes").insert(head).select().single();
-  if(res.error){if(b)b.disabled=false;return alert(res.error.message)}
-  q.id=res.data.id;
-  const removed=await sb.from("price_quote_items").delete().eq("quote_id",q.id);if(removed.error){if(b)b.disabled=false;return alert(removed.error.message)}
-  const rows=q.items.map(x=>({quote_id:q.id,code:x.code,category:x.category||x.section||"",name:x.name,spec:priceScope(x),unit:x.unit,quantity:priceQty(x),length_m:x.length_m,width_m:x.width_m,depth_m:x.depth_m,market_low:Number(x.market_low)||0,market_fair:Number(x.market_fair)||0,market_high:Number(x.market_high)||0,source:x.source||"",checked_at:x.checked_at||null,pricing_method:"market",custom_unit_price:priceHasOffer(x)?Number(x.custom_unit_price):null,note:x.note||""}));
-  const saved=await sb.from("price_quote_items").insert(rows);if(saved.error){if(b)b.disabled=false;return alert(saved.error.message)}
-  alert("حُفظت التسعيرة");
-  const l=await sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30);S.price.quotes=l.data||[];render();
-}
-async function priceDelete(){const q=S.price.quote;if(!q.id||!confirm("حذف التسعيرة نهائياً؟"))return;const {error}=await sb.from("price_quotes").delete().eq("id",q.id);if(error)return alert(error.message);S.price.quotes=S.price.quotes.filter(x=>x.id!==q.id);priceNew()}
-function priceLineHtml(x,i){
-  const q=priceQty(x),hasO=priceHasOffer(x),total=hasO?q*Number(x.custom_unit_price):0,range=Number(x.market_high)>0?`النطاق المرجعي: ${priceFmt(x.market_low)} – ${priceFmt(x.market_fair)} – ${priceFmt(x.market_high)} ر.س / ${esc(x.unit)}`:"لا يوجد نطاق مرجعي لهذا البند";
-  return `<div class="prLine"><div class="prLineHead"><b>${i+1}. ${esc(x.name)}</b><button class="sm del" onclick="priceRemove(${i})">حذف</button></div><details><summary>نطاق العمل · الوحدة ${esc(x.unit)}</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details><small>${range}</small><div class="prDims"><label>الكمية (${esc(x.unit)})<input type="number" min="0" step="any" value="${q}" onchange="priceEdit(${i},'quantity',this.value)"></label>${["م²","م.ط","م³"].includes(x.unit)?`<label>الطول م<input type="number" min="0" step="any" value="${x.length_m??""}" onchange="priceEdit(${i},'length_m',this.value)"></label>`:""}${["م²","م³"].includes(x.unit)?`<label>العرض م<input type="number" min="0" step="any" value="${x.width_m??""}" onchange="priceEdit(${i},'width_m',this.value)"></label>`:""}${x.unit==="م³"?`<label>العمق م<input type="number" min="0" step="any" value="${x.depth_m??""}" onchange="priceEdit(${i},'depth_m',this.value)"></label>`:""}<label>سعر العرض للوحدة (ر.س)<input type="number" min="0" step="any" inputmode="decimal" placeholder="أدخل سعر المقاول" value="${x.custom_unit_price??""}" onchange="priceEdit(${i},'custom_unit_price',this.value)"></label></div>${priceStatusHtml(x)}<div class="prBreak"><b>${hasO?`الإجمالي ${priceFmt(total)} ر.س`:`بالمتوسط المرجعي ${priceFmt(q*(Number(x.market_fair)||0))} ر.س`}</b></div><input placeholder="ملاحظات / اسم المقاول / موقع البند" value="${esc(x.note||"")}" onchange="priceEdit(${i},'note',this.value)"></div>`;
-}
-function priceQuoteHtml(){
-  const p=S.price,q=p.quote,offerTotal=q.items.reduce((n,x)=>n+(priceHasOffer(x)?priceQty(x)*Number(x.custom_unit_price):0),0),refTotal=q.items.reduce((n,x)=>n+priceQty(x)*(Number(x.market_fair)||0),0),alerts=q.items.filter(x=>priceCheck(x).s==="alert").length;
-  return `<details class="prSaved"><summary>التسعيرات المحفوظة (${p.quotes.length})</summary>${p.quotes.map(x=>`<button class="prPick" onclick="priceLoadQuote('${esc(x.id)}')"><b>${esc(x.title)}</b><span>${esc(x.branch||"بدون موقع")}</span></button>`).join("")||'<small>لا توجد تسعيرات محفوظة</small>'}</details><div class="prMeta"><label>اسم التسعيرة<input value="${esc(q.title)}" onchange="S.price.quote.title=this.value"></label><label>الفرع / الموقع<input value="${esc(q.branch||"")}" placeholder="اختياري" onchange="S.price.quote.branch=this.value"></label></div>${alerts?`<div class="prAlert">⚠ ${alerts} ${alerts>1?"بنود":"بند"} بعرض أعلى من الحد الأعلى بـ ${PR_ALERT*100}٪ أو أكثر</div>`:""}<section class="pricePrint"><h3>مقارنة عروض الأسعار</h3><p>التسعيرة: <b>${esc(q.title)}</b> · الموقع: <b>${esc(q.branch||"—")}</b> · التاريخ: ${new Date().toLocaleDateString("ar-SA")}</p><h4>البنود (${q.items.length})</h4>${q.items.map(priceLineHtml).join("")||'<div class="empty">لم تضف بنودًا بعد. ارجع للمرجع وأضف البنود.</div>'}<div class="prTotals"><div>إجمالي العروض المُدخلة <b>${priceFmt(offerTotal)} ر.س</b></div><div>إجمالي المتوسط المرجعي <b>${priceFmt(refTotal)} ر.س</b></div><small>الأسعار قبل الضريبة. قارن العروض فقط عندما تتطابق في نطاق العمل والوحدة.</small></div><div class="prActions"><button class="btn" id="priceSave" onclick="priceSave()">حفظ التسعيرة</button>${q.id?`<button class="btn danger" onclick="priceDelete()">حذف التسعيرة</button>`:""}</div></section>`;
-}
-function pricingHtml(){
-  const p=S.price||{};
-  if(p.loading)return '<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><p class="note">جاري تحميل البنود...</p></div></div>';
-  if(p.error)return `<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><div class="hlq">يلزم تشغيل ملف <b>pricing_v3.sql</b> مرة واحدة في SQL Editor داخل Supabase.<br><small dir="ltr">${esc(p.error)}</small></div><button class="btn" onclick="openPricing()">إعادة المحاولة</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
-  const tab=p.tab||"ref",q=p.quote;
-  return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>مرجع الأسعار والتسعير</h3><div>${tab==="quote"?`<button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><div class="prTabs"><button class="${tab==="ref"?"on":""}" onclick="priceTab('ref')">📚 المرجع</button><button class="${tab==="quote"?"on":""}" onclick="priceTab('quote')">🧮 مقارنة العروض (<span id="prQCount">${q.items.length}</span>)</button></div>${tab==="ref"?priceRefHtml():priceQuoteHtml()}<small class="prFoot">الأسعار مرجعية يحددها المالك للاسترشاد وليست عرضًا ملزمًا، وقد لا تشمل الضريبة أو ظروف الموقع. مراجع: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء - الهيئة العامة للإحصاء</a> · نشرات أسعار مواد البناء.</small></div></div>`;
-}
-
 /* ===== 7) النوافذ ===== */
 function modal(m){S.modal=m;S.link="";S.cred=null;render()}
 function projForm(p){
@@ -2344,7 +2165,6 @@ function projForm(p){
 }
 function modalHtml(){
   const m=S.modal,p=S.projects.find(x=>x.id===S.cur);
-  if(m==="pricing")return pricingHtml();
   if(m==="welcome")return welcomeHtml();
   if(m==="report")return reportHtml();
   if(m==="log")return logHtml();
