@@ -2161,6 +2161,7 @@ async function delE(id){
 const PR_SECTIONS=["الأعمال المدنية","الأرضيات","الأسقف","الدهانات","الأبواب والنوافذ","الكهرباء","التكييف","السباكة","أنظمة السلامة","اللوحات والهوية التجارية"];
 const PR_ALERT=0.2;
 const PR_SCOPES={
+ "CIV-CONC":"توريد وصب خرسانة جاهزة (غير مسلحة).\nيشمل الصب والدمك والتنظيف.\nالوحدة: م³.",
  "PNT-INT":"توريد وتركيب دهان جوتن Fenomastic أو ما يعادله.\nمعالجة الشروخ والعيوب.\nمعجون وجهين.\nبرايمر طبقة واحدة.\nدهان ثلاث أوجه نهائية.\nيشمل السقالات والتنظيف.\nالوحدة: م².",
  "CEI-GYP":"توريد وتركيب سقف جبس بورد عادي بهيكل معدني مجلفن.\nيشمل المعجون والتشطيب والتنظيف.\nالوحدة: م².",
  "FLR-PORC":"توريد وتركيب بورسلان.\nيشمل اللاصق والروبة والوزرة والتنظيف.\nالوحدة: م².",
@@ -2179,7 +2180,9 @@ const PR_SEED_SRC=[
  ["SAF-FIRE",8,"إنذار حريق","نقطة"],["SAF-CCTV",8,"كاميرات","كاميرا"],["SAF-ACCESS",8,"تحكم دخول","نقطة"],
  ["SGN-EXT",9,"لوحات خارجية","م²"],["SGN-STICK",9,"استيكرات","م²"],["SGN-STEEL",9,"ستانلس ستيل","م²"],["SGN-CLAD",9,"كلادينج","م²"]
 ];
-const PR_SEED=PR_SEED_SRC.map(([code,si,name,unit,low,avg,high],i)=>({code,section:PR_SECTIONS[si],name,unit,scope:PR_SCOPES[code]||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:low||0,market_fair:avg||0,market_high:high||0,sort:i+1,hidden:false,source:"نطاق يحدده المالك"}));
+const PR_EST={"CIV-DEM":[20,35,60],"CIV-BLOCK":[55,80,115],"CIV-PLASTER":[25,38,55],"CIV-CONC":[350,500,700],"CIV-ROOFWP":[35,55,85],"CIV-WETWP":[40,65,100],"FLR-CER":[55,85,125],"FLR-VINYL":[60,95,150],"FLR-EPOXY":[70,110,170],"CEI-GYP-WR":[60,85,115],"CEI-METAL":[55,80,115],"PNT-EXT":[15,24,35],"PNT-DEC":[45,80,140],"DOR-WOOD":[700,1200,2200],"DOR-IRON":[350,550,850],"ELE-POINT":[80,130,200],"ELE-PANEL":[1500,3000,6000],"ELE-LED":[40,80,160],"ELE-CABLE":[8,15,30],"HVC-SPLIT":[2200,3200,4500],"HVC-CASS":[5500,7500,10500],"HVC-DUCT":[9000,13000,19000],"HVC-AIR":[120,180,270],"PLB-WATER":[150,250,400],"PLB-DRAIN":[200,320,500],"PLB-HEATER":[450,750,1300],"PLB-FIX":[1200,2200,4500],"SAF-FIRE":[150,280,500],"SAF-CCTV":[350,600,1000],"SAF-ACCESS":[1200,2200,4000],"SGN-EXT":[600,1000,1700],"SGN-STICK":[70,120,200],"SGN-STEEL":[900,1500,2400],"SGN-CLAD":[250,420,700]};
+const PR_EST_TAG="تقدير للمراجعة";
+const PR_SEED=PR_SEED_SRC.map(([code,si,name,unit,low,avg,high],i)=>({code,section:PR_SECTIONS[si],name,unit,scope:PR_SCOPES[code]||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:low||(PR_EST[code]||[])[0]||0,market_fair:avg||(PR_EST[code]||[])[1]||0,market_high:high||(PR_EST[code]||[])[2]||0,sort:i+1,hidden:false,source:high||!PR_EST[code]?"نطاق يحدده المالك":PR_EST_TAG}));
 
 async function openPricing(){
   S.price={loading:true,error:"",items:[],quotes:[],query:"",section:"الكل",tab:"ref",showHidden:false,editing:null,quote:{id:null,title:"تسعيرة جديدة",branch:"",items:[]}};modal("pricing");
@@ -2235,7 +2238,7 @@ function priceRowHtml(x){
   range=has?`<div class="prRange"><span>أقل<b>${priceFmt(x.market_low)}</b></span><span>متوسط<b>${priceFmt(x.market_fair)}</b></span><span>أعلى<b>${priceFmt(x.market_high)}</b></span></div><small>ر.س / ${esc(x.unit)} · تنبيه عند عرض ≥ ${priceFmt(Number(x.market_high)*(1+PR_ALERT))}</small>`:`<div class="prPrice"><span style="font-size:16px;color:#946200">حدّد النطاق السعري</span></div><small>الوحدة: ${esc(x.unit)}</small>`;
   let ed="";
   if(p.editing===x.code)ed=`<div class="prEdit"><label>الوحدة<input id="peUnit" value="${esc(x.unit)}"></label><div class="prDims"><label>أقل سعر<input id="peLow" type="number" min="0" step="any" inputmode="decimal" value="${x.market_low||""}"></label><label>متوسط<input id="peAvg" type="number" min="0" step="any" inputmode="decimal" value="${x.market_fair||""}"></label><label>أعلى سعر معقول<input id="peHigh" type="number" min="0" step="any" inputmode="decimal" value="${x.market_high||""}"></label></div><label>نطاق العمل (ما يشمله السعر)<textarea id="peScope" rows="6" style="width:100%">${esc(priceScope(x))}</textarea></label><div class="prRowActs"><button class="btn" onclick="priceSaveItem('${c}')">حفظ</button><button class="btn alt" onclick="S.price.editing=null;priceRefresh()">إلغاء</button></div></div>`;
-  return `<div class="prCard" data-c="${c}"><div class="prCardHead"><b>${esc(x.name)}</b>${x.hidden?'<span class="prBadge h">مخفي</span>':""}</div><small class="prTrade">${esc(x.section)}</small>${range}<details><summary>نطاق العمل</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details>${ed}<div class="prRowActs"><button class="btn" onclick="priceAddRow('${c}',this)">＋ للتسعيرة</button><button class="btn alt" onclick="priceEditOpen('${c}')">✎ تعديل</button><button class="btn alt" onclick="priceToggleHide('${c}')">${x.hidden?"إظهار":"إخفاء"}</button>${String(x.code).startsWith("USR-")?`<button class="btn alt" onclick="priceDelItem('${c}')">حذف</button>`:""}</div></div>`;
+  return `<div class="prCard" data-c="${c}"><div class="prCardHead"><b>${esc(x.name)}</b>${x.hidden?'<span class="prBadge h">مخفي</span>':""}${x.source===PR_EST_TAG?'<span class="prBadge h" title="تقدير أولي، راجعه بعروض فعلية">تقدير</span>':""}</div><small class="prTrade">${esc(x.section)}</small>${range}<details><summary>نطاق العمل</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details>${ed}<div class="prRowActs"><button class="btn" onclick="priceAddRow('${c}',this)">＋ للتسعيرة</button><button class="btn alt" onclick="priceEditOpen('${c}')">✎ تعديل</button><button class="btn alt" onclick="priceToggleHide('${c}')">${x.hidden?"إظهار":"إخفاء"}</button>${String(x.code).startsWith("USR-")?`<button class="btn alt" onclick="priceDelItem('${c}')">حذف</button>`:""}</div></div>`;
 }
 function priceListHtml(){return priceRows().map(priceRowHtml).join("")||'<div class="empty">لا توجد بنود مطابقة</div>'}
 function priceRefresh(){const a=$("priceChips"),b=$("priceList");if(a)a.innerHTML=priceChipsHtml();if(b)b.innerHTML=priceListHtml()}
@@ -2254,7 +2257,7 @@ async function priceSaveItem(code){
   const lo=Number($("peLow").value)||0,av=Number($("peAvg").value)||0,hi=Number($("peHigh").value)||0,unit=$("peUnit").value.trim()||x.unit;
   if([lo,av,hi].some(v=>v<0))return alert("الأسعار لا تكون سالبة");
   if(lo&&av&&lo>av||av&&hi&&av>hi||lo&&hi&&lo>hi)return alert("رتّب الأسعار: أقل ≤ متوسط ≤ أعلى");
-  if(await priceUpsert([{...x,unit,market_low:lo,market_fair:av,market_high:hi,scope:$("peScope").value.trim()}])){S.price.editing=null;priceRefresh()}
+  if(await priceUpsert([{...x,unit,market_low:lo,market_fair:av,market_high:hi,source:"نطاق يحدده المالك",scope:$("peScope").value.trim()}])){S.price.editing=null;priceRefresh()}
 }
 async function priceToggleHide(code){const x=S.price.items.find(v=>v.code===code);if(x&&await priceUpsert([{...x,hidden:!x.hidden}]))priceRefresh()}
 async function priceDelItem(code){if(!confirm("حذف هذا البند نهائيًا؟"))return;const {error}=await sb.from("price_items").delete().eq("code",code);if(error)return alert(error.message);S.price.items=S.price.items.filter(x=>x.code!==code);priceRefresh()}
