@@ -455,7 +455,7 @@ function render(){
 function card(p){
   const u=S.urls[p.cover_path];
   return `<div class="card ${ST[p.status][1]}" data-search="${esc((String(p.name||"")+" "+String(p.loc||"")).toLocaleLowerCase())}" onclick="openP('${p.id}')"><div class="img" ${u?`style="background-image:url('${u}')"`:""}>${chip(p)}</div>
-  <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p>${p.map_url?`<p class="pmap" onclick="event.stopPropagation()"><a href="${esc(mMapUrl(p.map_url))}" target="_blank" rel="noopener">📍 موقع المشروع</a></p>`:""}<div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
+  <div class="body"><h4>${esc(p.name)}</h4><p>${esc(p.loc)}</p><div class="bar"><i style="width:${clamp(p.progress)}%"></i></div>
   <div class="row"><span>الإنجاز ${clamp(p.progress)}%</span><span>التسليم ${esc(p.due)||"-"}</span></div></div></div>`;
 }
 function home(){
