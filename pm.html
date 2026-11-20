@@ -125,6 +125,7 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 @media(max-width:520px){.prCards{grid-template-columns:1fr}}
 @media(max-width:850px){.prGrid{grid-template-columns:1fr}.priceList{max-height:26vh}.prMeta{grid-template-columns:repeat(2,minmax(110px,1fr))}.modal .box.prApp{padding:12px}}
 @media print{body *{visibility:hidden!important}.pricePrint,.pricePrint *{visibility:visible!important}.pricePrint{position:absolute!important;inset:0!important;width:100%!important}.pricePrint .prActions,.pricePrint input,.pricePrint select,.pricePrint button{display:none!important}.prLine{break-inside:avoid}.prTotals{break-inside:avoid}}
+.prRange{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px}.prRange span{background:#f1f5f9;border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;color:#64748b}.prRange b{display:block;font-size:17px;color:#0f2740}.prAlert{background:#fee2e2;border:1px solid #dc2626;color:#991b1b;border-radius:10px;padding:9px 12px;margin:8px 0;font-weight:700}.prWarn{background:#fef3c7;border:1px solid #d97706;color:#92400e;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}.prOk{color:#166534;font-size:14px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -2156,178 +2157,199 @@ async function delE(id){
   await loadE();render();
 }
 
-/* ===== كتالوج وتسعيرات الصيانة ===== */
+/* ===== مرجع التسعير v3: 10 أقسام · نطاق سعري (أقل/متوسط/أعلى) · تنبيه العروض · الرقم القياسي ===== */
+const PR_SECTIONS=["الأعمال المدنية","الأرضيات","الأسقف","الدهانات","الأبواب والنوافذ","الكهرباء","التكييف","السباكة","أنظمة السلامة","اللوحات والهوية التجارية"];
+const PR_ALERT=0.2;
+const PR_SCOPES={
+ "PNT-INT":"توريد وتركيب دهان جوتن Fenomastic أو ما يعادله.\nمعالجة الشروخ والعيوب.\nمعجون وجهين.\nبرايمر طبقة واحدة.\nدهان ثلاث أوجه نهائية.\nيشمل السقالات والتنظيف.\nالوحدة: م².",
+ "CEI-GYP":"توريد وتركيب سقف جبس بورد عادي بهيكل معدني مجلفن.\nيشمل المعجون والتشطيب والتنظيف.\nالوحدة: م².",
+ "FLR-PORC":"توريد وتركيب بورسلان.\nيشمل اللاصق والروبة والوزرة والتنظيف.\nالوحدة: م².",
+ "DOR-GLASS":"توريد وتركيب واجهة زجاج سيكوريت 12 مم.\nتشمل الإكسسوارات والتثبيت والتنظيف.\nالوحدة: م².",
+ "DOR-ALU":"توريد وتركيب باب ألمنيوم وزجاج.\nيشمل الإكسسوارات والقفل والتنظيف.\nالوحدة: م²."
+};
+const PR_SEED_SRC=[
+ ["CIV-DEM",0,"إزالة وقص وتكسير","م²"],["CIV-BLOCK",0,"بناء بلوك","م²"],["CIV-PLASTER",0,"لياسة","م²"],["CIV-CONC",0,"صبة خرسانية","م³"],["CIV-ROOFWP",0,"عزل أسطح","م²"],["CIV-WETWP",0,"عزل دورات مياه","م²"],
+ ["FLR-PORC",1,"بورسلان توريد وتركيب","م²",75,120,170],["FLR-CER",1,"سيراميك توريد وتركيب","م²"],["FLR-VINYL",1,"فينيل","م²"],["FLR-EPOXY",1,"إيبوكسي","م²"],
+ ["CEI-GYP",2,"جبس بورد عادي","م²",45,65,85],["CEI-GYP-WR",2,"جبس بورد مقاوم للرطوبة","م²"],["CEI-METAL",2,"سقف معدني 60x60","م²"],
+ ["PNT-INT",3,"دهان داخلي جوتن","م²",12,18,25],["PNT-EXT",3,"دهان خارجي","م²"],["PNT-DEC",3,"دهان زخرفي","م²"],
+ ["DOR-ALU",4,"باب ألمنيوم وزجاج","م²",700,1100,1500],["DOR-GLASS",4,"واجهة سيكوريت 12 مم","م²",450,650,900],["DOR-WOOD",4,"أبواب خشبية","باب"],["DOR-IRON",4,"أبواب حديد","م²"],
+ ["ELE-POINT",5,"نقاط كهرباء","نقطة"],["ELE-PANEL",5,"لوحات كهرباء","لوحة"],["ELE-LED",5,"إضاءة LED","وحدة"],["ELE-CABLE",5,"كابلات","م.ط"],
+ ["HVC-SPLIT",6,"سبليت","وحدة"],["HVC-CASS",6,"كاسيت","وحدة"],["HVC-DUCT",6,"دكت","وحدة"],["HVC-AIR",6,"مجاري هواء","م²"],
+ ["PLB-WATER",7,"تمديدات مياه","نقطة"],["PLB-DRAIN",7,"صرف صحي","نقطة"],["PLB-HEATER",7,"سخانات","حبة"],["PLB-FIX",7,"أطقم صحية","طقم"],
+ ["SAF-FIRE",8,"إنذار حريق","نقطة"],["SAF-CCTV",8,"كاميرات","كاميرا"],["SAF-ACCESS",8,"تحكم دخول","نقطة"],
+ ["SGN-EXT",9,"لوحات خارجية","م²"],["SGN-STICK",9,"استيكرات","م²"],["SGN-STEEL",9,"ستانلس ستيل","م²"],["SGN-CLAD",9,"كلادينج","م²"]
+];
+const PR_SEED=PR_SEED_SRC.map(([code,si,name,unit,low,avg,high],i)=>({code,section:PR_SECTIONS[si],name,unit,scope:PR_SCOPES[code]||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:low||0,market_fair:avg||0,market_high:high||0,sort:i+1,hidden:false,source:"نطاق يحدده المالك"}));
+
 async function openPricing(){
-  S.price={loading:true,error:"",catalog:[],supplierOffers:[],quotes:[],query:"",category:"الكل",trade:"الكل",section:"materials",tab:"ref",fam:{},showHidden:false,editing:null,limit:60,projectMatches:[],projectSelected:[],quote:{id:null,title:"تسعيرة جديدة",branch:"",overhead_pct:10,profit_pct:10,items:[]}};modal("pricing");
-  const [c,q,o]=await Promise.all([(async()=>{let rows=[],from=0;while(true){const r=await sb.from("price_catalog").select("*").eq("is_active",true).order("category").order("name").range(from,from+999);if(r.error)return{data:null,error:r.error};rows.push(...(r.data||[]));if((r.data||[]).length<1000)break;from+=1000}return{data:rows,error:null}})(),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30),sb.from("price_supplier_quotes").select("*").order("supplier_name").limit(5000)]);
-  S.price.loading=false;if(c.error||q.error||o.error){S.price.error=(c.error||q.error||o.error).message;render();return}let catalog=c.data||[];
-  const present=new Set(catalog.map(x=>x.code)),missing=priceBaseRows.filter(x=>!present.has(x.code));
-  if(missing.length){const seed=await sb.from("price_catalog").upsert(missing,{onConflict:"code",ignoreDuplicates:true});if(seed.error){S.price.error=seed.error.message;render();return}catalog.push(...missing)}
-  S.price.catalog=catalog;S.price.quotes=q.data||[];S.price.supplierOffers=o.data||[];if(S.price.catalog.length&&!("trade" in S.price.catalog[0]))S.price.error="V2";render();
+  S.price={loading:true,error:"",items:[],index:[],quotes:[],query:"",section:"الكل",tab:"ref",showHidden:false,editing:null,quote:{id:null,title:"تسعيرة جديدة",branch:"",items:[]}};modal("pricing");
+  const [a,b,q]=await Promise.all([sb.from("price_items").select("*").order("sort").limit(2000),sb.from("price_index").select("*").order("period").limit(500),sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30)]);
+  S.price.loading=false;if(a.error||b.error||q.error){S.price.error=(a.error||b.error||q.error).message;render();return}
+  let items=a.data||[];const present=new Set(items.map(x=>x.code)),missing=PR_SEED.filter(x=>!present.has(x.code));
+  if(missing.length){const r=await sb.from("price_items").upsert(missing,{onConflict:"code",ignoreDuplicates:true});if(r.error){S.price.error=r.error.message;render();return}items=items.concat(missing)}
+  S.price.items=items;S.price.index=b.data||[];S.price.quotes=q.data||[];render();
 }
 function priceFmt(v){return Number(v||0).toLocaleString("ar-SA",{maximumFractionDigits:2})}
-function priceSource(x){const s=String(x.source||"تقدير استرشادي"),a=s.indexOf("https://"),b=s.indexOf("http://"),i=a>=0?a:b;return i<0?esc(s):esc(s.slice(0,i))+`<a href="${esc(s.slice(i).trim())}" target="_blank" rel="noopener">فتح المصدر</a>`}
-function priceSupplierCompareHtml(code){const rows=(S.price.supplierOffers||[]).filter(q=>q.code===code);if(!rows.length)return '<div class="prSupplierEmpty">لا توجد أسعار موردين منشورة ومتحققة لهذا الصنف بعد.</div>';return `<div class="prSupplierCompare"><b>مقارنة أسعار الموردين</b><div class="prSupplierTable">${rows.map(q=>`<div class="prSupplierRow"><span><strong>${esc(q.supplier_name)}</strong><small>${esc(q.spec||"")}</small></span><span>${q.price===null||q.price===undefined?"طلب عرض سعر":`${priceFmt(q.price)} ر.س`}<small>${esc(q.unit||"")}${q.vat_included===true?" · شامل الضريبة":q.vat_included===false?" · قبل الضريبة":" · حالة الضريبة غير موضحة"}</small></span><span>${q.source_url?`<a href="${esc(q.source_url)}" target="_blank" rel="noopener">صفحة المورد</a>`:""}<small>${esc(q.availability||"")}${q.checked_at?` · ${esc(q.checked_at)}`:""}</small></span></div>`).join("")}</div></div>`}
-function priceQty(x){const L=Number(x.length_m)||0,W=Number(x.width_m)||0,D=Number(x.depth_m)||0;if(L&&x.unit==="م.ط")return L;if(L&&W&&x.unit==="م²")return L*W;if(L&&W&&D&&x.unit==="م³")return L*W*D;return Number(x.quantity)||0}
-function priceSteelQty(x){return x.include_steel?priceQty(x)*(Number(x.steel_kg_per_unit)||0):0}
-function priceSection(x){return String(x.code||"").startsWith("MAT-")||x.trade==="مواد"?"materials":String(x.code||"").startsWith("LAB-")||x.trade==="أجور يومية"?"labor":"legacy"}
-function priceCanAnalyze(x){return Number(x.material_cost||0)+Number(x.labor_cost||0)+Number(x.equipment_cost||0)+Number(x.steel_kg_per_unit||0)+Number(x.my_price||0)+Number(x.custom_unit_price||0)+Number(x.market_fair||0)>0}
-function priceParts(x){const sk=x.include_steel?(Number(x.steel_kg_per_unit)||0):0,section=priceSection(x),custom=x.custom_unit_price!==null&&x.custom_unit_price!==undefined&&x.custom_unit_price!==""?Number(x.custom_unit_price):null;return{material:(section==="materials"?(custom??Number(x.material_cost||x.market_fair||0)):Number(x.material_cost||0))+sk*3.13,labor:(section==="labor"?(custom??Number(x.labor_cost||x.market_fair||0)):Number(x.labor_cost||0))+sk*.55,equipment:Number(x.equipment_cost||0)+sk*.08,steel:priceSteelQty(x)}}
-function priceUnit(x){if(x.custom_unit_price!==null&&x.custom_unit_price!==undefined&&x.custom_unit_price!=="")return Number(x.custom_unit_price)||0;const sk=x.include_steel?(Number(x.steel_kg_per_unit)||0):0;return x.pricing_method==="analysis"&&priceCanAnalyze(x)?(priceParts(x).material+priceParts(x).labor+priceParts(x).equipment)*(1+Number(S.price.quote.overhead_pct||0)/100)*(1+Number(S.price.quote.profit_pct||0)/100):Number(x.market_fair||0)+sk*3.13}
-
-
 function priceNorm(s){return String(s||"").toLowerCase().replace(/[إأآ]/g,"ا").replace(/ة/g,"ه").replace(/[ًٌٍَُِّْـ]/g,"").replace(/[^\p{L}\p{N}]+/gu," ").trim()}
-/* ===== مرجع الأسعار v2: بحث بالأقسام + تعديل أسعارك + حاسبة التسعيرة ===== */
-const PR_TRADES=["مباني ولياسة","حديد وحدادة","بلاط وأرضيات","دهان","أسقف وقواطع","كهرباء وإنارة","سباكة وصرف","تكييف وتهوية","عزل","أبواب وزجاج","أعمال خارجية","متفرقات"];
-const PR_LEGACY_TRADES=["حفر وردم وإزالة","خرسانة وبناء","عزل","بلاط وأرضيات","دهان وتشطيبات","أسقف وقواطع","أبواب ونوافذ وحدادة","كهرباء","تكييف وتهوية","سباكة وصرف","أعمال خارجية","سلامة وحريق","متفرقات","خاص بالفروع"];
-const PR_MATERIALS=[
-  ["MAT-CEMENT","مباني ولياسة","أسمنت بورتلاندي 50 كجم","كيس","سعر المورد يدخله المالك"],["MAT-BLOCK-20","مباني ولياسة","بلوك أسمنتي 20 سم","حبة","النوع والمقاس حسب اعتماد المشروع"],["MAT-BLOCK-10","مباني ولياسة","بلوك أسمنتي 10 سم","حبة","النوع والمقاس حسب اعتماد المشروع"],["MAT-SAND","مباني ولياسة","رمل مغسول","م³","التوصيل والتفريغ يُحددان حسب الموقع"],["MAT-PLASTER","مباني ولياسة","خلطة لياسة جاهزة","كيس","حجم الكيس حسب المورد"],
-  ["MAT-REBAR","حديد وحدادة","حديد تسليح","طن","أدخل سعر الطن؛ حدّد القطر والماركة في الملاحظات"],["MAT-REBAR-KG","حديد وحدادة","حديد تسليح بالوزن","كجم","أدخل سعر الكيلو إذا كان عرض المورد بالوزن"],["MAT-WELDED-MESH","حديد وحدادة","شبك تسليح ملحوم","م²","السماكة وفتحات الشبك حسب المخطط"],["MAT-STEEL-I","حديد وحدادة","قطاع حديد I / H","م.ط","المقطع والوزن حسب المخطط"],["MAT-STEEL-BOX","حديد وحدادة","مواسير وقطاعات حديد مجوفة","م.ط","المقاس والسماكة حسب المخطط"],["MAT-STEEL-ANGLE","حديد وحدادة","زوايا حديد","م.ط","المقاس والسماكة حسب المخطط"],["MAT-STEEL-SHEET","حديد وحدادة","صاج حديد","م²","السماكة والطلاء حسب المواصفة"],["MAT-STEEL-CHANNEL","حديد وحدادة","قناة / شينكو حديد","م.ط","المقطع والسماكة حسب المخطط"],["MAT-STEEL-ROD","حديد وحدادة","أسياخ لحام","كجم","النوع والقطر حسب الاستخدام"],
-  ["MAT-TILE","بلاط وأرضيات","بورسلان / سيراميك","م²","سعر التوريد فقط، المقاس والدرجة يحددهما المالك"],["MAT-ADHESIVE","بلاط وأرضيات","لاصق بلاط 20 كجم","كيس","النوع داخلي أو خارجي حسب الموقع"],["MAT-GROUT","بلاط وأرضيات","روبة بلاط","كجم","اللون والنوع حسب العينة"],["MAT-SKIRTING","بلاط وأرضيات","وزرة بلاط","م.ط","سعر المادة فقط"],
-  ["MAT-PAINT","دهان","دهان داخلي","جالون","اللون والماركة ودرجة اللمعان حسب الاعتماد"],["MAT-PUTTY","دهان","معجون جدران 20 كجم","كيس","السعر حسب الماركة"],["MAT-PRIMER","دهان","برايمر داخلي","جالون","سعر التوريد فقط"],["MAT-EPOXY","دهان","دهان إيبوكسي للأرضيات","م²","النظام والسماكة حسب المواصفة"],
-  ["MAT-GYP-BOARD","أسقف وقواطع","لوح جبس بورد 12.5 مم","لوح","السعر قبل التركيب"],["MAT-GYP-TRACK","أسقف وقواطع","قناة / هيكل مجلفن للجبس","م.ط","السماكة والمقطع حسب الاعتماد"],["MAT-INSULATION","أسقف وقواطع","عازل حراري أو صوتي","م²","النوع والسماكة حسب المواصفة"],
-  ["MAT-WIRE-25","كهرباء وإنارة","سلك نحاس 2.5 مم²","م.ط","العلامة التجارية والكمية حسب اللوحة"],["MAT-WIRE-4","كهرباء وإنارة","سلك نحاس 4 مم²","م.ط","العلامة التجارية والكمية حسب اللوحة"],["MAT-CONDUIT","كهرباء وإنارة","ماسورة كهرباء PVC 20 مم","م.ط","سعر التوريد فقط"],["MAT-SOCKET","كهرباء وإنارة","مقبس كهرباء 13 أمبير","حبة","الماركة واللون حسب الاعتماد"],["MAT-LIGHT","كهرباء وإنارة","سبوت / وحدة إنارة LED","حبة","القدرة والموديل حسب الاعتماد"],
-  ["MAT-PPR","سباكة وصرف","ماسورة PPR تغذية","م.ط","القطر والضغط حسب المخطط"],["MAT-PVC","سباكة وصرف","ماسورة صرف PVC","م.ط","القطر والفئة حسب المخطط"],["MAT-VALVE","سباكة وصرف","محبس مياه","حبة","القطر والنوع حسب الاستخدام"],["MAT-FAUCET","سباكة وصرف","خلاط / حنفية","حبة","الموديل حسب الاعتماد"],["MAT-WC","سباكة وصرف","كرسي دورة مياه","حبة","الموديل والملحقات حسب الاعتماد"],
-  ["MAT-AC-COPPER","تكييف وتهوية","أنابيب نحاس للمكيف","م.ط","القطر والعزل حسب سعة الوحدة"],["MAT-AC-DRAIN","تكييف وتهوية","ماسورة تصريف تكاثف","م.ط","القطر حسب الجهاز"],["MAT-WATERPROOF","عزل","لفائف عزل مائي","م²","النوع والسماكة حسب اعتماد النظام"],["MAT-SEALANT","عزل","سيلكون / مادة مانعة للتسرب","عبوة","النوع واللون حسب الموقع"],
-  ["MAT-DOOR","أبواب وزجاج","باب خشبي / WPC","حبة","المقاس والإكسسوارات حسب الحصر"],["MAT-LOCK","أبواب وزجاج","قفل باب","حبة","الموديل حسب الاعتماد"],["MAT-GLASS","أبواب وزجاج","زجاج سيكوريت","م²","السماكة واللون بعد القياس"],["MAT-INTERLOCK","أعمال خارجية","بلاط إنترلوك","م²","اللون والسماكة حسب الاعتماد"],["MAT-CURB","أعمال خارجية","بردورة خرسانية","م.ط","المقاس حسب الموقع"]
-].map(([code,category,name,unit,spec])=>({code,category,trade:"مواد",name,spec,unit,material_cost:0,labor_cost:0,equipment_cost:0,market_low:0,market_fair:0,market_high:0,source:"أدخل سعر المورد بنفسك؛ سعر المادة فقط",checked_at:"2026-11-19",is_active:true}));
-const PR_LABOUR=[
- ["LAB-GENERAL","عامل عام",120],["LAB-MASON","بنّاء / مبلّط بلوك",220],["LAB-PLASTER","ليّاس",152],["LAB-TILER","مبلّط سيراميك وبورسلان",""],["LAB-PAINTER","دهّان",150],["LAB-ELECTRICIAN","كهربائي مباني",160],["LAB-PLUMBER","سبّاك مباني",152],["LAB-CARPENTER","نجّار مسلح",152],["LAB-STEEL","حدّاد تسليح",152],["LAB-FOREMAN","رئيس عمال",275],["LAB-GYPSUM","فني جبس بورد",240],["LAB-AC","فني تكييف",240],["LAB-WELDER","لحّام حدادة",250],["LAB-MARBLE","مركّب رخام وجرانيت",260],["LAB-EQUIPMENT","مشغل معدات (دون المعدة)",275],["LAB-DRIVER","سائق نقل ثقيل (دون المركبة)",190],["LAB-WATERPROOF","فني عزل مائي",200],["LAB-SCAFFOLD","فني سقالات",190],["LAB-ALUMINIUM","فني ألمنيوم",240]
-].map(([code,name,rate])=>({code,category:name,trade:"أجور يومية",name,spec:rate===""?"لا يتوفر سعر سوقي منشور حاليًا؛ أدخل سعرك":"مصنعية فقط · يوم عمل في الرياض · لا يشمل المواد أو المعدة",unit:"يومية",material_cost:0,labor_cost:rate===""?0:rate,equipment_cost:0,market_low:rate===""?0:rate,market_fair:rate===""?0:rate,market_high:rate===""?0:rate,source:rate===""?"لا توجد بيانات مرجعية متاحة":"مرجع أسعار سوقية مجمعة للرياض، فحص 19 نوفمبر 2026 · https://prices.qsmind.app/ar/saudi/labour",checked_at:"2026-11-19",is_active:true}));
-const priceBaseRows=[...PR_MATERIALS,...PR_LABOUR];
-const priceFamKey=c=>/^R26-.+-\d\d$/.test(c)?c.replace(/-\d\d$/,""):c;
-const priceBase=x=>Number(x.market_fair||0)+(x.steel_included_default?Number(x.steel_kg_per_unit||0)*3.13:0);
-const priceMine=x=>x.my_price!==null&&x.my_price!==undefined&&x.my_price!=="";
-const priceEff=x=>priceMine(x)?Number(x.my_price):priceBase(x);
-const priceR2=n=>Math.round(n*100)/100;
-const priceFamItems=key=>S.price.catalog.filter(x=>priceFamKey(x.code)===key);
-function priceCurOf(key,items){const sel=S.price.fam[key];return items.find(x=>x.code===sel)||items.find(x=>/-05$/.test(x.code))||items[Math.floor(items.length/2)]}
+function priceScope(x){return x.scope||x.spec||""}
+function priceQty(x){const L=Number(x.length_m)||0,W=Number(x.width_m)||0,D=Number(x.depth_m)||0;if(L&&x.unit==="م.ط")return L;if(L&&W&&x.unit==="م²")return L*W;if(L&&W&&D&&x.unit==="م³")return L*W*D;return Number(x.quantity)||0}
+function priceHasOffer(x){return x.custom_unit_price!==null&&x.custom_unit_price!==undefined&&x.custom_unit_price!==""&&Number(x.custom_unit_price)>0}
+function priceUnit(x){return priceHasOffer(x)?Number(x.custom_unit_price):Number(x.market_fair||0)}
+function priceCheck(x){
+  if(!priceHasOffer(x))return{s:"none"};
+  const o=Number(x.custom_unit_price),hi=Number(x.market_high)||0,lo=Number(x.market_low)||0;
+  if(!(hi>0))return{s:"norange"};
+  const pct=(o/hi-1)*100;
+  if(o>=hi*(1+PR_ALERT))return{s:"alert",pct};
+  if(o>hi)return{s:"high",pct};
+  if(lo>0&&o<lo)return{s:"low"};
+  return{s:"ok"};
+}
+function priceStatusHtml(x){
+  const c=priceCheck(x);
+  if(c.s==="alert")return `<div class="prAlert">⚠ تنبيه: العرض أعلى من الحد الأعلى المعقول بنسبة ${priceFmt(c.pct)}٪ (الحد ${priceFmt(x.market_high)} ر.س)</div>`;
+  if(c.s==="high")return `<div class="prWarn">العرض فوق الحد الأعلى بنسبة ${priceFmt(c.pct)}٪ (أقل من حد التنبيه ${PR_ALERT*100}٪)</div>`;
+  if(c.s==="low")return `<div class="prWarn">العرض أقل من الحد الأدنى المرجعي؛ تأكد من شمول النطاق كاملًا</div>`;
+  if(c.s==="ok")return `<div class="prOk">ضمن النطاق المرجعي ✔</div>`;
+  if(c.s==="norange")return `<div class="prWarn">لم تحدد نطاقًا سعريًا لهذا البند في المرجع</div>`;
+  return "";
+}
 function priceRows(){
-  const p=S.price,words=priceNorm(p.query||"").split(" ").filter(Boolean).map(w=>w.length>3&&w.startsWith("ال")?w.slice(2):w),map=new Map();
-  for(const x of p.catalog){
-    if(x.hidden&&!p.showHidden)continue;
-    const section=priceSection(x);if(section!==p.section)continue;
-    const t=section==="legacy"?(x.trade||"متفرقات"):(x.category||x.trade||"متفرقات");
-    if(p.trade!=="الكل"&&t!==p.trade)continue;
-    if(words.length){const h=priceNorm(x.code+" "+x.name+" "+x.spec+" "+x.category+" "+t);if(!words.every(w=>h.includes(w)))continue}
-    const k=priceFamKey(x.code);let r=map.get(k);
-    if(!r){r={key:k,name:String(x.name).split(" – ")[0],trade:t,unit:x.unit,items:[]};map.set(k,r)}
-    r.items.push(x);
-  }
-  return [...map.values()];
+  const p=S.price,words=priceNorm(p.query||"").split(" ").filter(Boolean);
+  return p.items.filter(x=>{
+    if(x.hidden&&!p.showHidden)return false;
+    if(p.section!=="الكل"&&x.section!==p.section)return false;
+    if(words.length){const h=priceNorm(x.name+" "+x.scope+" "+x.section);if(!words.every(w=>h.includes(w)))return false}
+    return true;
+  });
 }
 function priceChipsHtml(){
-  const p=S.price,cnt=new Map(),seen=new Set();
-  for(const x of p.catalog){if(x.hidden&&!p.showHidden||priceSection(x)!==p.section)continue;const k=priceFamKey(x.code);if(seen.has(k))continue;seen.add(k);const t=p.section==="legacy"?(x.trade||"متفرقات"):(x.category||x.trade||"متفرقات");cnt.set(t,(cnt.get(t)||0)+1)}
-  const order=p.section==="materials"?PR_TRADES:p.section==="legacy"?PR_LEGACY_TRADES:[...cnt.keys()],trades=order.filter(t=>cnt.has(t)).concat([...cnt.keys()].filter(t=>!order.includes(t)));
-  const chip=(t,n)=>`<button class="${p.trade===t?"on":""}" data-t="${esc(t)}" onclick="priceTrade(this.dataset.t)">${esc(t)} <small>${n}</small></button>`;
-  const bulk=p.trade!=="الكل"&&p.section!=="legacy"?`<div class="prBulk">تعديل كل أسعار «${esc(p.trade)}» دفعة واحدة: <input id="pbPct" type="number" step="any" inputmode="decimal" placeholder="٪ مثال 5 أو -3"><button class="btn alt" onclick="priceBulk()">تطبيق</button></div>`:"";
-  return `<div class="note" style="margin:0 0 8px">${p.section==="materials"?`بنود مواد رئيسية (${seen.size}) · الأسعار فارغة حتى تدخل سعر المورد`:p.section==="labor"?`أجور يومية بالرياض (${seen.size}) · الأسعار استرشادية ومصنعية فقط`: `الأسعار السابقة المحفوظة (${seen.size})`}</div><div class="prChips">${chip("الكل",seen.size)}${trades.map(t=>chip(t,cnt.get(t))).join("")}</div>${bulk}`;
+  const p=S.price,cnt=new Map();
+  for(const x of p.items){if(x.hidden&&!p.showHidden)continue;cnt.set(x.section,(cnt.get(x.section)||0)+1)}
+  const tot=[...cnt.values()].reduce((a,b)=>a+b,0),secs=PR_SECTIONS.filter(s=>cnt.has(s)).concat([...cnt.keys()].filter(s=>!PR_SECTIONS.includes(s)));
+  const chip=(t,n)=>`<button class="${p.section===t?"on":""}" data-t="${esc(t)}" onclick="priceSec(this.dataset.t)">${esc(t)} <small>${n}</small></button>`;
+  return `<div class="prChips">${chip("الكل",tot)}${secs.map(t=>chip(t,cnt.get(t))).join("")}</div>`;
 }
-function priceRowHtml(r){
-  const p=S.price,x=priceCurOf(r.key,r.items),fam=r.items.length>1,eff=priceEff(x),mine=priceMine(x),k=esc(r.key);
-  const priced=eff>0,sec=priceSection(x),priceDisplay=priced?`${priceFmt(eff)} <small>ر.س / ${esc(x.unit)}</small>`:`<span style="font-size:16px;color:#946200">أدخل سعرك</span>`;
-  const st=x.steel_included_default?Number(x.steel_kg_per_unit||0)*3.13:0,lo=Number(x.market_low||0)+st,hi=Number(x.market_high||0)+st;
-  const label=y=>String(y.name).split(" – ")[1]||"";
-  const sel=fam?`<select data-k="${k}" onchange="priceFam(this.dataset.k,this.value)">${r.items.map(y=>`<option value="${esc(y.code)}" ${y.code===x.code?"selected":""}>${esc(label(y))}</option>`).join("")}</select>`:"";
-  const parts=Number(x.material_cost||0)+Number(x.labor_cost||0)+Number(x.equipment_cost||0)>0?`<div>للوحدة: مواد ${priceFmt(x.material_cost)} · عمالة ${priceFmt(x.labor_cost)} · معدات ${priceFmt(x.equipment_cost)}</div>`:"";
+function priceRowHtml(x){
+  const p=S.price,c=esc(x.code),has=Number(x.market_high)>0,
+  range=has?`<div class="prRange"><span>أقل<b>${priceFmt(x.market_low)}</b></span><span>متوسط<b>${priceFmt(x.market_fair)}</b></span><span>أعلى<b>${priceFmt(x.market_high)}</b></span></div><small>ر.س / ${esc(x.unit)} · تنبيه عند عرض ≥ ${priceFmt(Number(x.market_high)*(1+PR_ALERT))}</small>`:`<div class="prPrice"><span style="font-size:16px;color:#946200">حدّد النطاق السعري</span></div><small>الوحدة: ${esc(x.unit)}</small>`;
   let ed="";
-  if(p.editing===r.key){
-    const all=priceFamItems(r.key),famMine=all.some(priceMine);
-    ed=`<div class="prEdit"><label>${sec==="labor"?"أجرتي اليومية":"سعري للوحدة"} (ر.س / ${esc(x.unit)})<input id="peVal" type="number" min="0" step="any" inputmode="decimal" value="${priceR2(eff)}"></label>${all.length>1?`<label class="prChk"><input type="checkbox" id="peAll" checked> طبّق بنفس النسبة على كل الدرجات والكميات (${all.length})</label>`:""}<div class="prRowActs"><button class="btn" onclick="priceSaveMine(this.closest('.prCard').dataset.k)">حفظ</button>${famMine?`<button class="btn alt" onclick="priceResetMine(this.closest('.prCard').dataset.k)">إرجاع للأصلي</button>`:""}<button class="btn alt" onclick="S.price.editing=null;priceRefresh()">إلغاء</button></div></div>`;
-  }
-   return `<div class="prCard ${mine?"mine":""}" data-k="${k}"><div class="prCardHead"><b>${esc(r.name)}</b>${mine?'<span class="prBadge">سعري</span>':""}${x.hidden?'<span class="prBadge h">مخفي</span>':""}</div><small class="prTrade">${esc(r.trade)}</small><div class="prPrice">${priceDisplay}</div>${mine?(sec==="labor"?`<small>سعر الرياض المرجعي ${priceFmt(priceBase(x))} ر.س</small>`:`<small>سعرك محفوظ في المرجع</small>`):sec==="labor"?`<small>مرجع يومي للرياض · ${esc(x.checked_at||"مصنعية فقط")}</small>`:priced?`<small>نطاق السوق ${priceFmt(lo)} – ${priceFmt(hi)}</small>`:'<small>المادة فقط؛ أدخل سعر المورد</small>'}${sel}${fam?"":`<small>${esc(x.spec)}</small>`}<details><summary>التفاصيل والمصدر والمقارنة</summary><small>${fam?esc(x.spec):""}${parts}<div>${priceSource(x)}${x.checked_at?" · تحديث "+esc(x.checked_at):""}</div>${priceSupplierCompareHtml(x.code)}</small></details>${ed}<div class="prRowActs"><button class="btn" ${priced?`onclick="priceAddRow(this.closest('.prCard').dataset.k,this)"`:'disabled title="أدخل السعر أولًا"'}>${priced?"＋ للتسعيرة":"أدخل السعر أولًا"}</button><button class="btn alt" onclick="priceEditOpen(this.closest('.prCard').dataset.k)">✎ أدخل سعرك</button><button class="btn alt" onclick="priceToggleHide(this.closest('.prCard').dataset.k)">${x.hidden?"إظهار":"إخفاء"}</button></div></div>`;
+  if(p.editing===x.code)ed=`<div class="prEdit"><label>الوحدة<input id="peUnit" value="${esc(x.unit)}"></label><div class="prDims"><label>أقل سعر<input id="peLow" type="number" min="0" step="any" inputmode="decimal" value="${x.market_low||""}"></label><label>متوسط<input id="peAvg" type="number" min="0" step="any" inputmode="decimal" value="${x.market_fair||""}"></label><label>أعلى سعر معقول<input id="peHigh" type="number" min="0" step="any" inputmode="decimal" value="${x.market_high||""}"></label></div><label>نطاق العمل (ما يشمله السعر)<textarea id="peScope" rows="6" style="width:100%">${esc(priceScope(x))}</textarea></label><div class="prRowActs"><button class="btn" onclick="priceSaveItem('${c}')">حفظ</button><button class="btn alt" onclick="S.price.editing=null;priceRefresh()">إلغاء</button></div></div>`;
+  return `<div class="prCard" data-c="${c}"><div class="prCardHead"><b>${esc(x.name)}</b>${x.hidden?'<span class="prBadge h">مخفي</span>':""}</div><small class="prTrade">${esc(x.section)}</small>${range}<details><summary>نطاق العمل</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details>${ed}<div class="prRowActs"><button class="btn" onclick="priceAddRow('${c}',this)">＋ للتسعيرة</button><button class="btn alt" onclick="priceEditOpen('${c}')">✎ تعديل</button><button class="btn alt" onclick="priceToggleHide('${c}')">${x.hidden?"إظهار":"إخفاء"}</button>${String(x.code).startsWith("USR-")?`<button class="btn alt" onclick="priceDelItem('${c}')">حذف</button>`:""}</div></div>`;
 }
-function priceListHtml(){
-  const p=S.price,order=p.section==="legacy"?PR_LEGACY_TRADES:p.section==="materials"?PR_TRADES:[],ord=t=>{const i=order.indexOf(t);return i<0?99:i},rows=priceRows().sort((a,b)=>ord(a.trade)-ord(b.trade)),lim=p.limit||60;
-  return (rows.slice(0,lim).map(priceRowHtml).join("")||'<div class="empty">لا توجد بنود مطابقة</div>')+(rows.length>lim?`<button class="btn alt prMore" onclick="priceMore()">عرض المزيد (${rows.length-lim} متبقية)</button>`:"");
-}
+function priceListHtml(){return priceRows().map(priceRowHtml).join("")||'<div class="empty">لا توجد بنود مطابقة</div>'}
 function priceRefresh(){const a=$("priceChips"),b=$("priceList");if(a)a.innerHTML=priceChipsHtml();if(b)b.innerHTML=priceListHtml()}
-function priceMore(){S.price.limit=(S.price.limit||60)+60;priceRefresh()}
-function priceTrade(t){S.price.trade=t;S.price.limit=60;S.price.editing=null;priceRefresh()}
-function priceSectionSet(section){S.price.section=section;S.price.trade="الكل";S.price.query="";S.price.limit=60;S.price.editing=null;render()}
-function priceFam(key,code){S.price.fam[key]=code;priceRefresh()}
-function priceEditOpen(key){S.price.editing=S.price.editing===key?null:key;priceRefresh();const el=$("peVal");if(el){el.focus();el.select()}}
+function priceSec(t){S.price.section=t;S.price.editing=null;priceRefresh()}
+function priceTab(t){S.price.tab=t;render()}
+function priceEditOpen(c){S.price.editing=S.price.editing===c?null:c;priceRefresh()}
 async function priceUpsert(rows){
   const now=new Date().toISOString();
-  for(let i=0;i<rows.length;i+=100){const {error}=await sb.from("price_catalog").upsert(rows.slice(i,i+100).map(x=>({...x,edited_at:now})),{onConflict:"code"});if(error){alert(error.message);return false}}
-  for(const r of rows){const cur=S.price.catalog.find(v=>v.code===r.code);if(cur)Object.assign(cur,r,{edited_at:now})}
+  const {error}=await sb.from("price_items").upsert(rows.map(x=>({...x,updated_at:now})),{onConflict:"code"});
+  if(error){alert(error.message);return false}
+  for(const r of rows){const cur=S.price.items.find(v=>v.code===r.code);if(cur)Object.assign(cur,r)}
   return true;
 }
-async function priceSaveMine(key){
-  const items=priceFamItems(key),x=priceCurOf(key,items),v=parseFloat($("peVal").value);
-  if(!(v>=0))return alert("اكتب سعرًا صحيحًا");
-  const all=items.length>1&&$("peAll")&&$("peAll").checked,base=priceBase(x),ratio=base>0?v/base:1;
-  const rows=(all?items:[x]).map(t=>({...t,my_price:t.code===x.code?priceR2(v):priceR2(priceBase(t)*ratio)}));
-  if(await priceUpsert(rows)){S.price.editing=null;priceRefresh()}
+async function priceSaveItem(code){
+  const x=S.price.items.find(v=>v.code===code);if(!x)return;
+  const lo=Number($("peLow").value)||0,av=Number($("peAvg").value)||0,hi=Number($("peHigh").value)||0,unit=$("peUnit").value.trim()||x.unit;
+  if([lo,av,hi].some(v=>v<0))return alert("الأسعار لا تكون سالبة");
+  if(lo&&av&&lo>av||av&&hi&&av>hi||lo&&hi&&lo>hi)return alert("رتّب الأسعار: أقل ≤ متوسط ≤ أعلى");
+  if(await priceUpsert([{...x,unit,market_low:lo,market_fair:av,market_high:hi,scope:$("peScope").value.trim()}])){S.price.editing=null;priceRefresh()}
 }
-async function priceResetMine(key){
-  const rows=priceFamItems(key).filter(priceMine).map(t=>({...t,my_price:null}));
-  if(rows.length&&await priceUpsert(rows)){S.price.editing=null;priceRefresh()}
-}
-async function priceToggleHide(key){
-  const items=priceFamItems(key),x=priceCurOf(key,items),h=!x.hidden;
-  if(await priceUpsert(items.map(t=>({...t,hidden:h}))))priceRefresh();
-}
-async function priceBulk(){
-  const p=S.price,pct=parseFloat($("pbPct")&&$("pbPct").value);
-  if(!isFinite(pct)||pct===0)return alert("اكتب النسبة، مثل 5 للزيادة أو -3 للخفض");
-  const items=p.catalog.filter(x=>!x.hidden&&priceSection(x)===p.section&&(p.section==="legacy"?(x.trade||"متفرقات")===(p.trade):(x.category||x.trade)===p.trade));
-  if(!items.length||!confirm("تعديل "+items.length+" سعر في «"+p.trade+"» بنسبة "+pct+"%؟ تقدر ترجّع كل بند للسعر الأصلي لاحقًا."))return;
-  if(await priceUpsert(items.map(x=>({...x,my_price:priceR2(priceEff(x)*(1+pct/100))}))))priceRefresh();
-}
-function priceAdd(code,quiet){
-  const x=S.price.catalog.find(v=>v.code===code);if(!x)return;
-  const mine=priceMine(x);
-  S.price.quote.items.push({...x,id:crypto.randomUUID(),quantity:1,length_m:null,width_m:null,depth_m:null,custom_unit_price:mine?Number(x.my_price):null,pricing_method:"market",include_steel:mine?false:!!x.steel_included_default,steel_kg_per_unit:Number(x.steel_kg_per_unit)||0,note:""});
-  if(!quiet)render();
-}
-function priceAddRow(key,btn){
-  const items=priceFamItems(key),x=priceCurOf(key,items);priceAdd(x.code,true);
-  const c=$("prQCount");if(c)c.textContent=S.price.quote.items.length;
-  if(btn){const o=btn.textContent;btn.textContent="✔ أُضيف";setTimeout(()=>{btn.textContent=o},1200)}
-}
-function priceTab(t){S.price.tab=t;render()}
-async function priceAddCustom(toQuote){
-  const name=$("pcname").value.trim(),category=$("pctrade").value,section=S.price.section,trade=section==="materials"?"مواد":section==="labor"?"أجور يومية":category,unit=section==="labor"?"يومية":($("pcunit").value.trim()||"حبة");
+async function priceToggleHide(code){const x=S.price.items.find(v=>v.code===code);if(x&&await priceUpsert([{...x,hidden:!x.hidden}]))priceRefresh()}
+async function priceDelItem(code){if(!confirm("حذف هذا البند نهائيًا؟"))return;const {error}=await sb.from("price_items").delete().eq("code",code);if(error)return alert(error.message);S.price.items=S.price.items.filter(x=>x.code!==code);priceRefresh()}
+async function priceAddCustom(){
+  const name=$("pcname").value.trim(),section=$("pcsec").value,unit=$("pcunit").value.trim()||"م²",lo=Number($("pclow").value)||0,av=Number($("pcavg").value)||0,hi=Number($("pchigh").value)||0;
   if(!name)return alert("اكتب اسم البند");
-  const mat=section==="materials"?(Number($("pcfair").value)||0):(Number($("pcmat").value)||0),lab=section==="labor"?(Number($("pcfair").value)||0):(Number($("pclab").value)||0),eq=Number($("pceqp").value)||0,fair=Number($("pcfair").value)||(mat+lab+eq)*1.21,code=(section==="materials"?"MAT-":section==="labor"?"LAB-":"USR-")+"USR-"+Date.now();
-  if(!(fair>0))return alert("اكتب سعر الوحدة (أو المواد/العمالة/المعدات)");
-  const {data,error}=await sb.from("price_catalog").insert({code,category,trade,name,spec:"بند أضافه المالك",unit,material_cost:mat,labor_cost:lab,equipment_cost:eq,market_low:fair,market_fair:fair,market_high:fair,source:"سعر أدخله المالك",checked_at:new Date().toISOString().slice(0,10)}).select().single();
-  if(error)return alert(error.message);
-  S.price.catalog.push(data);
-  if(toQuote)priceAdd(code,true);
-  render();
+  if(lo&&av&&lo>av||av&&hi&&av>hi||lo&&hi&&lo>hi)return alert("رتّب الأسعار: أقل ≤ متوسط ≤ أعلى");
+  const row={code:"USR-"+Date.now(),section,name,unit,scope:$("pcscope").value.trim()||`توريد وتركيب ${name} شامل المواد والعمالة والتنظيف.\nالوحدة: ${unit}.`,market_low:lo,market_fair:av,market_high:hi,sort:9000+S.price.items.length,hidden:false,source:"بند أضافه المالك"};
+  const {error}=await sb.from("price_items").insert(row);if(error)return alert(error.message);
+  S.price.items.push(row);render();
 }
 function priceRefHtml(){
-  const p=S.price,legacy=p.section==="legacy",labor=p.section==="labor",cats=legacy?PR_LEGACY_TRADES:labor?PR_LABOUR.map(x=>x.name):PR_TRADES,defaultCat=p.trade!=="الكل"?p.trade:cats[0];
-  return `<div class="prSectionTabs"><button class="${p.section==="materials"?"on":""}" onclick="priceSectionSet('materials')">🧱 المواد الرئيسية</button><button class="${labor?"on":""}" onclick="priceSectionSet('labor')">👷 شغل اليد باليومية</button><button class="${legacy?"on":""}" onclick="priceSectionSet('legacy')">📚 الأسعار السابقة</button></div><div class="note">${labor?"أجور يومية استرشادية في الرياض، مصنعية فقط. الأسعار قابلة للتعديل وسعر المبلّط غير متوفر مرجعيًا.":p.section==="materials"?"هذه قائمة المواد الأساسية. الأسعار فارغة حتى تدخل سعر المورد بنفسك.":"الكتالوج السابق محفوظ كما هو ويمكن الرجوع إليه."}</div><div class="prRefTop"><input id="priceSearch" placeholder="ابحث في البنود..." value="${esc(p.query)}" oninput="S.price.query=this.value;S.price.limit=60;priceRefresh()"><label class="mtg"><input type="checkbox" ${p.showHidden?"checked":""} onchange="S.price.showHidden=this.checked;priceRefresh()"> إظهار المخفي</label></div><div id="priceChips">${priceChipsHtml()}</div><div id="priceList" class="prCards">${priceListHtml()}</div><details class="prCustom"><summary>＋ إضافة ${labor?"مهنة يومية":p.section==="materials"?"مادة":"بند"}</summary><select id="pctrade">${cats.map(t=>`<option ${t===defaultCat?"selected":""}>${esc(t)}</option>`).join("")}${labor?'<option>مهنة أخرى</option>':""}</select><input id="pcname" placeholder="${labor?"اسم الصنعة":"اسم المادة ومواصفاتها"}"><input id="pcunit" ${labor?'value="يومية" readonly':""} placeholder="الوحدة: كيس، م²، م.ط، حبة"><div class="prDims"><input id="pcfair" type="number" inputmode="decimal" placeholder="${labor?"الأجرة اليومية بالريال":"سعر المادة بالريال"}"><input id="pcmat" type="number" inputmode="decimal" placeholder="مواد/وحدة (اختياري)" ${p.section!=="legacy"?'style="display:none"':""}><input id="pclab" type="number" inputmode="decimal" placeholder="عمالة/وحدة (اختياري)" ${p.section!=="legacy"?'style="display:none"':""}><input id="pceqp" type="number" inputmode="decimal" placeholder="معدات/وحدة (اختياري)" ${p.section!=="legacy"?'style="display:none"':""}></div><div class="prRowActs"><button class="btn" onclick="priceAddCustom(false)">حفظ في المرجع</button><button class="btn alt" onclick="priceAddCustom(true)">حفظ وإضافة للتسعيرة</button></div></details>${legacy?`<details class="prCustom"><summary>اقتراح بنود من وصف العمل</summary><textarea id="priceProjectDescription" rows="3" placeholder="اكتب نطاق المشروع..."></textarea><button class="btn" onclick="priceAnalyzeDescription()">اقترح بنودًا من الوصف</button><div id="priceProjectResults">${priceProjectResultsHtml()}</div></details>`:""}`;
+  const p=S.price;
+  return `<div class="note">المرجع يعتمد على بنود شاملة بنطاق عمل واضح (توريد وتركيب وتنظيف) حتى تقارن العروض بنفس الأساس. إذا جاء عرض أعلى من الحد الأعلى بـ ${PR_ALERT*100}٪ أو أكثر يظهر تنبيه مباشرة في التسعيرة. البنود ذات النطاق الفارغ تنتظر أن تحدد أسعارها.</div><div class="prRefTop"><input id="priceSearch" placeholder="ابحث في البنود..." value="${esc(p.query)}" oninput="S.price.query=this.value;priceRefresh()"><label class="mtg"><input type="checkbox" ${p.showHidden?"checked":""} onchange="S.price.showHidden=this.checked;priceRefresh()"> إظهار المخفي</label></div><div id="priceChips">${priceChipsHtml()}</div><div id="priceList" class="prCards">${priceListHtml()}</div><details class="prCustom"><summary>＋ إضافة بند</summary><select id="pcsec">${PR_SECTIONS.map(t=>`<option ${t===p.section?"selected":""}>${esc(t)}</option>`).join("")}</select><input id="pcname" placeholder="اسم البند"><input id="pcunit" placeholder="الوحدة: م²، نقطة، حبة" value="م²"><div class="prDims"><input id="pclow" type="number" inputmode="decimal" placeholder="أقل سعر"><input id="pcavg" type="number" inputmode="decimal" placeholder="متوسط"><input id="pchigh" type="number" inputmode="decimal" placeholder="أعلى سعر معقول"></div><textarea id="pcscope" rows="4" style="width:100%" placeholder="نطاق العمل: ما الذي يشمله السعر؟"></textarea><button class="btn" onclick="priceAddCustom()">إضافة</button></details>`;
+}
+
+/* الرقم القياسي لتكاليف البناء (الهيئة العامة للإحصاء) */
+function priceIdxInfo(){
+  const ix=S.price.index||[],last=ix[ix.length-1],base=[...ix].reverse().find(x=>x.applied);
+  const pct=last&&base&&Number(base.value)>0?(Number(last.value)/Number(base.value)-1)*100:null;
+  return{ix,last,base,pct};
+}
+function priceIndexHtml(){
+  const {ix,last,base,pct}=priceIdxInfo();
+  const summary=!ix.length?"أضف أول قراءة من نشرة الرقم القياسي لتكاليف البناء.":!base?`اختر القراءة التي بُنيت عليها أسعارك الحالية بزر «أساس الأسعار».`:last.id===base.id?`الأسعار محدّثة حتى آخر قراءة (${esc(last.period)}).`:`التغير منذ ${esc(base.period)} حتى ${esc(last.period)}: <b dir="ltr">${pct>=0?"+":""}${priceFmt(pct)}٪</b>`;
+  return `<div class="note">يُستخدم الرقم القياسي لتكاليف البناء للهيئة العامة للإحصاء لمتابعة تغير تكاليف المدخلات بمرور الوقت، وتُستخدم نشرات أسعار مواد البناء كمرجع عند ضبط النطاقات. أدخل قراءة كل فترة من النشرة المنشورة.<br><a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء</a> · <a href="https://www.stats.gov.sa" target="_blank" rel="noopener">موقع الهيئة (نشرات أسعار مواد البناء)</a></div>
+  <div class="prTotals"><div>${summary}</div>${base&&last&&last.id!==base.id&&pct!==null?`<button class="btn" onclick="priceIdxApply()">تحديث كل النطاقات بنسبة ${priceFmt(pct)}٪</button>`:""}</div>
+  <div class="prMeta"><label>الفترة (مثال: 2026-Q3)<input id="pxPeriod" placeholder="2026-Q3"></label><label>قيمة الرقم القياسي<input id="pxVal" type="number" step="any" inputmode="decimal"></label><label>ملاحظة<input id="pxNote" placeholder="اختياري"></label><button class="btn" onclick="priceIdxAdd()">إضافة قراءة</button></div>
+  ${[...ix].reverse().map((x,i,a)=>{const prev=a[i+1],ch=prev&&Number(prev.value)>0?(Number(x.value)/Number(prev.value)-1)*100:null;return `<div class="prLine"><div class="prLineHead"><b>${esc(x.period)} · ${priceFmt(x.value)}</b><span>${x.applied?'<span class="prBadge">أساس الأسعار</span> ':""}${ch!==null?`<small dir="ltr">${ch>=0?"+":""}${priceFmt(ch)}٪ عن السابقة</small>`:""}</span></div>${x.note?`<small>${esc(x.note)}</small>`:""}<div class="prRowActs">${x.applied?"":`<button class="btn alt" onclick="priceIdxBase('${esc(x.id)}')">أساس الأسعار</button>`}<button class="sm del" onclick="priceIdxDel('${esc(x.id)}')">حذف</button></div></div>`}).join("")||'<div class="empty">لا توجد قراءات بعد</div>'}`;
+}
+async function priceIdxAdd(){
+  const period=$("pxPeriod").value.trim(),value=parseFloat($("pxVal").value);
+  if(!period||!(value>0))return alert("اكتب الفترة وقيمة الرقم القياسي");
+  const {data,error}=await sb.from("price_index").insert({period,value,note:$("pxNote").value.trim()}).select().single();
+  if(error)return alert(error.message);
+  S.price.index.push(data);S.price.index.sort((a,b)=>String(a.period).localeCompare(String(b.period)));render();
+}
+async function priceIdxDel(id){if(!confirm("حذف هذه القراءة؟"))return;const {error}=await sb.from("price_index").delete().eq("id",id);if(error)return alert(error.message);S.price.index=S.price.index.filter(x=>x.id!==id);render()}
+async function priceIdxBase(id){
+  const r1=await sb.from("price_index").update({applied:false}).eq("applied",true);if(r1.error)return alert(r1.error.message);
+  const r2=await sb.from("price_index").update({applied:true}).eq("id",id);if(r2.error)return alert(r2.error.message);
+  S.price.index.forEach(x=>x.applied=x.id===id);render();
+}
+async function priceIdxApply(){
+  const {last,pct}=priceIdxInfo();if(!last||pct===null)return;
+  const rows=S.price.items.filter(x=>Number(x.market_high)>0);
+  if(!rows.length||!confirm("تعديل نطاقات "+rows.length+" بند بنسبة "+priceFmt(pct)+"٪ حسب الرقم القياسي؟ ستصبح قراءة "+last.period+" أساس الأسعار."))return;
+  const k=1+pct/100,r2=n=>Math.round(n*100)/100;
+  if(!(await priceUpsert(rows.map(x=>({...x,market_low:r2(x.market_low*k),market_fair:r2(x.market_fair*k),market_high:r2(x.market_high*k)})))))return;
+  await priceIdxBase(last.id);
+}
+
+/* التسعيرة ومقارنة العروض */
+function priceAdd(code,quiet){
+  const x=S.price.items.find(v=>v.code===code);if(!x)return;
+  S.price.quote.items.push({code:x.code,category:x.section,name:x.name,spec:priceScope(x),unit:x.unit,market_low:x.market_low,market_fair:x.market_fair,market_high:x.market_high,source:x.source,id:crypto.randomUUID(),quantity:1,length_m:null,width_m:null,depth_m:null,custom_unit_price:null,pricing_method:"market",note:""});
+  if(!quiet)render();
+}
+function priceAddRow(code,btn){
+  priceAdd(code,true);const c=$("prQCount");if(c)c.textContent=S.price.quote.items.length;
+  if(btn){const o=btn.textContent;btn.textContent="✔ أُضيف";setTimeout(()=>{btn.textContent=o},1200)}
+}
+function priceEdit(i,k,v){const x=S.price.quote.items[i];if(!x)return;x[k]=["quantity","length_m","width_m","depth_m","custom_unit_price"].includes(k)?(v===""?null:Number(v)):v;if(k==="length_m"||k==="width_m"||k==="depth_m")x.quantity=priceQty(x);render()}
+function priceRemove(i){S.price.quote.items.splice(i,1);render()}
+function priceNew(){S.price.quote={id:null,title:"تسعيرة جديدة",branch:"",items:[]};render()}
+async function priceLoadQuote(id){const {data,error}=await sb.from("price_quotes").select("*").eq("id",id).single();if(error)return alert(error.message);const r=await sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at");if(r.error)return alert(r.error.message);S.price.quote={...data,items:(r.data||[]).map(x=>({...x,id:x.id}))};render()}
+async function priceSave(){
+  const q=S.price.quote;if(!q.title.trim())return alert("اكتب اسم التسعيرة");if(!q.items.length)return alert("أضف بنداً واحداً على الأقل");
+  const b=$("priceSave");if(b)b.disabled=true;
+  const head={title:q.title.trim(),branch:(q.branch||"").trim(),updated_at:new Date().toISOString()};
+  let res=q.id?await sb.from("price_quotes").update(head).eq("id",q.id).select().single():await sb.from("price_quotes").insert(head).select().single();
+  if(res.error){if(b)b.disabled=false;return alert(res.error.message)}
+  q.id=res.data.id;
+  const removed=await sb.from("price_quote_items").delete().eq("quote_id",q.id);if(removed.error){if(b)b.disabled=false;return alert(removed.error.message)}
+  const rows=q.items.map(x=>({quote_id:q.id,code:x.code,category:x.category||x.section||"",name:x.name,spec:priceScope(x),unit:x.unit,quantity:priceQty(x),length_m:x.length_m,width_m:x.width_m,depth_m:x.depth_m,market_low:Number(x.market_low)||0,market_fair:Number(x.market_fair)||0,market_high:Number(x.market_high)||0,source:x.source||"",checked_at:x.checked_at||null,pricing_method:"market",custom_unit_price:priceHasOffer(x)?Number(x.custom_unit_price):null,note:x.note||""}));
+  const saved=await sb.from("price_quote_items").insert(rows);if(saved.error){if(b)b.disabled=false;return alert(saved.error.message)}
+  alert("حُفظت التسعيرة");
+  const l=await sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30);S.price.quotes=l.data||[];render();
+}
+async function priceDelete(){const q=S.price.quote;if(!q.id||!confirm("حذف التسعيرة نهائياً؟"))return;const {error}=await sb.from("price_quotes").delete().eq("id",q.id);if(error)return alert(error.message);S.price.quotes=S.price.quotes.filter(x=>x.id!==q.id);priceNew()}
+function priceLineHtml(x,i){
+  const q=priceQty(x),hasO=priceHasOffer(x),total=hasO?q*Number(x.custom_unit_price):0,range=Number(x.market_high)>0?`النطاق المرجعي: ${priceFmt(x.market_low)} – ${priceFmt(x.market_fair)} – ${priceFmt(x.market_high)} ر.س / ${esc(x.unit)}`:"لا يوجد نطاق مرجعي لهذا البند";
+  return `<div class="prLine"><div class="prLineHead"><b>${i+1}. ${esc(x.name)}</b><button class="sm del" onclick="priceRemove(${i})">حذف</button></div><details><summary>نطاق العمل · الوحدة ${esc(x.unit)}</summary><small style="white-space:pre-line">${esc(priceScope(x))}</small></details><small>${range}</small><div class="prDims"><label>الكمية (${esc(x.unit)})<input type="number" min="0" step="any" value="${q}" onchange="priceEdit(${i},'quantity',this.value)"></label>${["م²","م.ط","م³"].includes(x.unit)?`<label>الطول م<input type="number" min="0" step="any" value="${x.length_m??""}" onchange="priceEdit(${i},'length_m',this.value)"></label>`:""}${["م²","م³"].includes(x.unit)?`<label>العرض م<input type="number" min="0" step="any" value="${x.width_m??""}" onchange="priceEdit(${i},'width_m',this.value)"></label>`:""}${x.unit==="م³"?`<label>العمق م<input type="number" min="0" step="any" value="${x.depth_m??""}" onchange="priceEdit(${i},'depth_m',this.value)"></label>`:""}<label>سعر العرض للوحدة (ر.س)<input type="number" min="0" step="any" inputmode="decimal" placeholder="أدخل سعر المقاول" value="${x.custom_unit_price??""}" onchange="priceEdit(${i},'custom_unit_price',this.value)"></label></div>${priceStatusHtml(x)}<div class="prBreak"><b>${hasO?`الإجمالي ${priceFmt(total)} ر.س`:`بالمتوسط المرجعي ${priceFmt(q*(Number(x.market_fair)||0))} ر.س`}</b></div><input placeholder="ملاحظات / اسم المقاول / موقع البند" value="${esc(x.note||"")}" onchange="priceEdit(${i},'note',this.value)"></div>`;
 }
 function priceQuoteHtml(){
-  const p=S.price,q=p.quote,subtotal=q.items.reduce((n,x)=>n+priceQty(x)*priceUnit(x),0),matTotal=q.items.reduce((n,x)=>n+priceQty(x)*priceParts(x).material,0),laborTotal=q.items.reduce((n,x)=>n+priceQty(x)*priceParts(x).labor,0),direct=q.items.reduce((n,x)=>n+priceQty(x)*(priceParts(x).material+priceParts(x).labor+priceParts(x).equipment),0);
-  return `<details class="prSaved"><summary>التسعيرات المحفوظة (${p.quotes.length})</summary>${p.quotes.map(x=>`<button class="prPick" onclick="priceLoadQuote('${esc(x.id)}')"><b>${esc(x.title)}</b><span>${esc(x.branch||"بدون موقع")}</span></button>`).join("")||'<small>لا توجد تسعيرات محفوظة</small>'}</details><div class="prMeta"><label>اسم التسعيرة<input value="${esc(q.title)}" onchange="S.price.quote.title=this.value"></label><label>الموقع / العميل<input value="${esc(q.branch||"")}" placeholder="اختياري" onchange="S.price.quote.branch=this.value"></label><label>مصاريف عامة %<input type="number" min="0" value="${q.overhead_pct}" onchange="S.price.quote.overhead_pct=this.value"></label><label>ربح المقاول %<input type="number" min="0" value="${q.profit_pct}" onchange="S.price.quote.profit_pct=this.value"></label></div><section class="pricePrint"><h3>تسعيرة أعمال</h3><p>التسعيرة: <b>${esc(q.title)}</b> · الموقع: <b>${esc(q.branch||"—")}</b> · التاريخ: ${new Date().toLocaleDateString("ar-SA")}</p><h4>بنود التسعيرة (${q.items.length})</h4>${q.items.map(priceLineHtml).join("")||'<div class="empty">ما أضفت بنود بعد. ارجع لقسم المواد أو شغل اليد وأضف البنود.</div>'}<div class="prTotals"><div>إجمالي المواد <b>${priceFmt(matTotal)} ر.س</b></div><div>إجمالي شغل اليد <b>${priceFmt(laborTotal)} ر.س</b></div><div>إجمالي السعر حسب الطريقة المختارة <b>${priceFmt(subtotal)} ر.س</b></div><div>إجمالي التكلفة المباشرة <b>${priceFmt(direct)} ر.س</b></div><small>المجموع قبل الضريبة. أجور شغل اليد محسوبة بعدد الأيام × أجرة الصنعة اليومية.</small></div><div class="prActions"><button class="btn" id="priceSave" onclick="priceSave()">حفظ التسعيرة</button>${q.id?`<button class="btn danger" onclick="priceDelete()">حذف التسعيرة</button>`:""}</div></section>`;
+  const p=S.price,q=p.quote,offerTotal=q.items.reduce((n,x)=>n+(priceHasOffer(x)?priceQty(x)*Number(x.custom_unit_price):0),0),refTotal=q.items.reduce((n,x)=>n+priceQty(x)*(Number(x.market_fair)||0),0),alerts=q.items.filter(x=>priceCheck(x).s==="alert").length;
+  return `<details class="prSaved"><summary>التسعيرات المحفوظة (${p.quotes.length})</summary>${p.quotes.map(x=>`<button class="prPick" onclick="priceLoadQuote('${esc(x.id)}')"><b>${esc(x.title)}</b><span>${esc(x.branch||"بدون موقع")}</span></button>`).join("")||'<small>لا توجد تسعيرات محفوظة</small>'}</details><div class="prMeta"><label>اسم التسعيرة<input value="${esc(q.title)}" onchange="S.price.quote.title=this.value"></label><label>الفرع / الموقع<input value="${esc(q.branch||"")}" placeholder="اختياري" onchange="S.price.quote.branch=this.value"></label></div>${alerts?`<div class="prAlert">⚠ ${alerts} ${alerts>1?"بنود":"بند"} بعرض أعلى من الحد الأعلى بـ ${PR_ALERT*100}٪ أو أكثر</div>`:""}<section class="pricePrint"><h3>مقارنة عروض الأسعار</h3><p>التسعيرة: <b>${esc(q.title)}</b> · الموقع: <b>${esc(q.branch||"—")}</b> · التاريخ: ${new Date().toLocaleDateString("ar-SA")}</p><h4>البنود (${q.items.length})</h4>${q.items.map(priceLineHtml).join("")||'<div class="empty">لم تضف بنودًا بعد. ارجع للمرجع وأضف البنود.</div>'}<div class="prTotals"><div>إجمالي العروض المُدخلة <b>${priceFmt(offerTotal)} ر.س</b></div><div>إجمالي المتوسط المرجعي <b>${priceFmt(refTotal)} ر.س</b></div><small>الأسعار قبل الضريبة. قارن العروض فقط عندما تتطابق في نطاق العمل والوحدة.</small></div><div class="prActions"><button class="btn" id="priceSave" onclick="priceSave()">حفظ التسعيرة</button>${q.id?`<button class="btn danger" onclick="priceDelete()">حذف التسعيرة</button>`:""}</div></section>`;
 }
 function pricingHtml(){
   const p=S.price||{};
   if(p.loading)return '<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><p class="note">جاري تحميل البنود...</p></div></div>';
-  if(p.error)return `<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><div class="hlq">${p.error==="V2"?"يلزم تشغيل ملف <b>pricing_v2.sql</b> مرة واحدة في SQL Editor داخل Supabase.":"يلزم تشغيل ملف <b>pricing.sql</b> ثم <b>pricing_v2.sql</b> في SQL Editor داخل Supabase.<br><small dir=\"ltr\">"+esc(p.error)+"</small>"}</div><button class="btn" onclick="openPricing()">إعادة المحاولة</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
+  if(p.error)return `<div class="modal"><div class="box"><h3>مرجع الأسعار</h3><div class="hlq">يلزم تشغيل ملف <b>pricing_v3.sql</b> مرة واحدة في SQL Editor داخل Supabase.<br><small dir="ltr">${esc(p.error)}</small></div><button class="btn" onclick="openPricing()">إعادة المحاولة</button><button class="btn alt" onclick="modal(null)">إغلاق</button></div></div>`;
   const tab=p.tab||"ref",q=p.quote;
-  return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>مرجع الأسعار والتسعير</h3><div>${tab==="quote"?`<button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><div class="prTabs"><button class="${tab==="ref"?"on":""}" onclick="priceTab('ref')">📚 المرجع</button><button class="${tab==="quote"?"on":""}" onclick="priceTab('quote')">🧮 التسعيرة (<span id="prQCount">${q.items.length}</span>)</button></div>${tab==="ref"?priceRefHtml():priceQuoteHtml()}<small class="prFoot">الأسعار مرجعية للاسترشاد وليست عرضًا ملزمًا؛ وقد لا تشمل الضريبة أو ظروف الموقع. البنود اللي عدّلت سعرها تظهر بعلامة «سعري» وتنتقل بسعرك للتسعيرة. لا يعتمد بند الحفر/الخرسانة/العزل قبل تثبيت النطاق والكميات. مصادر: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الهيئة العامة للإحصاء</a> · <a href="https://prices.qsmind.app/en/saudi/works" target="_blank" rel="noopener">مرجع أسعار تنفيذ الرياض</a> · <a href="https://prices.qsmind.app/ar/saudi/labour" target="_blank" rel="noopener">أجور الرياض اليومية (19 نوفمبر 2026)</a>.</small></div></div>`;
+  return `<div class="modal"><div class="box prApp"><div class="prActions"><h3>مرجع الأسعار والتسعير</h3><div>${tab==="quote"?`<button class="btn" onclick="priceNew()">＋ تسعيرة جديدة</button><button class="btn alt" onclick="window.print()">طباعة / PDF</button>`:""}<button class="btn alt" onclick="modal(null)">إغلاق</button></div></div><div class="prTabs"><button class="${tab==="ref"?"on":""}" onclick="priceTab('ref')">📚 المرجع</button><button class="${tab==="index"?"on":""}" onclick="priceTab('index')">📈 الرقم القياسي</button><button class="${tab==="quote"?"on":""}" onclick="priceTab('quote')">🧮 مقارنة العروض (<span id="prQCount">${q.items.length}</span>)</button></div>${tab==="ref"?priceRefHtml():tab==="index"?priceIndexHtml():priceQuoteHtml()}<small class="prFoot">الأسعار مرجعية يحددها المالك للاسترشاد وليست عرضًا ملزمًا، وقد لا تشمل الضريبة أو ظروف الموقع. مراجع: <a href="https://www.stats.gov.sa/ar/w/cci" target="_blank" rel="noopener">الرقم القياسي لتكاليف البناء - الهيئة العامة للإحصاء</a> · نشرات أسعار مواد البناء.</small></div></div>`;
 }
-
-function priceAnalyzeDescription(){if(S.role!=="owner")return alert("اقتراح البنود متاح لمالك المشروع فقط");S.price.projectReasons=null;S.price.projectQuantities={};S.price.projectAssumptions=[];const raw=$("priceProjectDescription")?.value||"",norm=priceNorm(raw);if(norm.length<4)return alert("اكتب وصفًا أوضح للعمل المطلوب");const stop=new Set("في من على الى عن مع ثم هذا هذه التي المطلوب المشروع العمل فرع محل موقع كامل جديد صيانة تغيير تركيب توريد تنفيذ اصلاح تجديد".split(" "));let words=norm.split(/\s+/).map(w=>w.startsWith("ال")&&w.length>4?w.slice(2):w).filter(w=>w.length>2&&!stop.has(w));const synonyms=[["بلاط","تبليط","سيراميك","بورسلين","ارضيات"],["دهان","صبغ","طلاء"],["سباكه","سباك","مواسير","صرف","خلاط","تسرب"],["كهرباء","اناره","مقبس","افياش","كابل"],["مكيف","تكييف","شفاط","تهويه"],["عزل","تسريب","رطوبه"],["جبس","سقف","قواطع"],["تنظيف","غسيل","تعقيم"],["باب","قفل","مفصلات"],["زجاج","المنيوم","شباك"],["حريق","طفايه","انذار"],["مخلفات","هدم","تكسير","ترحيل"]];for(const group of synonyms)if(group.some(w=>words.includes(w)||norm.includes(w)))words.push(...group);words=[...new Set(words)];const scored=new Map();for(const x of S.price.catalog.filter(v=>!v.hidden)){const base=String(x.name).split(" – ")[0],txt=priceNorm(base+" "+x.category),tokens=[...new Set(txt.split(/\s+/))];let score=0;for(const w of words)if(tokens.some(t=>t===w||t.includes(w)||w.includes(t)))score+=3;if(words.some(w=>priceNorm(x.category).includes(w)))score+=2;if(score<3)continue;const old=scored.get(base),preferred=String(x.name).includes("متوسط، كمية صغيرة");if(!old||score>old.score||(score===old.score&&preferred&&!old.preferred))scored.set(base,{x,score,preferred})}S.price.projectCandidates=[...scored.values()].sort((a,b)=>b.score-a.score).slice(0,80).map(v=>v.x);S.price.projectMatches=S.price.projectCandidates.slice(0,20);S.price.projectSelected=S.price.projectMatches.slice(0,12).map(x=>x.code);const el=$("priceProjectResults");if(el)el.innerHTML=priceProjectResultsHtml();if(!S.price.projectMatches.length&&el)el.innerHTML="<small>لم أجد تطابقًا واضحًا. جرّب ذكر نوع العمل مثل بلاط أو دهان أو سباكة أو تكييف.</small>"}
-function priceProjectResultsHtml(){const p=S.price||{},items=p.projectMatches||[];if(!items.length)return "";const assumptions=(p.projectAssumptions||[]).map(x=>`<li>${esc(x)}</li>`).join("");return `${assumptions?`<div class="note"><b>افتراضات التقدير</b><ul>${assumptions}</ul></div>`:""}<p class="note">${p.projectReasons?"اقتراحات مطابقة الكلمات من البنود المتاحة؛ راجعها واضبط الكميات قبل الإضافة.":"اقتراحات مطابقة الكلمات. السعر للوحدة والكمية الافتراضية 1."}</p>${items.map(x=>`<label class="prPick"><input type="checkbox" ${p.projectSelected.includes(x.code)?"checked":""} onchange="priceToggleProject('${esc(x.code)}',this.checked)"><b>${esc(x.name)}</b><span>${esc(x.unit)} · ${priceFmt(x.market_fair)} ر.س/وحدة · كمية مقترحة ${priceFmt(p.projectQuantities?.[x.code]||1)}</span><small>${esc(p.projectReasons?.[x.code]||x.spec)}</small></label>`).join("")}<button class="btn" onclick="priceAddProjectSelections()">إضافة المحدد للتسعيرة</button>`}
-function priceToggleProject(code,on){const a=S.price.projectSelected||[];S.price.projectSelected=on?[...new Set([...a,code])]:a.filter(x=>x!==code);const el=$("priceProjectResults");if(el)el.innerHTML=priceProjectResultsHtml()}
-function priceAddProjectSelections(){const p=S.price,selected=new Set(p.projectSelected||[]),existing=new Set(p.quote.items.map(x=>x.code));let count=0;for(const code of selected){if(existing.has(code))continue;const x=p.catalog.find(v=>v.code===code);if(!x)continue;p.quote.items.push({...x,id:crypto.randomUUID(),quantity:Number(p.projectQuantities?.[code])||1,length_m:null,width_m:null,depth_m:null,custom_unit_price:null,pricing_method:"market",include_steel:!!x.steel_included_default,steel_kg_per_unit:Number(x.steel_kg_per_unit)||0,note:(p.projectReasons?.[code]||"مقترح من وصف المشروع")+"؛ راجع الكمية والمواصفة"});count++}p.projectSelected=[];if(!count)alert("حدد بنودًا جديدة للإضافة");render()}
-
-function priceEdit(i,k,v){const x=S.price.quote.items[i];if(!x)return;x[k]=["quantity","length_m","width_m","depth_m","custom_unit_price"].includes(k)?(v===""?null:Number(v)):v;if(k==="length_m"||k==="width_m"||k==="depth_m")x.quantity=priceQty(x);render()}
-function priceRemove(i){S.price.quote.items.splice(i,1);render()}
-function priceNew(){S.price.quote={id:null,title:"تسعيرة جديدة",branch:"",overhead_pct:10,profit_pct:10,items:[]};render()}
-async function priceLoadQuote(id){const {data,error}=await sb.from("price_quotes").select("*").eq("id",id).single();if(error)return alert(error.message);const r=await sb.from("price_quote_items").select("*").eq("quote_id",id).order("created_at");if(r.error)return alert(r.error.message);S.price.quote={...data,items:(r.data||[]).map(x=>({...x,id:x.id}))};render()}
-async function priceSave(){const q=S.price.quote;if(!q.title.trim())return alert("اكتب اسم التسعيرة");if(!q.items.length)return alert("أضف بنداً واحداً على الأقل");const b=$("priceSave");if(b)b.disabled=true;const head={title:q.title.trim(),branch:q.branch.trim(),overhead_pct:Number(q.overhead_pct)||0,profit_pct:Number(q.profit_pct)||0,updated_at:new Date().toISOString()};let res=q.id?await sb.from("price_quotes").update(head).eq("id",q.id).select().single():await sb.from("price_quotes").insert(head).select().single();if(res.error){if(b)b.disabled=false;return alert(res.error.message)}q.id=res.data.id;const removed=await sb.from("price_quote_items").delete().eq("quote_id",q.id);if(removed.error){if(b)b.disabled=false;return alert(removed.error.message)}const rows=q.items.map(x=>({quote_id:q.id,code:x.code,category:x.category,name:x.name,spec:x.spec||"",unit:x.unit,quantity:priceQty(x),length_m:x.length_m,width_m:x.width_m,depth_m:x.depth_m,material_cost:Number(x.material_cost)||0,labor_cost:Number(x.labor_cost)||0,equipment_cost:Number(x.equipment_cost)||0,market_low:Number(x.market_low)||0,market_fair:Number(x.market_fair)||0,market_high:Number(x.market_high)||0,source:x.source||"",checked_at:x.checked_at||null,steel_kg_per_unit:Number(x.steel_kg_per_unit)||0,include_steel:!!x.include_steel,pricing_method:x.pricing_method,custom_unit_price:x.custom_unit_price==null||x.custom_unit_price===""?null:Number(x.custom_unit_price),note:x.note||""}));const saved=await sb.from("price_quote_items").insert(rows);if(saved.error){if(b)b.disabled=false;return alert(saved.error.message)}alert("حُفظت التسعيرة");const l=await sb.from("price_quotes").select("id,title,branch,created_at").order("updated_at",{ascending:false}).limit(30);S.price.quotes=l.data||[];render()}
-async function priceDelete(){const q=S.price.quote;if(!q.id||!confirm("حذف التسعيرة نهائياً؟"))return;const {error}=await sb.from("price_quotes").delete().eq("id",q.id);if(error)return alert(error.message);S.price.quotes=S.price.quotes.filter(x=>x.id!==q.id);priceNew()}
-
-function priceLineHtml(x,i){const q=priceQty(x),unit=priceUnit(x),total=q*unit,parts=priceParts(x),direct=q*(parts.material+parts.labor+parts.equipment),steel=priceSteelQty(x),steelOption=Number(x.steel_kg_per_unit)>0?`<label class="prSteel"><input type="checkbox" ${x.include_steel?"checked":""} onchange="priceEdit(${i},'include_steel',this.checked)"> إضافة الحديد (${priceFmt(Number(x.steel_kg_per_unit))} كجم لكل ${esc(x.unit)}) · كمية محسوبة ${priceFmt(steel)} كجم</label>`:"";return `<div class="prLine"><div class="prLineHead"><b>${i+1}. ${esc(x.name)}</b><button class="sm del" onclick="priceRemove(${i})">حذف</button></div><small>${esc(x.spec)} · الوحدة ${esc(x.unit)} · المرجع: ${priceSource(x)}${x.checked_at?" · تحديث "+esc(x.checked_at):""}</small><div class="prDims"><label>${x.unit==="يومية"?"عدد الأيام":"الكمية"}<input type="number" min="0" step="any" value="${q}" onchange="priceEdit(${i},'quantity',this.value)"></label>${x.unit==="يومية"?"":`<label>الطول م<input type="number" min="0" step="any" value="${x.length_m??""}" onchange="priceEdit(${i},'length_m',this.value)"></label>`}${["م²","م³"].includes(x.unit)?`<label>العرض م<input type="number" min="0" step="any" value="${x.width_m??""}" onchange="priceEdit(${i},'width_m',this.value)"></label>`:""}${x.unit==="م³"?`<label>العمق/السماكة م<input type="number" min="0" step="any" value="${x.depth_m??""}" onchange="priceEdit(${i},'depth_m',this.value)"></label>`:""}</div>${steelOption}${priceCanAnalyze(x)?"":"<small>السعر مرجعي؛ لا يتوفر تفصيل موارد منشور لهذا البند.</small>"}<div class="prDims"><label>طريقة التسعير<select onchange="priceEdit(${i},'pricing_method',this.value)"><option value="market" ${x.pricing_method==="market"?"selected":""}>السعر المرجعي في الكتالوج</option><option value="analysis" ${x.pricing_method==="analysis"&&priceCanAnalyze(x)?"selected":""} ${priceCanAnalyze(x)?"":"disabled"}>تحليل موارد + مصاريف وربح${priceCanAnalyze(x)?"":" (غير منشور لهذا البند)"}</option></select></label><label>سعر الوحدة المعدل (اختياري)<input type="number" min="0" step="any" placeholder="${priceFmt(unit)}" value="${x.custom_unit_price??""}" onchange="priceEdit(${i},'custom_unit_price',this.value)"></label></div><div class="prBreak"><span>مواد ${priceFmt(q*parts.material)}</span><span>عمالة ${priceFmt(q*parts.labor)}</span><span>معدات ${priceFmt(q*parts.equipment)}</span><span>السوق ${priceFmt((Number(x.market_low)||0)+(x.include_steel?Number(x.steel_kg_per_unit)*3.13:0))}–${priceFmt((Number(x.market_high)||0)+(x.include_steel?Number(x.steel_kg_per_unit)*3.13:0))}</span><b>تكلفة مباشرة ${priceFmt(direct)} · سعر الوحدة ${priceFmt(unit)} · الإجمالي ${priceFmt(total)} ر.س</b></div><input placeholder="ملاحظات/مقاسات/موقع البند" value="${esc(x.note||"")}" onchange="priceEdit(${i},'note',this.value)"></div>`}
 
 /* ===== 7) النوافذ ===== */
 function modal(m){S.modal=m;S.link="";S.cred=null;render()}
