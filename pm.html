@@ -1561,7 +1561,7 @@ function mEditHtml(t){
   <label class="lbl">المقاول</label><input id="mef_k" value="${esc(t.contractor||"")}">
   <label class="lbl">جوال المقاول (اختياري)</label><input id="mef_cp" dir="ltr" inputmode="tel" value="${esc(t.contractor_phone||"")}" placeholder="مع رمز الدولة، مثال 9665XXXXXXXX">
   <label class="lbl">المستلم (للتسليم)</label><input id="mef_r" value="${esc(t.receiver||"")}">
-  <label class="lbl">تقرير الإنجاز (اختياري، يظهر في التقرير بعد التسليم)</label><textarea id="mef_cr" rows="3">${esc(t.outcome==="done"?(t.close_note||""):"")}</textarea>
+  <label class="lbl">تقرير الإنجاز (اختياري، يُحفظ ويظهر في التقرير في أي مرحلة)</label><textarea id="mef_cr" rows="3">${esc(t.outcome==="rejected"||t.outcome==="nowork"?"":(t.close_note||""))}</textarea>
   <div class="hlq">عند الرجوع لمرحلة أقدم يُمسح تلقائياً ما بعدها (التكلفة والاعتماد والتنفيذ والتسليم). التقرير والصور والمعوقات تبقى.</div>
   <button class="btn big" onclick="mEditSave('${t.id}')">حفظ</button><button class="btn alt" style="width:100%" onclick="MT.edit=null;render()">إلغاء</button></div>`;
 }
@@ -1578,7 +1578,7 @@ async function mEditSave(id){await mOnce(async()=>{
   if(i<5){p.cost_ok_at=null;p.cost_ok_by=null;p.cost_ok_role=null;p.mgmt_by=null;p.mgmt_status=null;p.mgmt_note=null;p.mgmt_token=null;p.mgmt_at=null}
   else{p.cost_ok_at=t.cost_ok_at||now}
   if(i<5){p.started_at=null;p.work_qty=null;p.work_unit=null}
-  if(i===6){p.closed_at=t.closed_at||now;p.outcome="done";p.close_note=g("mef_cr")||null}else{p.closed_at=null;p.outcome=null;p.close_note=null}
+  if(i===6){p.closed_at=t.closed_at||now;p.outcome="done";p.close_note=g("mef_cr")||null}else{p.closed_at=null;p.outcome=null;p.close_note=g("mef_cr")||null}   /* لا نمسح تقرير الإنجاز عند حفظ مرحلة غير التسليم */
   const ok=await mUpd(id,p,"عُدّل الطلب يدوياً · المرحلة: "+MST[i][1],null,null,{keep:true,toast:"تم الحفظ ✔"});
   if(!ok)return;
   if(p.cost_total==null)await sb.from("mnt_quotes").delete().eq("ticket_id",id).then(()=>{},()=>{});
@@ -1686,7 +1686,7 @@ async function mDeliver(id){await mOnce(async()=>{
 async function mReopen(id){
   if(!confirm("إعادة فتح الطلب؟"))return;
   const t=mT(id);if(!t)return;
-  await mUpd(id,{closed_at:null,outcome:null,close_note:null,stage:"exec"},"أُعيد فتح الطلب",["site"],"أُعيد فتح الطلب "+mNo(t),{body:t.branch+" · "+t.title,keep:true});
+  await mUpd(id,{closed_at:null,outcome:null,close_note:(t.outcome==="done"?t.close_note:null),stage:"exec"},"أُعيد فتح الطلب",["site"],"أُعيد فتح الطلب "+mNo(t),{body:t.branch+" · "+t.title,keep:true});
 }
 async function mDel(id){
   if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
@@ -2042,6 +2042,8 @@ if(mRs("insp")&&t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.
     if(mRs("team"))put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
     if(mRs("area")&&(t.area_name||t.area_phone))put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
     const doneTxt=String((!t.closed_at&&MT.crId===id&&MT.cr!=null?MT.cr:t.close_note)||"").trim();   /* يشمل النص المكتوب ولو لم يُسلَّم الطلب بعد */
+    if(mRs("done")&&!doneTxt)mToast("ما وجدت نص «تقرير الإنجاز» محفوظاً لهذا الطلب، فلم يُضف للتقرير");
+    else if(mRs("done")&&(t.outcome==="rejected"||t.outcome==="nowork"))mToast("الطلب مغلق كـ«"+(MOUT[t.outcome]||"")+"» ونصه سبب الإغلاق، فلم يُضف كتقرير إنجاز");
     if(mRs("done")&&doneTxt&&t.outcome!=="rejected"&&t.outcome!=="nowork")putText("تقرير الإنجاز",doneTxt,t.closed_at?' <small style="display:inline">· '+esc(dfmt(t.closed_at))+'</small>':'');
     if(MT.rnote&&MT.rnote.trim())putText("ملاحظات إضافية",MT.rnote.trim());
     const OB=(MT.o||[]).filter(o=>o.ticket_id===id);
