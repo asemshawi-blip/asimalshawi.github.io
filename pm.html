@@ -138,6 +138,9 @@ const sb2=supabase.createClient(SBU,SBK,{auth:{persistSession:false,autoRefreshT
 const UD="asemshawi-blip.github.io";   // نطاق داخلي لاسم المستخدم
 const ROLES={owner:"مدير المشروع",pm:"مدير مشروع",mgmt:"الإدارة",contr:"المقاول",site:"مدير الموقع"};
 const ST={plan:["التصميم","s-plan"],run:["قيد التنفيذ","s-run"],done:["تم التسليم","s-done"]};
+/* أنواع الصور: قبل / أثناء التنفيذ / بعد + أنواع إضافية. أي صورة تقدر تُقابَل بصورة أخرى في التقرير */
+const PHT={before:["قبل","#6b7a8c"],during:["أثناء التنفيذ","#2e69ad"],after:["بعد","#ed8700"],inspect:["معاينة","#7c3aed"],material:["توريد مواد","#0e7490"],defect:["ملاحظة / عيب","#dc2626"],handover:["تسليم واستلام","#21865c"]};
+const phOpts=v=>Object.keys(PHT).map(k=>`<option value="${k}" ${k===v?"selected":""}>${PHT[k][0]}</option>`).join("");
 /* see = من يشاهد ، add = من يضيف (المالك فقط يحذف) */
 const TABS=[
 {k:"works",n:"متابعة الأعمال",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site"},
@@ -491,7 +494,7 @@ async function openP(id){
   await Promise.allSettled([loadE(),loadPS()]);
   if(S.cur===id)render();
 }
-async function setTab(k){S.tab=k;await loadE();render()}
+async function setTab(k){S.tab=k;S.pe=null;S.peSel=null;await loadE();render()}
 /* ملفات رُفعت دفعة واحدة بنفس النص: تُعرض تحت نص واحد بدل تكراره على كل صورة */
 function entGroups(list){
   const out=[],open=new Map();
@@ -505,7 +508,7 @@ function entGroups(list){
 }
 function entGroupHtml(rows,own){
   const e=rows[0];
-  return `<div class="item"><div>${esc(e.body)}</div><div class="pgrid">${rows.map(r=>`<div class="pgi">${fileHtml(r)}${own||canDelMine(r)?`<button class="sm del" onclick="delE('${r.id}')">حذف</button>`:""}</div>`).join("")}</div><small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")} · ${rows.length} ملفات</small></div>`;
+  return `<div class="item"><div>${esc(e.body)}</div><div class="pgrid">${rows.map(r=>`<div class="pgi">${fileHtml(r)}${canEditE(r)?`<button class="sm" style="width:100%" onclick="peOpen('${r.id}')">✏️ تعديل</button>`:""}${own||canDelMine(r)?`<button class="sm del" onclick="delE('${r.id}')">حذف</button>`:""}</div>`).join("")}</div>${rows.filter(r=>S.pe===r.id).map(peHtml).join("")}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")} · ${rows.length} ملفات</small></div>`;
 }
 function fileHtml(e){
   const u=S.urls[e.file_path];if(!u)return"";
@@ -549,8 +552,8 @@ function proj(){
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
   const talk=mapAction||toPM||toCT||toAM||toSM||toCO?`<div class="acts">${mapAction}${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button><button class="btn" style="background:#0e7490" onclick="reqSiteUpd('${p.id}')">🔔 طلب تحديث من مدير الموقع</button></div>`:"";
-  const entOne=e=>`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
-  ${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
+  const entOne=e=>S.pe===e.id?peHtml(e):`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${refHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  ${canEditE(e)?`<button class="sm" onclick="peOpen('${e.id}')">✏️ تعديل</button> `:""}${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
   const items=entGroups(S.entries).map(rows=>rows.length>1?entGroupHtml(rows,own):entOne(rows[0])).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
   return `<button class="back" onclick="S.cur=null;render()">← كل المشاريع</button>
@@ -690,6 +693,12 @@ const RPCSS=`
 .rpg .pf.l1 img{max-height:640px}.rpg .pf.l2 img{max-height:430px}.rpg .pf.l3 img{max-height:330px}
 .rpg .pf .pc{padding:8px 11px 9px;font-size:11.5px;line-height:1.7;min-height:52px}
 .rpg .pf.l3 .pc{padding:6px 8px 7px;font-size:10.5px;min-height:46px}
+.rpg .pp{border:1px solid #e3e9ef;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#fff}.rpg .pp .pw{display:flex}
+.rpg .pp .ps{flex:1;width:0;background:#eef1f5;text-align:center;padding-bottom:6px}.rpg .pp .ps+.ps{border-right:1px solid #e3e9ef}
+.rpg .pp .pl{color:#fff;font-weight:700;font-size:12px;padding:3px 0;margin-bottom:6px}
+.rpg .pp img{display:block;width:auto;max-width:100%;max-height:380px;height:auto;margin:0 auto}
+.rpg .pp small{display:block;color:#647589;font-size:10.5px;margin-top:5px}
+.rpg .pp .pq{padding:8px 12px;font-size:11.5px;line-height:1.8;background:#fff;border-top:1px solid #e3e9ef}
 .rpg .pf.l1 .pc{min-height:0;font-size:12.5px}
 .rpg .pf .pc b{display:block;color:#182b3d;font-weight:600}
 .rpg .pf .pc small{color:#8996a5;font-size:10.5px}
@@ -781,6 +790,7 @@ function reportHtml(){
   <div id="rpi_fields" style="display:${r.projectInfoOn?"block":"none"}">${[["name","اسم المشروع"],["value","قيمة العقد"],["duration","المدة"],["area","المساحة"],["start","بداية العقد"],["end","نهاية العقد"],["actual","الانتهاء الفعلي"]].map(([k,l])=>`<label class="lbl">${l}<input id="rpi_${k}" value="${esc(r.projectInfo?.[k]||"")}" placeholder="اختياري"></label>`).join("")}</div>
   <div style="border-top:1px solid #e3e9ef;margin-top:12px;padding-top:8px"><b>أقسام اختيارية تكتبها بنفسك</b>
   ${[["obstacles","المعوقات التي واجهتنا بالمشروع"],["info","معلومات إضافية عن المشروع"]].map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" id="rpm_${k}" ${r.manual?.[k]?.on?"checked":""} style="width:18px;height:18px">${l}</label><textarea id="rpm_${k}_text" rows="3" placeholder="اكتب ${l} هنا إن رغبت" style="width:100%;box-sizing:border-box;margin-bottom:8px">${esc(r.manual?.[k]?.text||"")}</textarea>`).join("")}</div>
+  <label style="display:flex;align-items:center;gap:8px;margin:10px 0"><input id="rpba" type="checkbox" ${r.ba!==false?"checked":""} style="width:18px;height:18px">إظهار مقارنات الصور (صورة مقابل صورة، مثل قبل / بعد)</label>
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("3","شبكة مصغرة — 3 صور في الصف")}${sel("2","صورتان في الصف")}${sel("1","صورة في كل صف")}</select>
   <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">إضافة أسماء المراحل أسفل الصور</button>
   ${r.photoList?.length?`<div style="margin:8px 0;max-height:220px;overflow:auto">${r.photoList.map(e=>`<label class="lbl" style="display:block;margin:6px 0">${esc(dfmt(e.created_at))} · ${esc(cut(cleanTxt(e.body)||"صورة من الموقع",50))}<select onchange="rpSavePhotoStage('${esc(String(e.id))}',this.value)" style="display:block;width:100%"><option value="">بدون اسم مرحلة</option>${(r.phaseOptions||[]).map(f=>`<option value="${esc(f)}" ${r.stageByPhoto?.[e.id]===f?"selected":""}>${esc(f)}</option>`).join("")}</select></label>`).join("")}</div>`:`<p class="lbl">تظهر الصور كلها تلقائياً. اختر اسم مرحلة لكل صورة عند الرغبة.</p>`}
@@ -791,7 +801,7 @@ function reportHtml(){
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:"",dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
-    pho:true,upd:false,obs:false,wrk:false,ba:false,coverOn:$("rpcov").checked,coverImageOn:$("rpcovimg").checked,executiveOn:$("rpexec").checked,executiveSummary:$("rpexec_text").value.trim(),projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
+    pho:true,upd:false,obs:false,wrk:false,ba:$("rpba")?$("rpba").checked:true,coverOn:$("rpcov").checked,coverImageOn:$("rpcovimg").checked,executiveOn:$("rpexec").checked,executiveSummary:$("rpexec_text").value.trim(),projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
 }
 function rpLoadPhotoStages(projectId){try{return JSON.parse(localStorage.getItem("rp_photo_phases_"+projectId)||"{}")}catch(e){return {}}}
 function rpSavePhotoStage(photoId,phase){
@@ -868,7 +878,7 @@ function rpClassify(rows,f,t){
   rpMarkDup(rows);
   const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
   const issAll=rows.filter(e=>e.kind==="issues"),byId=new Map(rows.map(e=>[String(e.id),e]));
-  const pairs=rows.filter(e=>e.ba==="after"&&e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&x.b.ba==="before"&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+  const pairs=rows.filter(e=>e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&String(x.b.id)!==String(x.a.id)&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
   return {f,t,pairs,pairIds:new Set(),
     ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)&&!e._dup),
     atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
@@ -1035,9 +1045,19 @@ function rpPages(p,cfg,d,root){
   const manualLabels={obstacles:"المعوقات التي واجهتنا بالمشروع",info:"معلومات إضافية عن المشروع"};
   Object.entries(cfg.manual||{}).forEach(([k,v])=>{if(!v?.on||!v.text?.trim())return;const blocks=rpWriteBlocks(v.text);if(!blocks.length)return;put('<div>'+sec(manualLabels[k]||k)+blocks.join('')+'</div>');mark()});
   let pn=0;
-  const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc"><b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
+  const phChip=e=>e.ba&&PHT[e.ba]?'<span style="display:table;background:'+PHT[e.ba][1]+';color:#fff;border-radius:12px;padding:0 10px;font-size:10px;margin-bottom:3px">'+esc(PHT[e.ba][0])+'</span>':'';
+  const pairIds=cfg.ba&&d.pairIds?d.pairIds:new Set();
+  const pairCard=pr=>{
+    let x=pr.b,y=pr.a;const o=k=>Object.keys(PHT).indexOf(k);
+    if(x.ba&&y.ba&&o(x.ba)>o(y.ba)){const tmp=x;x=y;y=tmp}
+    const side=e=>{const t=PHT[e.ba]||["صورة","#52667b"];return '<div class="ps"><div class="pl" style="background:'+t[1]+'">'+esc(t[0])+'</div><img src="'+d.img[e.file_path]+'" alt=""><small>'+esc(dfmt(e.created_at))+'</small></div>'};
+    const cap=(!pr.a._dup&&cleanTxt(pr.a.body||""))||"";
+    return '<div class="pp"><div class="pw">'+side(x)+side(y)+'</div>'+(cap?'<div class="pq">'+esc(cut(cap.replace(/\n/g," "),160))+'</div>':'')+'</div>';
+  };
+  const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc">'+phChip(e)+'<b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
   const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push('<div class="pr l'+LY+'">'+h+'</div>')}return rows};
-  const allPics=[...(d.pics||[])].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  if(cfg.ba&&d.pairs&&d.pairs.length){fresh();put('<div>'+sec("مقارنة الصور")+'<div class="st">'+d.pairs.length+' مقارنة</div></div>');mark();d.pairs.forEach(pr=>put(pairCard(pr)))}
+  const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   if(allPics.length){const perPage=LY==="3"?6:LY==="2"?2:1;for(let offset=0;offset<allPics.length;offset+=perPage){fresh();const chunk=allPics.slice(offset,offset+perPage);if(offset===0){put('<div>'+sec("صور الفترة المحددة")+'<div class="st">'+allPics.length+' صورة</div></div>');mark()}picRows(chunk).forEach(put)}}
   else put('<div class="em">لا توجد صور مسجلة في الفترة المحددة.</div>');
   /* الفهرس */
@@ -1063,25 +1083,62 @@ async function rpPdf(p,cfg,pages,prog){
   return doc;
 }
 
-/* ===== تحديد صور قبل / بعد عند الحفظ ===== */
+/* ===== نوع الصورة + مقابلتها بصورة أخرى + تعديل الصورة بعد الإضافة ===== */
 function baUi(){
-  return `<label class="lbl">نوع الصور (للمقارنة في التقرير)</label>
-  <select id="bat" onchange="baChange()"><option value="">صور عادية</option><option value="before">«قبل» — حالة الموقع قبل العمل</option><option value="after">«بعد» — تقابل صورة «قبل» محددة</option></select>
+  return `<label class="lbl">نوع الصور</label>
+  <select id="bat" onchange="baChange()"><option value="">صور عادية</option>${phOpts("")}</select>
   <div id="bap" style="display:none"></div>`;
+}
+function baTiles(excl,sk){
+  const list=S.entries.filter(e=>String(e.id)!==String(excl)&&e.file_path&&(e.file_type||"").startsWith("image")&&S.urls[e.file_path]);
+  if(!list.length)return `<p class="lbl">لا توجد صور محفوظة لمقابلتها بعد.</p>`;
+  return `<p class="lbl">اختياري: اختر صورة لتُعرض مقابلها في التقرير (اضغط مرة ثانية لإلغاء الاختيار):</p><div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px">${list.map(e=>{const t=PHT[e.ba];return `<div data-id="${e.id}" data-sk="${sk}" onclick="refPick('${e.id}','${sk}')" style="flex:none;width:92px;cursor:pointer;text-align:center"><img src="${S.urls[e.file_path]}" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:3px solid ${String(S[sk])===String(e.id)?"#ed8700":"#cbd5e1"};display:block;margin:0"><small style="font-size:11px">${t?esc(t[0])+" · ":""}${esc(cut(e.body||dfmt(e.created_at),12))}</small></div>`}).join("")}</div>`;
 }
 function baChange(){
   const v=$("bat").value,b=$("bap");S.baSel=null;
-  if(v!=="after"){b.style.display="none";b.innerHTML="";return}
-  const bf=S.entries.filter(e=>e.ba==="before"&&e.file_path&&S.urls[e.file_path]);
-  b.style.display="block";
-  b.innerHTML=bf.length
-    ?`<p class="lbl">اختر صورة «قبل» التي تقابلها الصور التي سترفعها (اضغط على الصورة):</p><div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px">${bf.map(e=>`<div data-id="${e.id}" onclick="baPick('${e.id}')" style="flex:none;width:92px;cursor:pointer;text-align:center"><img src="${S.urls[e.file_path]}" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:3px solid #cbd5e1;display:block"><small style="font-size:11px">${esc(cut(e.body||dfmt(e.created_at),14))}</small></div>`).join("")}</div>`
-    :`<p class="lbl">لا توجد صور «قبل» محفوظة بعد. ارفع صور «قبل» أولاً ثم ارجع لرفع صور «بعد».</p>`;
+  if(!v){b.style.display="none";b.innerHTML="";return}
+  b.style.display="block";b.innerHTML=baTiles(null,"baSel");
 }
-function baPick(id){S.baSel=id;document.querySelectorAll("#bap [data-id]").forEach(d=>{d.querySelector("img").style.borderColor=d.dataset.id===id?"#ed8700":"#cbd5e1"})}
+function refPick(id,sk){
+  S[sk]=String(S[sk])===String(id)?null:id;
+  document.querySelectorAll('[data-sk="'+sk+'"]').forEach(d=>{d.querySelector("img").style.borderColor=String(d.dataset.id)===String(S[sk])?"#ed8700":"#cbd5e1"});
+}
 function baBadge(e){
-  const b=e.ba==="before";
-  return `<span style="display:inline-block;background:${b?"#6b7a8c":"#ed8700"};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px">${b?"قبل":"بعد"}</span>`;
+  const t=PHT[e.ba];if(!t)return "";
+  return `<span style="display:inline-block;background:${t[1]};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px;margin-inline-end:6px">${esc(t[0])}</span>`;
+}
+/* الصورة المقابلة (إن وُجدت) تظهر مصغّرة تحت الصورة */
+function refHtml(e){
+  if(!e.ba_ref)return "";
+  const r=S.entries.find(x=>String(x.id)===String(e.ba_ref));if(!r||!S.urls[r.file_path])return "";
+  const t=PHT[r.ba];
+  return `<div class="lbl" style="margin-top:8px">⇄ تُقابل في التقرير بصورة${t?" «"+esc(t[0])+"»":""}:</div><img src="${S.urls[r.file_path]}" loading="lazy" onclick="openImg(this.src)" style="width:auto;max-width:100%;max-height:140px">`;
+}
+function canEditE(e){return e.kind==="media"&&!!e.file_path&&(e.file_type||"").startsWith("image")&&(["owner","pm"].includes(S.role)||(!!e.author_id&&!!S.user&&e.author_id===S.user.id))}
+function peOpen(id){
+  const e=S.entries.find(x=>String(x.id)===String(id));if(!e)return;
+  S.pe=e.id;S.peSel=e.ba_ref||null;render();
+  setTimeout(()=>{const el=$("pe_"+e.id);if(el)el.scrollIntoView({block:"center"})},60);
+}
+function peCancel(){S.pe=null;S.peSel=null;render()}
+function peHtml(e){
+  return `<div class="item" id="pe_${e.id}" style="background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0"><b>✏️ تعديل الصورة</b>${fileHtml(e)}
+  <label class="lbl">نوع الصورة</label><select id="pe_t"><option value="">صورة عادية</option>${phOpts(e.ba)}</select>
+  <label class="lbl">الوصف</label><textarea id="pe_b" rows="2">${esc(e.body||"")}</textarea>
+  ${baTiles(e.id,"peSel")}
+  <button class="btn" id="pe_s" onclick="peSave('${e.id}')">حفظ التعديل</button> <button class="btn alt" onclick="peCancel()">إلغاء</button></div>`;
+}
+async function peSave(id){
+  const e=S.entries.find(x=>String(x.id)===String(id));if(!e)return;
+  const t=$("pe_t").value,body=$("pe_b").value.trim(),ref=S.peSel&&String(S.peSel)!==String(id)?S.peSel:null;
+  const btn=$("pe_s");btn.disabled=true;btn.textContent="جاري الحفظ...";
+  const {data,error}=await sb.from("entries").update({ba:t||null,ba_ref:ref,body}).eq("id",id).select("id");
+  if(error||!data||!data.length){
+    btn.disabled=false;btn.textContent="حفظ التعديل";
+    return alert((error?error.message:"ما تم الحفظ (لا توجد صلاحية تعديل).")+"\nإذا استمرت المشكلة: شغّل ملف photo-phases.sql في Supabase ثم أعد المحاولة.");
+  }
+  logA("entry","تعديل صورة"+(t?" ← "+PHT[t][0]:"")+(ref?" (مع مقابلة)":""));
+  S.pe=null;S.peSel=null;await loadE();render();
 }
 async function saveProj(){
   const name=$("mn").value.trim();if(!name)return alert("اكتب اسم المشروع");
@@ -2106,9 +2163,8 @@ async function addE(){
   if(bat){
     if(!fs.length)return alert("ارفع صورة لتحديد قبل / بعد");
     if(fs.some(f=>!f.type.startsWith("image")))return alert("تحديد قبل / بعد للصور فقط");
-    if(bat==="after"&&!S.baSel)return alert("اختر صورة «قبل» التي تقابلها هذه الصور");
   }
-  const bax=bat?{ba:bat,ba_ref:bat==="after"?S.baSel:null}:{};
+  const bax=bat?{ba:bat,ba_ref:S.baSel||null}:{};
   $("bt").disabled=true;
   const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
   if(!navigator.onLine)return qAdd({...base,body,bax,files:fs});
@@ -2121,9 +2177,9 @@ async function addE(){
   if(!rows.length)return render();
   const {error}=await sb.from("entries").insert(rows);
   if(error&&!fs.length&&isNetErr(error)){await qAdd({...base,body,bax,files:[]});return}
-  if(error)alert(error.message.includes("ba")?"لم يتم تفعيل قبل/بعد في قاعدة البيانات بعد. شغّل ملف before-after.sql في Supabase ثم أعد المحاولة.":error.message);
+  if(error)alert(/ba_ref|\bba\b|check constraint/i.test(error.message)?"أنواع الصور الجديدة غير مفعّلة في قاعدة البيانات بعد. شغّل ملف photo-phases.sql في Supabase ثم أعد المحاولة.":error.message);
   if(!error)logA("entry",`${(TABS.find(x=>x.k===S.tab)||{}).n||""}: ${fs.length?fs.length+" ملف":body.slice(0,60)}`);
-  S.baSel=null;
+  if(!error)S.baSel=null;
   await loadE();render();
 }
 /* كاتب المعوق/الملاحظة يقدر يحذف اللي أضافه بالغلط (تبويب المعوقات فقط) */
