@@ -1352,7 +1352,7 @@ function mStageBody(t){
       const CN=[...new Set(MT.t.map(x=>x.contractor).filter(Boolean))];
       h=(can?`<div class="mcostbox"><span>التكلفة المعتمدة</span><b>${money(mCost(t))} ر.س</b></div>${mApprover(t)?`<div class="lbl">✅ اعتمدها: ${mApprTxt(t)}</div>`:""}<label class="lbl">اسم المقاول *</label><input id="mct" list="mctl" value="${esc(t.contractor||"")}" placeholder="اسم المقاول أو الفني"><datalist id="mctl">${CN.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><label class="lbl">مدة العمل *</label><div class="mdur"><input id="mq" type="number" inputmode="decimal" min="0" step="any" placeholder="3"><select id="mu"><option value="d">يوم</option><option value="h">ساعة</option></select></div>${big("▶ بدء العمل",`mExecStart('${id}')`)}`:wait);
     }else{
-      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل"><label class="lbl">تقرير الإنجاز (اختياري)</label><textarea id="mrp" rows="3" placeholder="اكتب ملخص ما تم تنفيذه إن رغبت">${esc(t.close_note||"")}</textarea>${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
+      h=`<div class="hlq"><b>المقاول:</b> ${esc(t.contractor||"-")} · <b>المدة:</b> ${mDur(t)} · <b>بدأ:</b> ${dfmt(t.started_at)}</div>`+(can?`<label class="lbl">صور بعد التنفيذ *</label><input id="mfl" type="file" accept="image/*" multiple class="mfile">${mPics(id,["after"])}<label class="lbl">اسم المستلم *</label><input id="mrc" value="${esc(t.receiver||"")}" placeholder="اسم من استلم العمل"><label class="lbl">تقرير الإنجاز (اختياري)</label><textarea id="mrp" rows="3" oninput="MT.cr=this.value;MT.crId='${id}'" placeholder="اكتب ملخص ما تم تنفيذه إن رغبت">${esc(MT.crId===id&&MT.cr!=null?MT.cr:(t.close_note||""))}</textarea>${big("✔ تم التسليم",`mDeliver('${id}')`,"#16a34a")}`:wait);
     }
   }
   return head+h;
@@ -2041,7 +2041,8 @@ if(mRs("insp")&&t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.
     }
     if(mRs("team"))put(`<div class="team"><div><small>مدير المشروع</small><b>${esc(t.pm_name||"-")}</b></div><div><small>مدير الموقع</small><b>${esc(t.assignee||"-")}</b></div><div><small>المقاول</small><b>${esc(t.contractor||"-")}</b></div></div>`);
     if(mRs("area")&&(t.area_name||t.area_phone))put(`<table class="info"><tr><td class="a">مدير المنطقة</td><td class="b">${esc(t.area_name||"-")}</td><td class="a">الجوال</td><td class="b" style="direction:ltr;text-align:right">${esc(t.area_phone?"+"+String(t.area_phone).replace(/\D/g,""):"-")}</td></tr></table>`);
-    if(mRs("done")&&t.close_note&&t.outcome!=="rejected"&&t.outcome!=="nowork")putText("تقرير الإنجاز",t.close_note,t.closed_at?' <small style="display:inline">· '+esc(dfmt(t.closed_at))+'</small>':'');
+    const doneTxt=String((!t.closed_at&&MT.crId===id&&MT.cr!=null?MT.cr:t.close_note)||"").trim();   /* يشمل النص المكتوب ولو لم يُسلَّم الطلب بعد */
+    if(mRs("done")&&doneTxt&&t.outcome!=="rejected"&&t.outcome!=="nowork")putText("تقرير الإنجاز",doneTxt,t.closed_at?' <small style="display:inline">· '+esc(dfmt(t.closed_at))+'</small>':'');
     if(MT.rnote&&MT.rnote.trim())putText("ملاحظات إضافية",MT.rnote.trim());
     const OB=(MT.o||[]).filter(o=>o.ticket_id===id);
     if(mRs("obs")&&OB.length){
