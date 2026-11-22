@@ -1179,6 +1179,8 @@ const MST=[["new","طلب جديد","#d97706","طلب"],["inspect","المعاي
 const MPRI={urgent:["مستعجل","#dc2626"],high:["عاجل","#ea580c"],normal:["عادي","#94a3b8"]};
 const MOUT={done:"تم التسليم",nowork:"لا يحتاج عمل",rejected:"أُلغي الطلب"};
 const MWN={site:"مدير الموقع",pm:"مدير المشروع",mgmt:"الإدارة"};
+const MPT={issue:["المشكلة","#d97706"],before:PHT.before,during:["أثناء العمل","#2e69ad"],after:PHT.after,inspect:PHT.inspect,material:PHT.material,defect:PHT.defect,handover:PHT.handover,other:["صور","#52667b"]};
+const mPhOpts=v=>["before","during","after","inspect","material","defect","handover"].map(k=>`<option value="${k}" ${k===v?"selected":""}>${MPT[k][0]}</option>`).join("");
 const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
 let MT={t:[],e:[],q:{},sm:[],o:[],oerr:"",id:null,err:"",rep:null};
 const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
@@ -1207,7 +1209,7 @@ async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnc
 async function loadM(){
   if(!mSee())return;
   if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
-  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("id,ticket_id,kind,phase,body,file_path,file_type,author_role,created_at").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
+  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
   if(a.error||b.error||quotes.error){MT.err=(a.error||b.error||quotes.error).message;MT.t=[];MT.e=[];return}
   MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
   (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
@@ -1296,7 +1298,7 @@ async function mCreate(){await mOnce(async()=>{
 
 /* ---------- نافذة الطلب: المرحلة الحالية فقط ---------- */
 async function mOpen(id){
-  MT.id=id;MT.rep=null;MT.edit=null;
+  MT.id=id;MT.rep=null;MT.edit=null;MT.pe=null;MT.peSel=null;
   await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path).concat((MT.o||[]).filter(o=>o.ticket_id===id&&o.file_path).map(o=>o.file_path)));
   modal("mtk");
 }
@@ -1356,9 +1358,9 @@ function mStageBody(t){
   return head+h;
 }
 function mGallery(id){
-  const g=ph=>mPics(id,ph),b=g(["issue","before"]),d=g(["during","other"]),a=g(["after"]);
-  if(!b&&!d&&!a)return "";
-  return `<div class="mgal">${b?`<div class="mgp"><b>قبل</b>${b}</div>`:""}${d?`<div class="mgp"><b>أثناء العمل</b>${d}</div>`:""}${a?`<div class="mgp"><b>بعد</b>${a}</div>`:""}</div>`;
+  const g=ph=>mPics(id,ph),b=g(["issue","before"]),d=g(["during","other"]),a=g(["after"]),x=g(["inspect","material","defect","handover"]);
+  if(!b&&!d&&!a&&!x)return "";
+  return `<div class="mgal">${b?`<div class="mgp"><b>قبل</b>${b}</div>`:""}${d?`<div class="mgp"><b>أثناء العمل</b>${d}</div>`:""}${a?`<div class="mgp"><b>بعد</b>${a}</div>`:""}${x?`<div class="mgp"><b>صور أخرى</b>${x}</div>`:""}</div>`;
 }
 function mDetails(t){
   const row=(a,b)=>b?`<tr><td>${a}</td><td>${b}</td></tr>`:"",c=mCost(t);
@@ -1382,16 +1384,36 @@ function mPhotosHtml(t){
   const all=MT.e.filter(e=>e.ticket_id===t.id&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image")));
   if(!all.length&&!adm)return "";
   const cov=mCover(t);
-  const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]]],known=["issue","before","during","other","after"];
+  const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]],["معاينة",["inspect"]],["توريد مواد",["material"]],["ملاحظة / عيب",["defect"]],["تسليم واستلام",["handover"]]],known=["issue","before","during","other","after","inspect","material","defect","handover"];
   const one=e=>{const im=`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`;
     if(!adm)return im;
     const isCov=e.file_path===cov;
-    return `<span class="mthw">${im}${isCov?'<span class="cvt">★ صورة العرض</span>':`<button class="pb pc" title="اجعلها صورة العرض" onclick="mPicCover('${e.id}')">★</button>`}<button class="pb pd" title="حذف الصورة" onclick="mPicDel('${e.id}')">✕</button></span>`};
+    return `<span class="mthw">${im}${e.ref_id?'<span class="cvt" style="background:#2e69ad">⇄</span>':""}${isCov?'<span class="cvt">★ صورة العرض</span>':`<button class="pb pc" title="اجعلها صورة العرض" onclick="mPicCover('${e.id}')">★</button>`}<button class="pb" style="inset-inline-start:34px;background:#2e69ad" title="تعديل الصورة" onclick="mPeOpen('${e.id}')">✏️</button><button class="pb pd" title="حذف الصورة" onclick="mPicDel('${e.id}')">✕</button></span>`};
   const pics=L=>L.filter(e=>S.urls[e.file_path]).map(one).join("");
   const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
-  const add=adm?`<div class="mpadd"><select id="mpph"><option value="before">قبل</option><option value="during">أثناء العمل</option><option value="after">بعد</option></select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button></div>`:"";
-  return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary><div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||(all.length?'<div class="lbl">جاري تحميل الصور...</div>':'<div class="lbl">لا توجد صور</div>')}</div>${add}</details>`;
+  const add=adm?`<div class="mpadd"><select id="mpph">${mPhOpts("before")}</select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button></div>`:"";
+  const pe=adm&&MT.pe?all.find(x=>String(x.id)===String(MT.pe)):null;
+  return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary>${pe?mPeHtml(pe,all):""}<div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||(all.length?'<div class="lbl">جاري تحميل الصور...</div>':'<div class="lbl">لا توجد صور</div>')}</div>${add}</details>`;
 }
+/* تعديل صورة الصيانة: النوع + الوصف + الصورة المقابلة في التقرير */
+function mPeOpen(id){MT.pe=id;const e=MT.e.find(x=>String(x.id)===String(id));MT.peSel=e&&e.ref_id||null;render();setTimeout(()=>{const el=$("mpe");if(el)el.scrollIntoView({block:"center"})},60)}
+function mPeCancel(){MT.pe=null;MT.peSel=null;render()}
+function mPePick(id){MT.peSel=String(MT.peSel)===String(id)?null:id;document.querySelectorAll('[data-mpk]').forEach(d=>{d.querySelector("img").style.borderColor=String(d.dataset.mpk)===String(MT.peSel)?"#ed8700":"#cbd5e1"})}
+function mPeHtml(e,all){
+  const others=all.filter(x=>String(x.id)!==String(e.id)&&S.urls[x.file_path]);
+  const tiles=others.length?`<p class="lbl">اختياري: اختر صورة لتُعرض مقابلها في التقرير (اضغط مرة ثانية لإلغاء الاختيار):</p><div style="display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px">${others.map(x=>{const t=MPT[x.phase];return `<div data-mpk="${x.id}" onclick="mPePick('${x.id}')" style="flex:none;width:92px;cursor:pointer;text-align:center"><img src="${S.urls[x.file_path]}" alt="" style="width:92px;height:70px;object-fit:cover;border-radius:8px;border:3px solid ${String(MT.peSel)===String(x.id)?"#ed8700":"#cbd5e1"};display:block;margin:0"><small style="font-size:11px">${t?esc(t[0]):""}</small></div>`}).join("")}</div>`:`<p class="lbl">لا توجد صور أخرى لمقابلتها.</p>`;
+  return `<div id="mpe" style="background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0"><b>✏️ تعديل الصورة</b><img src="${S.urls[e.file_path]}" alt="" style="display:block;width:100%;max-height:260px;object-fit:contain;background:#eef1f5;border-radius:12px;margin:8px 0">
+  <label class="lbl">نوع الصورة</label><select id="mpe_t">${mPhOpts(e.phase==="issue"?"before":(e.phase==="other"?"during":e.phase))}</select>
+  <label class="lbl">الوصف (اختياري)</label><textarea id="mpe_b" rows="2">${esc(e.body||"")}</textarea>${tiles}
+  <button class="btn" id="mpe_s" onclick="mPeSave('${e.id}')">حفظ التعديل</button> <button class="btn alt" onclick="mPeCancel()">إلغاء</button></div>`;
+}
+async function mPeSave(id){await mOnce(async()=>{
+  const e=MT.e.find(x=>String(x.id)===String(id));if(!e||!mAdm())return;
+  const ph=$("mpe_t").value,body=($("mpe_b").value||"").trim()||null,ref=MT.peSel&&String(MT.peSel)!==String(id)?MT.peSel:null;
+  const {data,error}=await sb.from("mnt_events").update({phase:ph,body,ref_id:ref}).eq("id",e.id).select("id");
+  if(error||!data||!data.length)return alert((error?error.message:"ما تم الحفظ (لا توجد صلاحية تعديل).")+"\nشغّل ملف photo-phases.sql في Supabase ثم أعد المحاولة.");
+  MT.pe=null;MT.peSel=null;await loadM();await sign(MT.e.filter(x=>x.ticket_id===e.ticket_id&&x.file_path).map(x=>x.file_path));render();mToast("تم تعديل الصورة");
+})}
 /* حذف صورة / تغيير صورة العرض / إضافة صور (للمالك ومدير المشروع) */
 const mPicNeedSql="\nإذا ما انحذفت: شغّل ملف mnt_photo_edit.sql في Supabase.";
 async function mPicDel(eid){
@@ -1976,7 +1998,10 @@ async function mPdf(id){
     if(!document.getElementById("rpcss2")){const s=document.createElement("style");s.id="rpcss2";s.textContent=MRCSS;document.head.appendChild(s)}
     const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
     let bef=imgs.filter(e=>e.phase==="before"||e.phase==="issue");   /* قبل = صور الطلب + صور المعاينة */
-    const aft=imgs.filter(e=>e.phase==="after"),pics=[...bef,...aft],img={};
+    const aft=imgs.filter(e=>e.phase==="after"),img={};
+    const byId=new Map(imgs.map(e=>[String(e.id),e])),mid=["during","inspect","material","defect","handover"].map(k=>[k,imgs.filter(e=>e.phase===k)]);
+    const prs=imgs.filter(e=>e.ref_id&&byId.get(String(e.ref_id))&&String(e.ref_id)!==String(e.id)).map(a=>({a,b:byId.get(String(a.ref_id))})),pid=new Set(prs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
+    const pics=[...new Set([...bef,...aft,...mid.flatMap(x=>x[1]),...prs.flatMap(x=>[x.a,x.b])])];
     if(pics.length){
       const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
       const um={};(data||[]).forEach(d=>{if(d.signedUrl)um[d.path]=d.signedUrl});
@@ -2009,8 +2034,8 @@ if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <sm
         (MT.or||[]).filter(r=>String(r.obstacle_id)===String(o.id)).forEach(r=>putText((r.kind==="directive"?"📌 توجيه":"↩ رد")+" · "+(r.author_role||"")+" · "+dfmt(r.created_at),r.body));
       });
     }
-    const row=(L,tag,cls,title)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
-      const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}">${tag}</div><img src="${img[e.file_path]}"></div>`;
+    const row=(L,tag,cls,title,col)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
+      const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}"${col?` style="background:${col}"`:""}>${tag}</div><img src="${img[e.file_path]}"></div>`;
       const hd=`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`;
       for(let k=0;k<P.length;k+=n){
         if(box.children.length)fresh();
@@ -2018,7 +2043,18 @@ if(t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.insp_at?' <sm
         for(let f=P.slice(k,k+n).length;f<n;f++)cells+='<div class="pf" style="visibility:hidden;border:0"></div>';
         put(`<div>${k===0?hd:""}<div class="pr">${cells}</div></div>`);   /* العنوان يبقى مع أول صفّ صور ولا ينفصل عنه */
       }};
-    row(bef,"قبل","bf","📷 صور قبل (الطلب والمعاينة)");row(aft,"بعد","af","📷 صور بعد التسليم");
+    const PPs=prs.filter(x=>img[x.a.file_path]&&img[x.b.file_path]).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+    if(PPs.length){
+      const ord=k=>Object.keys(MPT).indexOf(k),sd=e=>{const q=MPT[e.phase]||["صورة","#52667b"];return '<div class="ps"><div class="pl" style="background:'+q[1]+'">'+esc(q[0])+'</div><img src="'+img[e.file_path]+'" alt=""><small>'+esc(dfmt(e.created_at))+'</small></div>'};
+      if(box.children.length)fresh();
+      put('<div style="font-weight:700;color:#102944;margin:4px 0 8px">⇄ مقارنة الصور ('+PPs.length+')</div>');
+      PPs.forEach(pr=>{let x=pr.b,y=pr.a;if(x.phase&&y.phase&&ord(x.phase)>ord(y.phase)){const q=x;x=y;y=q}
+        const cap=(y.body||x.body||"").trim();
+        put('<div class="pp"><div class="pw">'+sd(x)+sd(y)+'</div>'+(cap?'<div class="pq">'+esc(cap)+'</div>':'')+'</div>')});
+    }
+    row(bef.filter(e=>!pid.has(String(e.id))),"قبل","bf","📷 صور قبل (الطلب والمعاينة)");
+    mid.forEach(([k,L])=>row(L.filter(e=>!pid.has(String(e.id))),MPT[k][0],"",{during:"📷 صور أثناء التنفيذ",inspect:"📷 صور المعاينة",material:"📷 توريد مواد",defect:"📷 ملاحظات / عيوب",handover:"📷 التسليم والاستلام"}[k],MPT[k][1]));
+    row(aft.filter(e=>!pid.has(String(e.id))),"بعد","af","📷 صور بعد التسليم");
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
     pages.forEach((pg,i)=>{const f=pg.querySelector(".rpf span");if(f)f.textContent="صفحة "+(i+1)+" من "+pages.length});
     for(let i=0;i<pages.length;i++){
