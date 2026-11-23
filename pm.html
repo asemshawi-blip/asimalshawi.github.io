@@ -1346,7 +1346,7 @@ function mNewHtml(){
   <label class="lbl">مدير الموقع (يوصله إشعار للمعاينة) *</label><select id="nas">${MT.sm.length===1?"":'<option value="">اختر مدير الموقع</option>'}${MT.sm.map(x=>`<option value="${esc(x.user_id)}">${esc(x.name)}</option>`).join("")}</select>
   ${MT.sm.length?"":'<div class="lbl">لا يوجد مدراء موقع. أنشئ حسابًا من «الحسابات».</div>'}
   <label class="lbl">اسم مدير المشروع (يظهر في التقرير)</label><input id="npm" value="${esc(mMeName())}">
-  <label class="lbl">مدير المنطقة (اختياري)</label><input id="nam" placeholder="اسم مدير المنطقة"><input id="nap" dir="ltr" inputmode="tel" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
+  <label class="lbl">مدير المنطقة (اختياري)</label><input list="pbl" autocomplete="off" id="nam" placeholder="اسم مدير المنطقة"><input id="nap" dir="ltr" inputmode="tel" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
   <label class="lbl">موقع الفرع على قوقل ماب (اختياري)</label><input id="nmp" dir="ltr" placeholder="الصق رابط قوقل ماب أو الإحداثيات">
   <label class="mck" style="margin:8px 0"><input id="nur" type="checkbox"> 🚨 مستعجل</label>
   <label class="lbl">صور المشكلة (اختياري)</label><input id="nfl" type="file" accept="image/*" multiple class="mfile">
@@ -1625,13 +1625,13 @@ function mEditHtml(t){
   <label class="lbl">العنوان</label><input id="mef_t" value="${esc(t.title||"")}">
   <label class="lbl">الفرع</label><input id="mef_b" value="${esc(t.branch||"")}">
   <label class="lbl">اسم مدير المشروع (يظهر في التقرير)</label><input id="mef_pm" value="${esc(t.pm_name||"")}" placeholder="اكتب الاسم الذي تبيه في التقرير">
-  <label class="lbl">مدير المنطقة</label><input id="mef_am" value="${esc(t.area_name||"")}" placeholder="اسم مدير المنطقة"><input id="mef_ph" dir="ltr" inputmode="tel" value="${esc(t.area_phone||"")}" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
+  <label class="lbl">مدير المنطقة</label><input list="pbl" autocomplete="off" id="mef_am" value="${esc(t.area_name||"")}" placeholder="اسم مدير المنطقة"><input id="mef_ph" dir="ltr" inputmode="tel" value="${esc(t.area_phone||"")}" placeholder="جواله مع رمز الدولة (9665XXXXXXXX)">
   <label class="lbl">موقع الفرع على قوقل ماب</label><input id="mef_mp" dir="ltr" value="${esc(t.map_url||"")}" placeholder="الصق رابط قوقل ماب أو الإحداثيات">
   <label class="lbl">وصف الطلب</label><textarea id="mef_d" rows="2">${esc(t.descr||"")}</textarea>
   <label class="lbl">المرحلة</label><select id="mef_s">${opts}</select>
   <label class="lbl">تقرير المعاينة</label><textarea id="mef_g" rows="3">${esc(t.diagnosis||"")}</textarea>
   <label class="lbl">التكلفة (ر.س): اتركها فاضية إذا ما تسعّر</label><input id="mef_c" type="number" inputmode="decimal" min="0" step="any" value="${c!=null&&c!==""?esc(c):""}">
-  <label class="lbl">المقاول</label><input id="mef_k" value="${esc(t.contractor||"")}">
+  <label class="lbl">المقاول</label><input list="pbl" autocomplete="off" id="mef_k" value="${esc(t.contractor||"")}">
   <label class="lbl">جوال المقاول (اختياري)</label><input id="mef_cp" dir="ltr" inputmode="tel" value="${esc(t.contractor_phone||"")}" placeholder="مع رمز الدولة، مثال 9665XXXXXXXX">
   <label class="lbl">المستلم (للتسليم)</label><input id="mef_r" value="${esc(t.receiver||"")}">
   <label class="lbl">تقرير الإنجاز (اختياري، يُحفظ ويظهر في التقرير في أي مرحلة)</label><textarea id="mef_cr" rows="3">${esc(t.outcome==="rejected"||t.outcome==="nowork"?"":(t.close_note||""))}</textarea>
@@ -1747,7 +1747,8 @@ async function mExecStart(id){await mOnce(async()=>{
   const t=mT(id),c=$("mct").value.trim(),q=+$("mq").value;
   if(!c)return alert("اكتب اسم المقاول");if(!(q>0))return alert("اكتب مدة العمل");
   const u=$("mu").value;
-  await mUpd(id,{started_at:mNow(),contractor:c,work_qty:q,work_unit:u},"بدأ العمل: "+c+" · "+q+(u==="h"?" ساعة":" يوم"),["owner","pm"],"بدأ تنفيذ "+mNo(t),{body:c+" · "+q+(u==="h"?" ساعة":" يوم"),toast:"بدأ العمل ▶"});
+  const _pb=pbBook().get(pbKey(c)),_x={started_at:mNow(),contractor:c,work_qty:q,work_unit:u};if(_pb&&!(t&&t.contractor_phone))_x.contractor_phone=_pb.p;
+  await mUpd(id,_x,"بدأ العمل: "+c+" · "+q+(u==="h"?" ساعة":" يوم"),["owner","pm"],"بدأ تنفيذ "+mNo(t),{body:c+" · "+q+(u==="h"?" ساعة":" يوم"),toast:"بدأ العمل ▶"});
 })}
 async function mDeliver(id){await mOnce(async()=>{
   const t=mT(id),rc=$("mrc").value.trim(),fs=[...($("mfl")?.files||[])];
@@ -2339,12 +2340,12 @@ function projForm(p){
   return `<div class="modal"><div class="box"><h3>${edit?"تعديل المشروع":"مشروع جديد"}</h3>
   <input id="mn" placeholder="اسم المشروع" value="${esc(p.name)}"><input id="ml" placeholder="الموقع / المدينة" value="${esc(p.loc)}">
   <label class="lbl">رابط موقع المشروع على خرائط قوقل (اختياري)</label><input id="mmapurl" dir="ltr" placeholder="الصق رابط قوقل ماب أو الإحداثيات" value="${esc(p.map_url)}">
-  <input id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}"><input id="msp" dir="ltr" inputmode="tel" placeholder="جوال مدير الموقع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.site_phone)}">
-  <input id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
+  <input list="pbl" autocomplete="off" id="mct" placeholder="اسم المقاول" value="${esc(p.contractor_name)}"><input list="pbl" autocomplete="off" id="msm" placeholder="مدير الموقع" value="${esc(p.site_manager)}"><input id="msp" dir="ltr" inputmode="tel" placeholder="جوال مدير الموقع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.site_phone)}">
+  <input list="pbl" autocomplete="off" id="mpn" placeholder="اسم مدير المشروع" value="${esc(p.pm_name)}">
   <input id="mpp" dir="ltr" inputmode="tel" placeholder="جوال مدير المشروع مع رمز الدولة (9655XXXXXXX)" value="${esc(p.pm_phone)}">
   <input id="mcp" dir="ltr" inputmode="tel" placeholder="جوال المقاول مع رمز الدولة (9655XXXXXXX)" value="${esc(p.contractor_phone)}">
-  <input id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
-  <input id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
+  <input list="pbl" autocomplete="off" id="mam" placeholder="اسم مدير المنطقة" value="${esc(p.area_name)}"><input id="map" dir="ltr" inputmode="tel" placeholder="جوال مدير المنطقة مع رمز الدولة (9655XXXXXXX)" value="${esc(p.area_phone)}">
+  <input list="pbl" autocomplete="off" id="mcn" placeholder="اسم موظف التنسيق مع المالك" value="${esc(p.coord_name)}"><input id="mcph" dir="ltr" inputmode="tel" placeholder="جوال موظف التنسيق مع رمز الدولة (9655XXXXXXX)" value="${esc(p.coord_phone)}">
   <label class="lbl">نوع المشروع</label><select id="mty"><option value="new" ${(!p.ptype||p.ptype==="new")?"selected":""}>إنشاء</option><option value="kiosk" ${p.ptype==="kiosk"?"selected":""}>كشك جاهز من المصنع</option><option value="reno" ${p.ptype==="reno"?"selected":""}>ترميم</option></select>
   <select id="ms">${stOpts(p.status)}</select>
   <label class="lbl">نسبة الإنجاز %</label><input id="mp" type="number" min="0" max="100" value="${clamp(p.progress)}">
@@ -2398,6 +2399,37 @@ function openImg(u){
   d.append(i,x);document.body.appendChild(d);
 }
 function closeImg(){$("lb")?.remove()}
+/* ===== دفتر الأسماء: اكتب الاسم فيظهر رقمه تلقائياً (ويمكنك تعديل الرقم) ===== */
+const PB_KEY="pm_contacts_v1",PBMAP={mct:"mcp",msm:"msp",mpn:"mpp",mam:"map",mcn:"mcph",nam:"nap",mef_am:"mef_ph",mef_k:"mef_cp"},PBREV=Object.fromEntries(Object.entries(PBMAP).map(([a,b])=>[b,a]));
+const pbKey=n=>String(n||"").trim().replace(/\s+/g," ").toLowerCase();
+function pbBook(){
+  const m=new Map(),add=(n,p,t)=>{n=String(n||"").trim();p=normP(p||"");const k=pbKey(n);if(!k||!p)return;const o=m.get(k);if(!o||String(t||"")>=String(o.t||""))m.set(k,{n,p,t:t||""})};
+  (S.projects||[]).forEach(x=>{const t=x.updated_at||x.created_at||"";add(x.contractor_name,x.contractor_phone,t);add(x.site_manager,x.site_phone,t);add(x.pm_name,x.pm_phone,t);add(x.area_name,x.area_phone,t);add(x.coord_name,x.coord_phone,t)});
+  (MT.t||[]).forEach(x=>{const t=x.updated_at||x.created_at||"";add(x.contractor,x.contractor_phone,t);add(x.area_name,x.area_phone,t)});
+  try{Object.values(JSON.parse(localStorage.getItem(PB_KEY)||"{}")).forEach(v=>add(v.n,v.p,v.t))}catch(e){}
+  return m;
+}
+function pbList(){
+  let dl=document.getElementById("pbl");if(!dl){dl=document.createElement("datalist");dl.id="pbl";document.body.appendChild(dl)}
+  dl.innerHTML=[...pbBook().values()].sort((a,b)=>a.n.localeCompare(b.n,"ar")).map(x=>`<option value="${esc(x.n)}">`).join("");
+}
+function pbFill(nameEl){
+  const ph=document.getElementById(PBMAP[nameEl.id]);if(!ph)return;
+  const hit=pbBook().get(pbKey(nameEl.value));
+  const free=!ph.value.trim()||ph.dataset.pb===ph.value;   /* لا نكتب فوق رقم كتبته أنت بيدك */
+  if(hit){if(free){ph.value=hit.p;ph.dataset.pb=hit.p}}
+  else if(ph.dataset.pb&&ph.dataset.pb===ph.value){ph.value="";ph.dataset.pb=""}
+}
+document.addEventListener("focusin",e=>{const el=e.target;if(el&&el.tagName==="INPUT"&&PBMAP[el.id])pbList()});
+document.addEventListener("input",e=>{const el=e.target;if(el&&el.tagName==="INPUT"&&PBMAP[el.id])pbFill(el)});
+document.addEventListener("change",e=>{
+  const el=e.target;if(!el||el.tagName!=="INPUT")return;
+  if(PBMAP[el.id])return pbFill(el);
+  if(PBREV[el.id]){   /* عدّلت الرقم يدوياً: نحفظه كأحدث رقم لهذا الاسم */
+    const nm=document.getElementById(PBREV[el.id]),n=nm?nm.value.trim():"",p=normP(el.value);
+    if(n&&p){try{const o=JSON.parse(localStorage.getItem(PB_KEY)||"{}");o[pbKey(n)]={n,p,t:new Date().toISOString()};localStorage.setItem(PB_KEY,JSON.stringify(o))}catch(x){}}
+  }
+});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeImg()});
 const rndPass=()=>[...crypto.getRandomValues(new Uint8Array(8))].map(x=>"abcdefghjkmnpqrstuvwxyz23456789"[x%31]).join("");
 async function mkAccount(role){
