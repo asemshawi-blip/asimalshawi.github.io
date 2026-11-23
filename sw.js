@@ -1,4 +1,4 @@
-const CACHE="pm-v77",CDN="pm-cdn-v1";
+const CACHE="pm-v78",CDN="pm-cdn-v1";
 const APP_FILES=["./","./index.html","./pm.html","./manifest.json","./icon-192.png","./icon-512.png","./apple-touch-icon.png","./i18n.js","./pricing.js"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
@@ -38,15 +38,19 @@ self.addEventListener("fetch",event=>{
 
 /* الإشعارات */
 self.addEventListener("push",e=>{
-  let d={};try{d=e.data.json()}catch(_){d={body:e.data?e.data.text():""}}
-  e.waitUntil(self.registration.showNotification(d.title||"إدارة المشاريع",{body:d.body||"",icon:"./icon-192.png",badge:"./icon-192.png",tag:d.tag,renotify:!!d.tag,dir:"rtl",lang:"ar",data:{p:d.p,t:d.t}}));
+  let d={};
+  try{ d=e.data?e.data.json():{}; }catch(err){ try{ d={body:e.data?e.data.text():""}; }catch(err2){} }
+  const title=d.title||"إدارة المشاريع";
+  const options={ body:d.body||"", data:d.data||d, icon:"./icon-192.png", badge:"./icon-192.png" };
+  e.waitUntil(self.registration.showNotification(title, options));
 });
 self.addEventListener("notificationclick",e=>{
-  e.notification.close();const {p,t}=e.notification.data||{};
-  e.waitUntil((async()=>{
-    const cs=await self.clients.matchAll({type:"window",includeUncontrolled:true});
-    const c=cs.find(x=>new URL(x.url).pathname.endsWith("pm.html"))||cs[0];
-    if(c){await c.focus();c.postMessage({open:{p,t}});return}
-    await self.clients.openWindow("./pm.html"+(p?"?p="+encodeURIComponent(p)+"&t="+encodeURIComponent(t||""):(t?"?t="+encodeURIComponent(t):"")));
-  })());
+  e.notification.close();
+  const d=e.notification.data||{};
+  const open=d.open||d;
+  const url="./pm.html"+(open&&open.p?("?p="+encodeURIComponent(open.p)+(open.t?"&t="+encodeURIComponent(open.t):"")):"");
+  e.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(cs=>{
+    for(const c of cs){ if("focus" in c){ c.postMessage({open:open}); return c.focus(); } }
+    return clients.openWindow(url);
+  }));
 });
