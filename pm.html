@@ -2643,7 +2643,8 @@ init();
       busy=true; typingEl.style.display='block';
       try{
         // 1) حاول العقل الذكي أولاً
-        const res = await fetch(EDGE_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, context:buildContext(), history: bodyEl.innerText.slice(-2500) }) });
+        const { data: { session } } = await sb.auth.getSession();
+        const res = await fetch(EDGE_URL, { method:'POST', headers:{'Content-Type':'application/json','apikey':SBK,'Authorization':'Bearer ' + (session?.access_token || SBK)}, body: JSON.stringify({ message:text, context:buildContext(), history: bodyEl.innerText.slice(-2500) }) });
         const data = await res.json();
         typingEl.style.display='none'; busy=false;
         if(data.reply) addMsg(data.reply,'ai');
@@ -2722,6 +2723,7 @@ init();
 <!-- PM-CACHE-V78-SMART-AGENT -->
 </body>
 </html>
+
 
 
 
