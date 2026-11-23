@@ -2570,6 +2570,152 @@ init();
 </script>
 
 <script src="i18n.js"></script>
+
+<!-- ===== وكيل المشاريع الذكي - Groq + fallback خفيف ===== -->
+<style>
+#agentBtn{position:fixed;bottom:20px;left:20px;z-index:9999;width:60px;height:60px;border-radius:50%;background:#0f2742;color:#fff;border:2px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,.35);font-size:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:Tajawal,Tahoma,sans-serif}
+#agentBtn span{font-size:10px;position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:2px 7px;border-radius:10px;white-space:nowrap}
+#agentPanel{position:fixed;bottom:92px;left:20px;z-index:9999;width:min(390px,calc(100vw - 32px));height:min(580px,calc(100vh - 130px));background:#fff;border-radius:18px;box-shadow:0 14px 44px rgba(0,0,0,.30);display:none;flex-direction:column;overflow:hidden;font-family:Tajawal,Tahoma,sans-serif;direction:rtl;border:1px solid #e2e8f0}
+#agentPanel.open{display:flex}
+.agentHead{background:#0f2742;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.agentHead b{font-size:15px}.agentHead span{font-size:12px;opacity:.8;display:block;margin-top:2px}
+.agentClose{background:rgba(255,255,255,.18);border:0;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px}
+.agentBody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f4f6fa}
+.aMsg{max-width:90%;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.7;white-space:pre-wrap}
+.aMsg.user{background:#0f2742;color:#fff;align-self:flex-start;border-bottom-right-radius:4px}
+.aMsg.ai{background:#fff;border:1px solid #e2e8f0;align-self:flex-end;border-bottom-left-radius:4px}
+.aConfirm{background:#fffbeb;border:1px solid #d97706;border-radius:14px;padding:12px;font-size:13.5px;line-height:1.75}
+.aConfirm b{color:#92400e}
+.aBtns{display:flex;gap:8px;margin-top:10px}
+.aBtn{flex:1;padding:11px;border-radius:10px;border:0;cursor:pointer;font-weight:700;font-family:inherit;font-size:14px}
+.aBtn.ok{background:#16a34a;color:#fff}.aBtn.no{background:#e2e8f0;color:#1b2a3b}
+.aQuick{display:flex;gap:6px;flex-wrap:wrap;padding:0 14px 10px;background:#f4f6fa}
+.aQuick button{border:1px solid #e2e8f0;background:#fff;padding:7px 11px;border-radius:20px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.agentInput{display:flex;gap:8px;padding:12px;border-top:1px solid #e2e8f0;background:#fff}
+.agentInput input{flex:1;padding:11px 12px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;outline:none}
+.agentInput button{background:#0f2742;color:#fff;border:0;padding:0 18px;border-radius:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.aTyping{font-size:12px;color:#64748b;padding:0 14px 6px;background:#f4f6fa;display:none}
+.aBadge{font-size:11px;background:#ecfdf5;color:#166534;padding:3px 8px;border-radius:10px;margin-right:6px}
+@media(max-width:480px){#agentBtn{bottom:16px;left:16px}#agentPanel{left:16px;right:16px;width:auto;bottom:88px}}
+</style>
+<script>
+(function(){
+  // رابط الـ Edge Function حق مشروعك نفسه - جاهز، لا تعدله
+  const EDGE_URL = "https://wmavitpimbcjohcjgqhz.supabase.co/functions/v1/ai-agent";
+  function ready(fn){ if(window.S && window.sb) fn(); else setTimeout(()=>ready(fn),300); }
+  ready(function(){
+    const HISTORY_KEY='pm_agent_history_v3_smart';
+    const btn=document.createElement('button'); btn.id='agentBtn'; btn.innerHTML='🤖<span>الوكيل الذكي</span>'; btn.title='وكيل المشاريع الذكي';
+    document.body.appendChild(btn);
+    const panel=document.createElement('div'); panel.id='agentPanel';
+    panel.innerHTML=`<div class="agentHead"><div><b>🤖 وكيل المشاريع <span class="aBadge">ذكي • Groq</span></b><span>تشاوره بأي صيغة، ويشاورك قبل أي تعديل</span></div><button class="agentClose">✕</button></div><div class="agentBody" id="agentBody"></div><div class="aQuick"><button data-q="وش رايك في وضع مشاريعي اليوم؟">وش رايك في وضعي؟</button><button data-q="وش المتأخر اليوم؟">المتأخر</button><button data-q="سوي لي تقرير المدير حق اليوم">تقرير المدير</button></div><div class="aTyping" id="aTyping">الوكيل الذكي يفكر...</div><div class="agentInput"><input id="agentInput" placeholder="شاوره بأي صيغة... مثل: هل أأجل مشروع الرياض؟" /><button id="agentSend">إرسال</button></div>`;
+    document.body.appendChild(panel);
+    const bodyEl=panel.querySelector('#agentBody'), inputEl=panel.querySelector('#agentInput'), typingEl=panel.querySelector('#aTyping');
+    let isOpen=false, busy=false;
+    function save(){ try{ localStorage.setItem(HISTORY_KEY, bodyEl.innerHTML); }catch(e){} }
+    function loadHist(){ try{ const h=localStorage.getItem(HISTORY_KEY); if(h){ bodyEl.innerHTML=h; bodyEl.scrollTop=bodyEl.scrollHeight; return true; } }catch(e){} return false; }
+    function addMsg(t,who='ai'){ const d=document.createElement('div'); d.className='aMsg '+who; d.textContent=t; bodyEl.appendChild(d); bodyEl.scrollTop=bodyEl.scrollHeight; save(); }
+    function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    btn.onclick=()=>{ isOpen=!isOpen; panel.classList.toggle('open',isOpen); if(isOpen && !bodyEl.children.length && !loadHist()){ addMsg('هلا فيك 👋\nأنا الحين ذكي، مو حافظ أوامر.\n\nشاورني بأي صيغة تبي:\n• "وش رايك أأجل مشروع الرياض؟"\n• "هل مشروع جدة متعثر ولا ماشي؟"\n• "قارن بين مشروع الرياض وجدة، وش أبدأ فيه؟"\n• "سجل معوق لمشروع الرياض: تأخر التوريد"\n\nأي تعديل بيشاورك قبل ما أنفذه.','ai'); } };
+    panel.querySelector('.agentClose').onclick=()=>{ panel.classList.remove('open'); isOpen=false; };
+    panel.querySelectorAll('.aQuick button').forEach(b=> b.onclick=()=>{ inputEl.value=b.dataset.q; send(); });
+
+    function buildContext(){
+      const projs=(S.projects||[]).map(p=>({id:p.id,name:p.name,loc:p.loc,due:p.due,start_date:p.start_date,progress:p.progress,status:p.status,ptype:p.ptype,contractor_name:p.contractor_name,site_manager:p.site_manager,price:p.price}));
+      const cur = S.cur ? projs.find(x=>x.id===S.cur) : null;
+      return {
+        today: new Date().toISOString().slice(0,10),
+        role: S.role,
+        projects: projs,
+        currentProject: cur,
+        currentEntries: (S.entries||[]).slice(0,25).map(e=>({kind:e.kind,body:e.body,created_at:e.created_at,author_role:e.author_role})),
+        currentWorks: (S.works||[]).slice(0,40).map(w=>({phase:w.phase,name:w.name,weight:w.weight,pct:w.pct}))
+      };
+    }
+
+    async function send(){
+      const text=inputEl.value.trim(); if(!text||busy) return;
+      inputEl.value=''; addMsg(text,'user');
+      if(!S.user){ addMsg('سجل دخول أول عشان أشوف مشاريعك.','ai'); return; }
+      busy=true; typingEl.style.display='block';
+      try{
+        // 1) حاول العقل الذكي أولاً
+        const res = await fetch(EDGE_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message:text, context:buildContext(), history: bodyEl.innerText.slice(-2500) }) });
+        const data = await res.json();
+        typingEl.style.display='none'; busy=false;
+        if(data.reply) addMsg(data.reply,'ai');
+        if(data.action && data.needsConfirmation) showConfirm(data.action);
+        else if(data.action && data.action.type==='open_project'){ try{ goP(data.action.data.project_id); }catch(e){} }
+      }catch(e){
+        // 2) إذا الذكي مو مركب بعد، طح للوضع الخفيف ولا تترك المستخدم بدون رد
+        typingEl.style.display='none'; busy=false;
+        addMsg('⚠️ الوضع الذكي مو شغال الحين — يبدو أن Edge Function مو مركبة بعد أو مفتاح Groq مو محفوظ.\n\nركبها من ملف index.ts اللي عطيتك إياه (دقيقتين)، وبعدها أرد عليك كذكي.\n\nالحين برد عليك بالوضع الخفيف:','ai');
+        localFallback(text);
+      }
+    }
+
+    // --- Fallback خفيف إذا الذكي مو مركب ---
+    function localFallback(text){
+      const projs=S.projects||[];
+      if(/متأخر/.test(text)){
+        const late=projs.filter(p=>{ try{ const t=timing(p); return t&&t.late; }catch(e){return false;} });
+        addMsg(late.length? 'المتأخرة: '+late.map(p=>p.name+' — '+timing(p).t).join('\n') : 'ما عندك متأخرة 🎉','ai'); return;
+      }
+      if(/تقرير.*مدير|مدير.*تقرير/.test(text)){
+        addMsg('تقرير المدير — '+new Date().toLocaleDateString('ar')+'\n'+projs.slice(0,8).map(p=>'• '+p.name+' — '+ (p.progress??0)+'% — تسليم '+(p.due||'-')).join('\n'),'ai'); return;
+      }
+      addMsg('فهمت عليك، بس عشان أرد عليك كذكي بأي صيغة، ركب Edge Function أولاً. وبعدها شاورني بأي كلام عادي.','ai');
+    }
+
+    function kindLabel(k){ const m={notes:'ملاحظة',coord:'تنسيق',issues:'معوق',reports:'تقرير',media:'صورة'}; return m[k]||k; }
+    function showConfirm(action){
+      const desc = action.description || (action.type+' - '+JSON.stringify(action.data||{}));
+      const wrap=document.createElement('div');
+      wrap.innerHTML=`<div class="aConfirm"><b>📋 أتأكد منك قبل التنفيذ:</b><br>${esc(desc)}<div class="aBtns"><button class="aBtn ok" data-a="ok">✅ نفذ</button><button class="aBtn no" data-a="no">❌ إلغاء</button></div></div>`;
+      bodyEl.appendChild(wrap); bodyEl.scrollTop=bodyEl.scrollHeight; save();
+      wrap.querySelector('[data-a="ok"]').onclick=async ()=>{
+        wrap.querySelectorAll('button').forEach(b=>b.disabled=true);
+        try{
+          const ok = await executeAction(action);
+          if(ok) addMsg('تم ✅ نفذت اللي اتفقنا عليه.','ai'); else addMsg('ما قدرت أنفذ. تأكد من الصلاحيات.','ai');
+        }catch(e){ addMsg('ما قدرت أنفذ: '+(e.message||e),'ai'); }
+        save();
+      };
+      wrap.querySelector('[data-a="no"]').onclick=()=>{ wrap.querySelectorAll('button').forEach(b=>b.disabled=true); addMsg('تمام، لغيتها. ما صار أي تعديل.','ai'); save(); };
+    }
+
+    async function executeAction(action){
+      const d=action.data||{};
+      if(action.type==='add_entry'){
+        const {error}=await sb.from('entries').insert({project_id:d.project_id, kind:d.kind||'notes', body:d.body, author_role:(window.ROLES&&ROLES[S.role])||S.role});
+        if(!error){ try{ if(window.logA) logA('entry', kindLabel(d.kind)+': '+String(d.body||'').slice(0,60), d.project_id); }catch(e){} try{ if(S.cur===d.project_id && window.loadE) await loadE(); if(window.render) render(); }catch(e){} }
+        return !error;
+      }
+      if(action.type==='update_project_progress'){
+        const {error}=await sb.from('projects').update({progress:d.progress}).eq('id',d.project_id);
+        if(!error){ const p=S.projects.find(x=>x.id===d.project_id); if(p) p.progress=d.progress; try{ if(window.render) render(); }catch(e){} }
+        return !error;
+      }
+      if(action.type==='update_project'){
+        const {error}=await sb.from('projects').update(d.updates||{}).eq('id',d.project_id);
+        if(!error){ const p=S.projects.find(x=>x.id===d.project_id); if(p) Object.assign(p,d.updates||{}); try{ if(window.render) render(); }catch(e){} }
+        return !error;
+      }
+      if(action.type==='create_project'){
+        const {error}=await sb.from('projects').insert(d);
+        if(!error){ try{ await load(); }catch(e){} }
+        return !error;
+      }
+      return false;
+    }
+
+    panel.querySelector('#agentSend').onclick=send;
+    inputEl.addEventListener('keydown',e=>{ if(e.key==='Enter') send(); });
+  });
+})();
+</script>
+<!-- ===== نهاية وكيل المشاريع الذكي ===== -->
+
 </body>
 </html>
 
