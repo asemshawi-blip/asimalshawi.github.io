@@ -752,7 +752,7 @@ const rpRef=p=>"RPT-"+iso(new Date()).replace(/-/g,"")+"-"+String(p.id||"").repl
 function openReport(){
   if(!["owner","pm"].includes(S.role))return;
   const p=S.projects.find(x=>x.id===S.cur),t=day0(new Date()),reno=isReno(p);
-  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",manual:{},projectInfo:{},projectInfoOn:false,coverOn:true,coverImageOn:true,executiveOn:false,executiveSummary:"",stageByPhoto:rpLoadPhotoStages(p?.id),q:"hi",lay:"3",dur:"",du:"d"};
+  S.rep={phase:"form",reno,from:iso(addDays(t,-6)),to:iso(t),title:reno?"تقرير الترميم الشامل":"تقرير الإنجاز",by:ROLES[S.role]||"",manual:{},projectInfo:{},projectInfoOn:false,coverOn:true,coverImageOn:true,executiveOn:false,executiveSummary:"",stageByPhoto:rpLoadPhotoStages(p?.id),showPrice:false,q:"hi",lay:"3",dur:"",du:"d"};
   RP.cancel=false;modal("report");
 }
 function rpPreset(k){
@@ -791,6 +791,7 @@ function reportHtml(){
   <div style="border-top:1px solid #e3e9ef;margin-top:12px;padding-top:8px"><b>أقسام اختيارية تكتبها بنفسك</b>
   ${[["obstacles","المعوقات التي واجهتنا بالمشروع"],["info","معلومات إضافية عن المشروع"]].map(([k,l])=>`<label style="display:flex;align-items:center;gap:8px;margin:8px 0"><input type="checkbox" id="rpm_${k}" ${r.manual?.[k]?.on?"checked":""} style="width:18px;height:18px">${l}</label><textarea id="rpm_${k}_text" rows="3" placeholder="اكتب ${l} هنا إن رغبت" style="width:100%;box-sizing:border-box;margin-bottom:8px">${esc(r.manual?.[k]?.text||"")}</textarea>`).join("")}</div>
   <label style="display:flex;align-items:center;gap:8px;margin:10px 0"><input id="rpba" type="checkbox" ${r.ba!==false?"checked":""} style="width:18px;height:18px">إظهار مقارنات الصور (صورة مقابل صورة، مثل قبل / بعد)</label>
+  ${rpPriceBox(p,r,canPrice)}
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("3","شبكة مصغرة — 3 صور في الصف")}${sel("2","صورتان في الصف")}${sel("1","صورة في كل صف")}</select>
   <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">إضافة أسماء المراحل أسفل الصور</button>
   ${r.photoList?.length?`<div style="margin:8px 0;max-height:220px;overflow:auto">${r.photoList.map(e=>`<label class="lbl" style="display:block;margin:6px 0">${esc(dfmt(e.created_at))} · ${esc(cut(cleanTxt(e.body)||"صورة من الموقع",50))}<select onchange="rpSavePhotoStage('${esc(String(e.id))}',this.value)" style="display:block;width:100%"><option value="">بدون اسم مرحلة</option>${(r.phaseOptions||[]).map(f=>`<option value="${esc(f)}" ${r.stageByPhoto?.[e.id]===f?"selected":""}>${esc(f)}</option>`).join("")}</select></label>`).join("")}</div>`:`<p class="lbl">تظهر الصور كلها تلقائياً. اختر اسم مرحلة لكل صورة عند الرغبة.</p>`}
@@ -798,10 +799,21 @@ function reportHtml(){
   <label class="lbl">الجودة</label><select id="rpq"><option value="hi" ${r.q==="hi"?"selected":""}>عالية (للعرض والطباعة)</option><option value="md" ${r.q==="md"?"selected":""}>متوسطة (حجم أصغر للمشاركة)</option></select>
   <button class="btn" onclick="rpRun()">إنشاء التقرير</button> <button class="btn alt" onclick="modal(null)">إلغاء</button></div></div>`;
 }
+function rpPrice(p){
+  if(!p)return null;
+  if(p.rq_status==="approved"&&p.rq_total!=null&&p.rq_total!=="")return {v:p.rq_total,ap:"اعتماد "+(p.rq_dec_role||"الإدارة")+(p.rq_dec_by?" · "+p.rq_dec_by:"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"")};
+  if(p.price!=null&&p.price!==""&&Number(p.price)>0)return {v:p.price,ap:""};
+  return null;
+}
+function rpPriceBox(p,r,can){
+  if(!can)return "";
+  const pri=rpPrice(p);
+  return `<div style="border:1px solid #e3e9ef;border-radius:12px;padding:10px 12px;margin:10px 0"><label style="display:flex;align-items:center;gap:8px;margin:2px 0"><input id="rpprice" type="checkbox" ${r.showPrice&&pri?"checked":""} ${pri?"":"disabled"} style="width:18px;height:18px">إظهار السعر المعتمد في التقرير</label><small class="lbl">${pri?"يُسحب تلقائياً من بيانات المشروع: "+money(pri.v)+" ر.س"+(pri.ap?" ("+esc(pri.ap)+")":""):"لا يوجد سعر مسجّل لهذا المشروع."}</small></div>`;
+}
 function rpReadCfg(){
   const p=S.projects.find(x=>x.id===S.cur),reno=isReno(p);
   return {reno,full:reno,title:$("rpn").value.trim()||(reno?"تقرير الترميم الشامل":"تقرير الإنجاز"),from:reno?"":$("rpf").value,to:reno?"":$("rpt").value,by:"",dur:$("rpdur")?.value.trim()||"",du:$("rpdu")?.value||"d",
-    pho:true,upd:false,obs:false,wrk:false,ba:$("rpba")?$("rpba").checked:true,coverOn:$("rpcov").checked,coverImageOn:$("rpcovimg").checked,executiveOn:$("rpexec").checked,executiveSummary:$("rpexec_text").value.trim(),projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
+    pho:true,upd:false,obs:false,wrk:false,ba:$("rpba")?$("rpba").checked:true,showPrice:!!($("rpprice")&&$("rpprice").checked&&!$("rpprice").disabled),coverOn:$("rpcov").checked,coverImageOn:$("rpcovimg").checked,executiveOn:$("rpexec").checked,executiveSummary:$("rpexec_text").value.trim(),projectInfoOn:$("rpi").checked,projectInfo:Object.fromEntries(["name","value","duration","area","start","end","actual"].map(k=>[k,$("rpi_"+k).value.trim()])),manual:Object.fromEntries(["obstacles","info"].map(k=>[k,{on:$("rpm_"+k).checked,text:$("rpm_"+k+"_text").value.trim()}])),stageByPhoto:S.rep.stageByPhoto||{},q:$("rpq").value,lay:$("rpl").value};
 }
 function rpLoadPhotoStages(projectId){try{return JSON.parse(localStorage.getItem("rp_photo_phases_"+projectId)||"{}")}catch(e){return {}}}
 function rpSavePhotoStage(photoId,phase){
@@ -837,6 +849,7 @@ async function rpBuild(cfg){
   if(cfg.full){cfg.from=iso(data.f);cfg.to=iso(data.t)}
   step(14,"تجهيز الصور…");
   await rpImages(p,cfg,data,(i,n)=>step(14+Math.round(i/Math.max(n,1)*32),`تجهيز الصور (${i}/${n})…`));
+  if(data.fail>0)throw new Error("تعذر تجهيز "+data.fail+" صورة بعد عدة محاولات، فلم يُنشأ التقرير حتى لا يخرج ناقصاً. تأكد من الاتصال وأعد المحاولة، أو اختر جودة «متوسطة».");
   step(48,"تحليل البيانات وتنسيق الصفحات…");
   const root=document.createElement("div");root.style.cssText="position:fixed;left:-12000px;top:0;pointer-events:none";document.body.appendChild(root);
   try{
@@ -846,13 +859,62 @@ async function rpBuild(cfg){
     const blob=doc.output("blob"),name=rpName(p,cfg);
     if(RP.url)URL.revokeObjectURL(RP.url);
     RP.blob=blob;RP.url=URL.createObjectURL(blob);
-    let canShare=false;try{canShare=!!(navigator.canShare&&navigator.canShare({files:[new File([blob],name,{type:"application/pdf"})]}))}catch(e){}
+    let canShare=false;try{canShare=rpCanShare()}catch(e){}
     S.rep={...cfg,phase:"done",name,pages:pages.total,size:fmtSize(blob.size),canShare,fail:data.fail};render();
   }finally{root.remove()}
 }
 const rpName=(p,cfg)=>(cfg.full?`${p.name} - ${cfg.title} ${iso(new Date())}`:`${p.name} - ${cfg.title} ${cfg.from} إلى ${cfg.to}`).replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()+".pdf";
 function rpDownload(){const a=document.createElement("a");a.href=RP.url;a.download=S.rep.name;document.body.appendChild(a);a.click();a.remove()}
-async function rpShare(){try{await navigator.share({files:[new File([RP.blob],S.rep.name,{type:"application/pdf"})],title:S.rep.name})}catch(e){if(e.name!=="AbortError")alert("تعذرت المشاركة: "+(e.message||e))}}
+/* انتظار فك ترميز كل الصور داخل الصفحة قبل التقاطها (سبب الصور الرمادية: الالتقاط قبل جاهزية الصورة) */
+async function rpReady(pg){
+  const imgs=[...pg.querySelectorAll("img")];
+  await Promise.all(imgs.map(async im=>{
+    if(!im.complete||!im.naturalWidth)await new Promise(r=>{im.addEventListener("load",r,{once:true});im.addEventListener("error",r,{once:true});setTimeout(r,8000)});
+    try{await im.decode()}catch(e){}
+  }));
+  if(imgs.some(im=>!im.complete||!im.naturalWidth))throw new Error("تعذر تحميل صورة داخل صفحات التقرير");
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+}
+/* هل ظهرت أي صورة كمستطيل رمادي فارغ في اللقطة؟ */
+function rpGrey(cv,pg){
+  const k=cv.width/pg.offsetWidth,pr=pg.getBoundingClientRect(),cx=cv.getContext("2d");
+  for(const im of pg.querySelectorAll(".pf img,.pp img,.im img")){
+    const r=im.getBoundingClientRect();
+    if(r.width<8||r.height<8)return true;
+    let n=0,g=0;
+    for(const fx of [.2,.5,.8])for(const fy of [.2,.5,.8]){
+      const x=Math.round((r.left-pr.left+r.width*fx)*k),y=Math.round((r.top-pr.top+r.height*fy)*k);
+      if(x<0||y<0||x>=cv.width||y>=cv.height)continue;
+      const d=cx.getImageData(x,y,1,1).data;n++;
+      if(Math.abs(d[0]-238)<=4&&Math.abs(d[1]-241)<=4&&Math.abs(d[2]-245)<=4)g++;
+    }
+    if(n&&g===n)return true;
+  }
+  return false;
+}
+async function rpCapture(pg,sc){
+  try{Intl.Segmenter=undefined}catch(e){}
+  for(let a=0;a<3;a++){
+    await rpReady(pg);
+    const s=a===0?sc:Math.max(1,sc*(a===1?.8:.65));
+    const cv=await html2canvas(pg,{scale:s,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
+    if(!rpGrey(cv,pg))return cv;
+    cv.width=cv.height=0;await new Promise(r=>setTimeout(r,400));
+  }
+  throw new Error("تعذر رسم الصور داخل التقرير بشكل سليم. أعد المحاولة، أو اختر جودة «متوسطة» لتقليل استهلاك ذاكرة الجهاز.");
+}
+const rpCanShare=()=>{try{return !!(navigator.canShare&&navigator.canShare({files:[new File([new Blob(["x"])],"a.pdf",{type:"application/pdf"})]}))}catch(e){return false}};
+async function rpShareFile(blob,name){
+  const tries=[()=>({files:[new File([blob],name,{type:"application/pdf"})],title:name}),()=>({files:[new File([blob],name,{type:"application/pdf"})]}),()=>({files:[new File([blob],"Report-"+iso(new Date()).replace(/-/g,"")+".pdf",{type:"application/pdf"})]})];
+  let last=null;
+  for(const t of tries){
+    try{await navigator.share(t());return}
+    catch(e){if(e&&e.name==="AbortError")return;last=e}
+  }
+  alert("تعذرت المشاركة"+(last?" ("+(last.name||"")+(last.message?": "+last.message:"")+")":"")+".\nاستخدم «تحميل» ثم شارك الملف من تطبيق الملفات.");
+}
+async function rpShare(){return rpShareFile(RP.blob,S.rep.name)}
+async function mRepShare(){const r=MT.rep;if(r&&r.blob)return rpShareFile(r.blob,r.name)}
 function rpPreview(){window.open(RP.url,"_blank")}
 
 /* —— البيانات —— */
@@ -887,18 +949,27 @@ function rpClassify(rows,f,t){
     lastAny:rows.length?new Date(Math.max(...rows.map(e=>+new Date(e.created_at)))):null,
     img:{},fail:0,cover:""};
 }
+const rpBlank=c=>{try{const t=document.createElement("canvas");t.width=t.height=16;const x=t.getContext("2d");x.drawImage(c,0,0,16,16);const d=x.getImageData(0,0,16,16).data;let m=0;for(let i=0;i<d.length;i+=4)m=Math.max(m,Math.abs(d[i]-238),Math.abs(d[i+1]-241),Math.abs(d[i+2]-245));return m<=3}catch(e){return false}};
 async function rpPrep(url,mode,L){
   const r=await fetch(url);if(!r.ok)throw new Error("HTTP "+r.status);
   const u=URL.createObjectURL(await r.blob());
   try{
     const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("decode"));i.src=u});
-    const cv=mode==="cover",nw=img.naturalWidth,nh=img.naturalHeight,ms=Math.min(1,Math.max(L.W,L.H)/Math.max(nw,nh));
-    /* الصورة العادية تحتفظ بنسبتها كاملة بلا قص ولا حواف رمادية؛ الغلاف فقط يُقصّ ليملأ الإطار */
-    const W=cv?1428:Math.max(1,Math.round(nw*ms)),H=cv?1000:Math.max(1,Math.round(nh*ms)),c=document.createElement("canvas");c.width=W;c.height=H;
-    const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
-    const s=cv?Math.max(W/nw,H/nh):W/nw,w=nw*s,h=nh*s;
-    x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
-    const out=c.toDataURL("image/jpeg",.84);c.width=c.height=0;return out;
+    try{await img.decode()}catch(e){}
+    const cv=mode==="cover",nw=img.naturalWidth,nh=img.naturalHeight;
+    if(!nw||!nh)throw new Error("decode");
+    /* الصورة العادية تحتفظ بنسبتها كاملة بلا قص؛ الغلاف فقط يُقصّ ليملأ الإطار.
+       إن خرجت اللوحة رمادية (حد ذاكرة canvas في الآيباد/الآيفون) نعيد الرسم بمقاس أصغر بدل أن تدخل صورة فارغة التقرير */
+    for(const f of [1,.6,.35]){
+      const ms=Math.min(1,Math.max(L.W,L.H)/Math.max(nw,nh))*f;
+      const W=cv?Math.round(1428*f):Math.max(1,Math.round(nw*ms)),H=cv?Math.round(1000*f):Math.max(1,Math.round(nh*ms)),c=document.createElement("canvas");c.width=W;c.height=H;
+      const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
+      const s=cv?Math.max(W/nw,H/nh):W/nw,w=nw*s,h=nh*s;
+      x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+      const ok=!rpBlank(c),out=ok?c.toDataURL("image/jpeg",.84):"";c.width=c.height=0;
+      if(ok&&out.length>1000)return out;
+    }
+    throw new Error("blank");
   }finally{URL.revokeObjectURL(u)}
 }
 async function rpImages(p,cfg,data,prog){
@@ -909,9 +980,9 @@ async function rpImages(p,cfg,data,prog){
     (d||[]).forEach(x=>{if(x.signedUrl)urls[x.path]=x.signedUrl});
   }
   const jobs=want.filter(x=>urls[x]),q=[...jobs];let done=0,fail=want.length-jobs.length;
-  await Promise.all(Array.from({length:3},async()=>{
+  await Promise.all(Array.from({length:2},async()=>{
     while(q.length){const path=q.shift();
-      try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit",L)}catch(e){fail++}
+      let ok=false;for(let a=0;a<3&&!ok;a++){try{data.img[path]=await rpPrep(urls[path],path===p.cover_path?"cover":"fit",L);ok=true}catch(e){await new Promise(r=>setTimeout(r,600*(a+1)))}}if(!ok)fail++
       prog(++done,jobs.length)}
   }));
   data.cover=cfg.coverOn&&cfg.coverImageOn?(data.img[p.cover_path]||""):"";
@@ -1042,6 +1113,8 @@ function rpPages(p,cfg,d,root){
   if(cfg.projectInfoOn&&projectRows.length){put(sec("بيانات المشروع"));mark();put('<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px">'+projectRows.map(x=>'<div style="border:1px solid #e3e9ef;border-radius:9px;padding:8px 10px"><small style="display:block;color:#8996a5">'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div>')}
   const teamRows=[["مدير المشروع",p.pm_name],["مدير الموقع",p.site_manager],["المقاول",p.contractor_name]].filter(x=>x[1]);
   if(teamRows.length)put('<div><div class="st">فريق المشروع</div><div class="team">'+teamRows.map(x=>'<div><small>'+esc(x[0])+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div></div>');
+  const priInfo=cfg.showPrice?rpPrice(p):null;
+  if(priInfo)put('<div class="gh"><div><small>السعر المعتمد</small><b>'+esc(money(priInfo.v))+' ر.س</b></div><div class="cn">'+(priInfo.ap?'<span>'+esc(priInfo.ap)+'</span>':'')+'</div></div>');
   const manualLabels={obstacles:"المعوقات التي واجهتنا بالمشروع",info:"معلومات إضافية عن المشروع"};
   Object.entries(cfg.manual||{}).forEach(([k,v])=>{if(!v?.on||!v.text?.trim())return;const blocks=rpWriteBlocks(v.text);if(!blocks.length)return;put('<div>'+sec(manualLabels[k]||k)+blocks.join('')+'</div>');mark()});
   let pn=0;
@@ -1073,7 +1146,7 @@ async function rpPdf(p,cfg,pages,prog){
   for(let i=0;i<N;i++){
     if(RP.cancel)throw new Error("cancel");
     prog(i+1,N);
-    const cv=await html2canvas(pages[i],{scale:sc,backgroundColor:"#ffffff",logging:false,useCORS:true,windowWidth:1280,windowHeight:1280,onclone:(d)=>{const st=d.createElement("style");st.textContent=".rpg,.rpg *{overflow-wrap:normal!important;word-break:normal!important;letter-spacing:0!important;word-spacing:0!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important;text-rendering:optimizeLegibility;font-kerning:normal;font-variant-ligatures:normal}";d.head.appendChild(st)}});
+    const cv=await rpCapture(pages[i],sc);
     if(i)doc.addPage();
     doc.addImage(cv.toDataURL("image/jpeg",ql),"JPEG",0,0,W,H,undefined,"FAST");
     cv.width=cv.height=0;pages[i].remove();
@@ -1475,7 +1548,7 @@ function mTicketHtml(){
   const pr=MPRI[t.priority]||MPRI.normal,rep=MT.rep;
   const repChk=mAdm()&&mRepPriceOk()&&!(rep&&rep.busy)?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rp!==false?"checked":""} onchange="mRepPrice(this.checked)"> إظهار التكلفة في التقرير</label>`:"";
   const repDirChk=mAdm()&&mDirs(t.id).length?`<label class="lbl" style="display:inline-flex;align-items:center;gap:6px;margin:0 6px;cursor:pointer"><input type="checkbox" ${MT.rdir===true?"checked":""} onchange="mRepDir(this.checked)"> إظهار التوجيهات في التقرير</label>`:"";
-  const repBtn=!mAdm()?"":rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
+  const repBtn=!mAdm()?"":rep&&rep.busy?`<span class="lbl">جاري إنشاء التقرير…</span>`:rep&&rep.url?`<a class="btn" href="${rep.url}" download="${esc(rep.name)}">⬇ تحميل التقرير</a>${rpCanShare()?`<button class="btn alt" onclick="mRepShare()">📤 مشاركة</button>`:""}`:`<button class="btn alt" onclick="mPdf('${t.id}')">📄 تقرير PDF</button>`;
   return `<div class="modal"><div class="box mtk"><div class="mh"><h3 style="margin:0">${esc(t.title)}</h3>${t.priority&&t.priority!=="normal"?`<span class="mchip" style="background:${pr[1]}">${pr[0]}</span>`:""}</div>
   <div class="lbl" style="margin:4px 0 10px">${mNo(t)} · 🏪 ${esc(t.branch||"")} · ${mAge(t)}</div>
   ${mQuick(t)}
@@ -2021,7 +2094,14 @@ async function mPdf(id){
     if(pics.length){
       const {data}=await sb.storage.from("media").createSignedUrls([...new Set(pics.map(e=>e.file_path))],3600);
       const um={};(data||[]).forEach(d=>{if(d.signedUrl)um[d.path]=d.signedUrl});
-      for(const e of pics){if(um[e.file_path]&&!img[e.file_path]){try{img[e.file_path]=await rpPrep(um[e.file_path],"fit",{W:700,H:400})}catch{}}}
+      let miss=0;
+      for(const e of pics){
+        if(!um[e.file_path]){miss++;continue}
+        if(img[e.file_path])continue;
+        let ok=false;for(let a=0;a<3&&!ok;a++){try{img[e.file_path]=await rpPrep(um[e.file_path],"fit",{W:900,H:600});ok=true}catch{await new Promise(r=>setTimeout(r,600*(a+1)))}}
+        if(!ok)miss++;
+      }
+      if(miss)throw new Error("تعذر تجهيز "+miss+" صورة بعد عدة محاولات، فلم يُنشأ التقرير حتى لا يخرج ناقصاً. تأكد من الاتصال وأعد المحاولة.");
     }
     const ref=mNo(t),pages=[],mk=h=>{const n=document.createElement("div");n.innerHTML=h.trim();return n.firstElementChild};
     let box=null;const fresh=()=>{const pg=mk(`<div class="rpg"><div class="rph"><div class="l"><img src="icon-192.png"><span>إدارة المشاريع</span></div><div class="r"><b>تقرير صيانة</b><br>${esc(ref)}</div></div><div class="rpc"></div><div class="rpf"><span></span><span class="rf">${ref}</span><span>${esc(dfmt(new Date()))}</span></div></div>`);root.appendChild(pg);pages.push(pg);box=pg.querySelector(".rpc")};
@@ -2079,13 +2159,13 @@ if(mRs("insp")&&t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.
     const {jsPDF}=window.jspdf,doc=new jsPDF({orientation:"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
     pages.forEach((pg,i)=>{const f=pg.querySelector(".rpf span");if(f)f.textContent="صفحة "+(i+1)+" من "+pages.length});
     for(let i=0;i<pages.length;i++){
-      const cv=await html2canvas(pages[i],{scale:1.6,backgroundColor:"#fff",useCORS:true});
+      const cv=await rpCapture(pages[i],1.6);
       if(i)doc.addPage();doc.addImage(cv.toDataURL("image/jpeg",.85),"JPEG",0,0,W,H,undefined,"FAST");
     }
     const blob=doc.output("blob"),name=`${ref} ${iso(new Date())}.pdf`;
     if(MT.rep&&MT.rep.url)URL.revokeObjectURL(MT.rep.url);
     MT.rep={url:URL.createObjectURL(blob),blob,name};
-  }catch(e){MT.rep=null;alert("تعذر: "+(e.message||e))}finally{root.remove();if(S.modal==="mtk")render()}
+  }catch(e){MT.rep=null;alert("تعذر إنشاء التقرير: "+(e.message||e))}finally{root.remove();if(S.modal==="mtk")render()}
 }
 
 /* ===== تنظيف الصور اليتيمة */
