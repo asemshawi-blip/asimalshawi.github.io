@@ -1130,7 +1130,7 @@ function rpPages(p,cfg,d,root){
   const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc">'+phChip(e)+'<b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
   const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push('<div class="pr l'+LY+'">'+h+'</div>')}return rows};
   if(cfg.ba&&d.pairs&&d.pairs.length){fresh();put('<div>'+sec("مقارنة الصور")+'<div class="st">'+d.pairs.length+' مقارنة</div></div>');mark();d.pairs.forEach(pr=>put(pairCard(pr)))}
-  const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort((a,b)=>{const RK={before:0,inspect:1,material:2,during:3,defect:4,handover:5,after:6},r=e=>e.ba in RK?RK[e.ba]:3;return (r(a)-r(b))||(new Date(a.created_at)-new Date(b.created_at))});
   if(allPics.length){const perPage=LY==="3"?6:LY==="2"?2:1;for(let offset=0;offset<allPics.length;offset+=perPage){fresh();const chunk=allPics.slice(offset,offset+perPage);if(offset===0){put('<div>'+sec("صور الفترة المحددة")+'<div class="st">'+allPics.length+' صورة</div></div>');mark()}picRows(chunk).forEach(put)}}
   else put('<div class="em">لا توجد صور مسجلة في الفترة المحددة.</div>');
   /* الفهرس */
@@ -2088,7 +2088,7 @@ async function mPdf(id){
     const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
     let bef=imgs.filter(e=>e.phase==="before"||e.phase==="issue");   /* قبل = صور الطلب + صور المعاينة */
     const aft=imgs.filter(e=>e.phase==="after"),img={};
-    const byId=new Map(imgs.map(e=>[String(e.id),e])),mid=["during","inspect","material","defect","handover"].map(k=>[k,imgs.filter(e=>e.phase===k)]);
+    const byId=new Map(imgs.map(e=>[String(e.id),e])),mid=["inspect","material","during","defect","handover"].map(k=>[k,imgs.filter(e=>e.phase===k)]);
     const prs=imgs.filter(e=>e.ref_id&&byId.get(String(e.ref_id))&&String(e.ref_id)!==String(e.id)).map(a=>({a,b:byId.get(String(a.ref_id))})),pid=new Set(prs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
     const pics=[...new Set([...bef,...aft,...mid.flatMap(x=>x[1]),...prs.flatMap(x=>[x.a,x.b])])];
     if(pics.length){
