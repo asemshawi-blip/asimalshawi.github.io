@@ -2690,6 +2690,15 @@ init();
 
     async function executeAction(action){
       const d=action.data||{};
+      if(action.type==='notify_manager'){
+        if(!['owner','pm'].includes(S.role)) return false;
+        const project=S.projects.find(p=>p.id===d.project_id);
+        if(!project) return false;
+        const roles=(Array.isArray(d.roles)?d.roles:[]).filter(r=>['pm','site','mgmt'].includes(r));
+        if(!roles.length||!d.message) return false;
+        const {error}=await sb.rpc('maint_notify',{p_project:project.id,p_ticket:null,p_roles:roles,p_title:'🤖 متابعة مشروع · '+project.name,p_body:String(d.message).slice(0,200)});
+        return !error;
+      }
       if(action.type==='add_entry'){
         const {error}=await sb.from('entries').insert({project_id:d.project_id, kind:d.kind||'notes', body:d.body, author_role:(window.ROLES&&ROLES[S.role])||S.role});
         if(!error){ try{ if(window.logA) logA('entry', kindLabel(d.kind)+': '+String(d.body||'').slice(0,60), d.project_id); }catch(e){} try{ if(S.cur===d.project_id && window.loadE) await loadE(); if(window.render) render(); }catch(e){} }
@@ -2723,6 +2732,7 @@ init();
 <!-- PM-CACHE-V78-SMART-AGENT -->
 </body>
 </html>
+
 
 
 
