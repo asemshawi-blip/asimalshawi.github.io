@@ -2605,7 +2605,7 @@ init();
 (function(){
   // رابط الـ Edge Function حق مشروعك نفسه - جاهز، لا تعدله
   const EDGE_URL = "https://wmavitpimbcjohcjgqhz.supabase.co/functions/v1/ai-agent";
-  function ready(fn){ if(window.S && window.sb) fn(); else setTimeout(()=>ready(fn),300); }
+  function ready(fn){ if(typeof S !== "undefined" && typeof sb !== "undefined") fn(); else setTimeout(()=>ready(fn),300); }
   ready(function(){
     const HISTORY_KEY='pm_agent_history_v3_smart';
     const btn=document.createElement('button'); btn.id='agentBtn'; btn.innerHTML='🤖<span>الوكيل الذكي</span>'; btn.title='وكيل المشاريع الذكي';
@@ -2722,6 +2722,7 @@ init();
 <!-- PM-CACHE-V78-SMART-AGENT -->
 </body>
 </html>
+
 
 
 
