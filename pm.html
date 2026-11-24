@@ -2599,6 +2599,7 @@ init();
 .agentInput button{background:#0f2742;color:#fff;border:0;padding:0 18px;border-radius:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .aTyping{font-size:12px;color:#64748b;padding:0 14px 6px;background:#f4f6fa;display:none}
 .aBadge{font-size:11px;background:#ecfdf5;color:#166534;padding:3px 8px;border-radius:10px;margin-right:6px}
+#aBar{background:#fff8ec;border-bottom:1px solid #f1e2c4;font-size:13px}#aBar:empty{display:none}#aBar .aRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 14px}#aBar .aApp{padding:9px 14px;border-top:1px solid #f1e2c4;line-height:1.6}#aBar .aApp div{display:flex;gap:6px;margin-top:6px}#aBar .aApp button{border:0;border-radius:8px;padding:5px 12px;font-family:inherit;font-weight:700;cursor:pointer;color:#fff}#aBar .aApp .y{background:#16a34a}#aBar .aApp .n{background:#b91c1c}#aBar .aApp button:disabled{opacity:.5}#aBar label{display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:700}
 @media(max-width:480px){#agentBtn{bottom:16px;left:16px}#agentPanel{left:16px;right:16px;width:auto;bottom:88px}}
 </style>
 <script>
@@ -2611,7 +2612,7 @@ init();
     const btn=document.createElement('button'); btn.id='agentBtn'; btn.innerHTML='🤖<span>الوكيل الذكي</span>'; btn.title='وكيل المشاريع الذكي';
     document.body.appendChild(btn);
     const panel=document.createElement('div'); panel.id='agentPanel';
-    panel.innerHTML=`<div class="agentHead"><div><b>🤖 وكيل المشاريع <span class="aBadge">ذكي • Groq</span></b><span>تشاوره بأي صيغة، ويشاورك قبل أي تعديل</span></div><button class="agentClose">✕</button></div><div class="agentBody" id="agentBody"></div><div class="aQuick"><button data-q="وش رايك في وضع مشاريعي اليوم؟">وش رايك في وضعي؟</button><button data-q="وش المتأخر اليوم؟">المتأخر</button><button data-q="سوي لي تقرير المدير حق اليوم">تقرير المدير</button></div><div class="aTyping" id="aTyping">الوكيل الذكي يفكر...</div><div class="agentInput"><input id="agentInput" placeholder="شاوره بأي صيغة... مثل: هل أأجل مشروع الرياض؟" /><button id="agentSend">إرسال</button></div>`;
+    panel.innerHTML=`<div class="agentHead"><div><b>🤖 وكيل المشاريع <span class="aBadge">وكيل مستقل</span></b><span>تشاوره بأي صيغة، ويشاورك قبل أي تعديل</span></div><button class="agentClose">✕</button></div><div id="aBar"></div><div class="agentBody" id="agentBody"></div><div class="aQuick"><button data-q="وش رايك في وضع مشاريعي اليوم؟">وش رايك في وضعي؟</button><button data-q="وش المتأخر اليوم؟">المتأخر</button><button data-q="سوي لي تقرير المدير حق اليوم">تقرير المدير</button></div><div class="aTyping" id="aTyping">الوكيل الذكي يفكر...</div><div class="agentInput"><input id="agentInput" placeholder="شاوره بأي صيغة... مثل: هل أأجل مشروع الرياض؟" /><button id="agentSend">إرسال</button></div>`;
     document.body.appendChild(panel);
     const bodyEl=panel.querySelector('#agentBody'), inputEl=panel.querySelector('#agentInput'), typingEl=panel.querySelector('#aTyping');
     let isOpen=false, busy=false;
@@ -2619,7 +2620,7 @@ init();
     function loadHist(){ try{ const h=localStorage.getItem(HISTORY_KEY); if(h){ bodyEl.innerHTML=h; bodyEl.scrollTop=bodyEl.scrollHeight; return true; } }catch(e){} return false; }
     function addMsg(t,who='ai'){ const d=document.createElement('div'); d.className='aMsg '+who; d.textContent=t; bodyEl.appendChild(d); bodyEl.scrollTop=bodyEl.scrollHeight; save(); }
     function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    btn.onclick=()=>{ isOpen=!isOpen; panel.classList.toggle('open',isOpen); if(isOpen && !bodyEl.children.length && !loadHist()){ addMsg('هلا فيك 👋\nأنا الحين ذكي، مو حافظ أوامر.\n\nشاورني بأي صيغة تبي:\n• "وش رايك أأجل مشروع الرياض؟"\n• "هل مشروع جدة متعثر ولا ماشي؟"\n• "قارن بين مشروع الرياض وجدة، وش أبدأ فيه؟"\n• "سجل معوق لمشروع الرياض: تأخر التوريد"\n\nأي تعديل بيشاورك قبل ما أنفذه.','ai'); } };
+    btn.onclick=()=>{ isOpen=!isOpen; panel.classList.toggle('open',isOpen); if(isOpen) loadInbox(); if(isOpen && !bodyEl.children.length && !loadHist()){ addMsg('هلا فيك 👋\nأنا الحين ذكي، مو حافظ أوامر.\n\nشاورني بأي صيغة تبي:\n• "وش رايك أأجل مشروع الرياض؟"\n• "هل مشروع جدة متعثر ولا ماشي؟"\n• "قارن بين مشروع الرياض وجدة، وش أبدأ فيه؟"\n• "سجل معوق لمشروع الرياض: تأخر التوريد"\n\nأي تعديل بيشاورك قبل ما أنفذه.','ai'); } };
     panel.querySelector('.agentClose').onclick=()=>{ panel.classList.remove('open'); isOpen=false; };
     panel.querySelectorAll('.aQuick button').forEach(b=> b.onclick=()=>{ inputEl.value=b.dataset.q; send(); });
 
@@ -2653,7 +2654,7 @@ init();
       }catch(e){
         // 2) إذا الذكي مو مركب بعد، طح للوضع الخفيف ولا تترك المستخدم بدون رد
         typingEl.style.display='none'; busy=false;
-        addMsg('⚠️ الوضع الذكي مو شغال الحين — يبدو أن Edge Function مو مركبة بعد أو مفتاح Groq مو محفوظ.\n\nركبها من ملف index.ts اللي عطيتك إياه (دقيقتين)، وبعدها أرد عليك كذكي.\n\nالحين برد عليك بالوضع الخفيف:','ai');
+        addMsg('⚠️ ما قدرت أوصل للوكيل الحين (تأكد أن الدالة ai-agent منشورة). برد عليك بالوضع الخفيف:','ai');
         localFallback(text);
       }
     }
@@ -2705,21 +2706,49 @@ init();
         return !error;
       }
       if(action.type==='update_project_progress'){
+        if(!(Number(d.progress)>=0&&Number(d.progress)<=100)) return false;
         const {error}=await sb.from('projects').update({progress:d.progress}).eq('id',d.project_id);
         if(!error){ const p=S.projects.find(x=>x.id===d.project_id); if(p) p.progress=d.progress; try{ if(window.render) render(); }catch(e){} }
         return !error;
       }
       if(action.type==='update_project'){
-        const {error}=await sb.from('projects').update(d.updates||{}).eq('id',d.project_id);
-        if(!error){ const p=S.projects.find(x=>x.id===d.project_id); if(p) Object.assign(p,d.updates||{}); try{ if(window.render) render(); }catch(e){} }
+        const ALLOW=['due','status','progress','start_date']; const up={}; Object.keys(d.updates||{}).forEach(k=>{ if(ALLOW.includes(k)) up[k]=d.updates[k]; }); if(!Object.keys(up).length) return false;
+        const {error}=await sb.from('projects').update(up).eq('id',d.project_id);
+        if(!error){ const p=S.projects.find(x=>x.id===d.project_id); if(p) Object.assign(p,up); try{ if(window.render) render(); }catch(e){} }
         return !error;
       }
-      if(action.type==='create_project'){
+      if(action.type==='create_project'){ return false;
         const {error}=await sb.from('projects').insert(d);
         if(!error){ try{ await load(); }catch(e){} }
         return !error;
       }
       return false;
+    }
+
+
+    /* ===== صندوق الوكيل: وضع الإجازة + الموافقات + آخر ملخص (للمالك) ===== */
+    async function loadInbox(){
+      const bar=panel.querySelector('#aBar'); bar.innerHTML='';
+      if(S.role!=='owner') return;
+      try{
+        const {data:st}=await sb.from('agent_settings').select('*').eq('id',1).maybeSingle();
+        if(!st) return;
+        const row=document.createElement('div'); row.className='aRow';
+        row.innerHTML='<label><input type="checkbox" id="aVac"'+(st.vacation_mode?' checked':'')+'> 🏖 وضع الإجازة</label><span>'+(st.vacation_mode?'الوكيل يتصرف بدالك':'الوكيل يستأذنك')+'</span>';
+        bar.appendChild(row);
+        row.querySelector('#aVac').onchange=async e=>{ await sb.from('agent_settings').update({vacation_mode:e.target.checked,updated_at:new Date().toISOString()}).eq('id',1); addMsg(e.target.checked?'تم تفعيل وضع الإجازة 🏖 بشتغل حسب قواعدك وأرسل لك ملخص صباح ومساء.':'تم إيقاف وضع الإجازة. أي إجراء بيجيك للموافقة.','ai'); loadInbox(); };
+        const {data:ap}=await sb.from('agent_approvals').select('*').eq('status','pending').order('created_at',{ascending:false}).limit(10);
+        (ap||[]).forEach(a=>{
+          const d=document.createElement('div'); d.className='aApp';
+          d.innerHTML='<b>📋 بانتظار قرارك:</b> '+esc(a.description)+'<div><button class="y">✅ وافق</button><button class="n">❌ ارفض</button></div>';
+          bar.appendChild(d);
+          const done=async(st2,msg)=>{ d.querySelectorAll('button').forEach(b=>b.disabled=true); await sb.from('agent_approvals').update({status:st2,decided_at:new Date().toISOString()}).eq('id',a.id); addMsg(msg,'ai'); loadInbox(); };
+          d.querySelector('.y').onclick=async()=>{ d.querySelectorAll('button').forEach(b=>b.disabled=true); let ok=false; try{ ok=await executeAction(a.action); }catch(e){} if(ok) done('approved','تم ✅ '+a.description); else { d.querySelectorAll('button').forEach(b=>b.disabled=false); addMsg('ما قدرت أنفذ هذا الطلب، تأكد من الصلاحيات.','ai'); } };
+          d.querySelector('.n').onclick=()=>done('rejected','تمام، رفضت: '+a.description);
+        });
+        const {data:br}=await sb.from('agent_log').select('id,result,created_at').eq('tool','daily_brief').order('created_at',{ascending:false}).limit(1);
+        if(br&&br[0]){ const seen=localStorage.getItem('pm_agent_brief_seen'); if(String(br[0].id)!==seen){ localStorage.setItem('pm_agent_brief_seen',String(br[0].id)); addMsg('📰 ملخص الوكيل ('+new Date(br[0].created_at).toLocaleString('ar-SA')+')\n\n'+(br[0].result&&br[0].result.text||''),'ai'); } }
+      }catch(e){}
     }
 
     panel.querySelector('#agentSend').onclick=send;
@@ -2729,7 +2758,7 @@ init();
 </script>
 <!-- ===== نهاية وكيل المشاريع الذكي ===== -->
 
-<!-- PM-CACHE-V78-SMART-AGENT -->
+<!-- PM-CACHE-V79-AUTONOMOUS-AGENT -->
 </body>
 </html>
 
