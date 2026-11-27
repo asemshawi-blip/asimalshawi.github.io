@@ -820,7 +820,7 @@ function reportHtml(){
 }
 function rpPrice(p){
   if(!p)return null;
-  if(p.rq_status==="approved"&&p.rq_total!=null&&p.rq_total!=="")return {v:p.rq_total,ap:"اعتماد "+(p.rq_dec_role||"الإدارة")+(p.rq_dec_by?" · "+p.rq_dec_by:"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"")};
+  if(p.rq_status==="approved"&&p.rq_total!=null&&p.rq_total!=="")return {v:p.rq_total,ap:"اعتماد "+(p.rq_dec_role||"الإدارة")+(p.rq_dec_by?" · "+pmNm(p.rq_dec_by,p.pm_name,p.rq_dec_role):"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"")};
   if(p.price!=null&&p.price!==""&&Number(p.price)>0)return {v:p.price,ap:""};
   return null;
 }
@@ -1314,10 +1314,13 @@ const mMine=t=>{const w=mWho(t);return !!w&&w!=="mgmt"&&(w==="pm"?mAdm():S.role=
 const mCan=t=>{const w=mWho(t);return !!w&&w!=="mgmt"&&(mAdm()||S.role===w)};
 const mCost=t=>t.cost_total!=null&&t.cost_total!==""?t.cost_total:(MT.q[t.id]?MT.q[t.id].total:null);
 /* من اعتمد التكلفة: مدير المشروع/المالك (cost_ok_by) أو الإدارة (mgmt_by) */
-const mApprover=t=>{if(t.mgmt_status==="approved")return{n:t.mgmt_by||t.cost_ok_by||"",r:t.cost_ok_role||"الإدارة",at:t.mgmt_at||t.cost_ok_at};if(t.cost_ok_at)return{n:t.cost_ok_by||"",r:t.cost_ok_role||"مدير المشروع",at:t.cost_ok_at};return null};
+const mApprover=t=>{if(t.mgmt_status==="approved")return{n:pmNm(t.mgmt_by||t.cost_ok_by||"",t.pm_name,t.cost_ok_role||"الإدارة"),r:t.cost_ok_role||"الإدارة",at:t.mgmt_at||t.cost_ok_at};if(t.cost_ok_at)return{n:pmNm(t.cost_ok_by||"",t.pm_name,t.cost_ok_role||"مدير المشروع"),r:t.cost_ok_role||"مدير المشروع",at:t.cost_ok_at};return null};
 const mApprTxt=t=>{const a=mApprover(t);return a?(a.n?esc(a.n)+" · ":"")+esc(a.r)+" · "+dfmt(a.at):""};
 const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم"):"-";
-const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
+const mMeName=()=>(S.me&&S.me.name)||(["owner","pm"].includes(S.role)?"مدير المشروع":(S.user.email||"").split("@")[0])||ROLES[S.role]||"";
+/* اسم المستخدم (إنجليزي بدون مسافات مثل asem.shawi) يُعرض باسم مدير المشروع بدل اليوزر */
+const pmNm=(v,pn,role)=>{v=String(v||"");if(!v||!/^[A-Za-z0-9._\-]+$/.test(v.trim()))return v;if(role&&!/^مدير (ال)?مشروع$/.test(String(role).trim()))return v;return pn||"مدير المشروع"};
+const rqName=p=>(p&&p.pm_name)||mMeName();
 const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
 const mErr=e=>{const m=(e&&e.message)||String(e||"");alert(/column|schema cache/i.test(m)?(/contractor_phone/i.test(m)?"شغّل supabase/maintenance_contractor_phone.sql في Supabase أولاً.":(/cost_ok_by|cost_ok_role|mgmt_by|rq_/.test(m)?"يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.":"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً."))+"\n\n"+m:m)};
 const mCover=t=>{
@@ -1879,7 +1882,7 @@ const rqLine=x=>(Number(x.q)||0)*(Number(x.u)||0),rqSum=L=>L.reduce((n,x)=>n+rqL
 const rqP=id=>S.projects.find(x=>x.id===id);
 const rqLink=p=>location.origin+location.pathname+"?r="+(p.rq_token||"");
 const rqShareText=p=>`طلب اعتماد تسعيرة ترميم\n${p.name}${p.loc?" · "+p.loc:""}\nالإجمالي: ${money(p.rq_total)} ر.س\n${rqLink(p)}`;
-const rqDecTxt=p=>(p.rq_dec_by?esc(p.rq_dec_by)+" · ":"")+esc(p.rq_dec_role||"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"");
+const rqDecTxt=p=>(p.rq_dec_by?esc(pmNm(p.rq_dec_by,p.pm_name,p.rq_dec_role))+" · ":"")+esc(p.rq_dec_role||"")+(p.rq_dec_at?" · "+dfmt(p.rq_dec_at):"");
 const mgName=()=>{try{return localStorage.getItem("pm_approver_name")||""}catch(e){return""}};
 let RQ=null;
 function rqNotify(p,roles,body){if(!roles||!roles.length)return;try{sb.rpc("maint_notify",{p_project:p.id,p_ticket:null,p_roles:roles,p_title:"تسعيرة ترميم · "+p.name,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
@@ -1901,7 +1904,7 @@ function renoQuoteBox(p){
   <div class="mcostbox"><span>إجمالي التسعيرة</span><b>${money(p.rq_total)} ر.س</b></div>
   <div style="overflow:auto"><table class="mtb"><tr style="font-weight:700"><td>البند</td><td>الكمية</td><td>سعر الوحدة</td><td>الإجمالي</td></tr>${rows}</table></div>
   ${p.rq_note?`<div class="hlq" style="white-space:pre-wrap">${esc(p.rq_note)}</div>`:""}
-  <div class="lbl">سعّرها: ${esc(p.rq_by||"-")}${p.rq_at?" · "+dfmt(p.rq_at):""}</div>`;
+  <div class="lbl">سعّرها: ${esc(pmNm(p.rq_by,p.pm_name)||"-")}${p.rq_at?" · "+dfmt(p.rq_at):""}</div>`;
   if(st==="approved")h+=`<div class="mwait" style="background:#f0fdf4;border:1px solid #16a34a;color:#166534">✅ اعتمدها: ${rqDecTxt(p)}</div>`;
   if(st==="rejected")h+=`<div class="hlq"><b>رُفضت:</b> ${esc(p.rq_reject||"")} · ${rqDecTxt(p)}</div>`;
   if(st==="pending")h+=ed?`<div class="mbtns">${big("✔ اعتماد التسعيرة",`rqApprove('${id}')`,"#16a34a")}${big("📨 رفع للإدارة",`rqUp('${id}')`,"#db2777")}<button class="btn alt" onclick="rqOpen()">✎ تعديل التسعيرة</button></div>`:`<div class="mwait">⏳ بانتظار اعتماد مدير المشروع</div>`;
@@ -1941,11 +1944,11 @@ async function rqSend(){await mOnce(async()=>{
   if(L.some(x=>!x.d))return alert("اكتب وصف كل بند");
   if(L.some(x=>!(x.q>0)))return alert("الكمية يجب أن تكون أكبر من صفر");
   const tot=+rqSum(L).toFixed(2);if(!(tot>0))return alert("الإجمالي يجب أن يكون أكبر من صفر");
-  await rqSave(p,{rq_items:L,rq_total:tot,rq_note:(RQ.note||"").trim()||null,rq_by:mMeName(),rq_at:new Date().toISOString(),rq_status:"pending",rq_reject:null,rq_dec_by:null,rq_dec_role:null,rq_dec_at:null,rq_token:null},"سُعّرت أعمال الترميم "+money(tot)+" ر.س وأُرسلت للاعتماد · "+mMeName(),[],"حُفظت التسعيرة ✔");
+  await rqSave(p,{rq_items:L,rq_total:tot,rq_note:(RQ.note||"").trim()||null,rq_by:rqName(p),rq_at:new Date().toISOString(),rq_status:"pending",rq_reject:null,rq_dec_by:null,rq_dec_role:null,rq_dec_at:null,rq_token:null},"سُعّرت أعمال الترميم "+money(tot)+" ر.س وأُرسلت للاعتماد · "+rqName(p),[],"حُفظت التسعيرة ✔");
 })}
 async function rqApprove(id){await mOnce(async()=>{
   const p=rqP(id);if(!p||!confirm("اعتماد التسعيرة بمبلغ "+money(p.rq_total)+" ر.س؟ سيُسجَّل اسمك كمعتمد."))return;
-  await rqSave(p,{rq_status:"approved",rq_reject:null,rq_dec_by:mMeName(),rq_dec_role:ROLES[S.role]||"",rq_dec_at:new Date().toISOString(),rq_token:null},"اعتُمدت تسعيرة الترميم "+money(p.rq_total)+" ر.س بواسطة "+mMeName()+" ("+(ROLES[S.role]||"")+")",[],"اعتُمدت التسعيرة ✔");
+  await rqSave(p,{rq_status:"approved",rq_reject:null,rq_dec_by:rqName(p),rq_dec_role:ROLES[S.role]||"",rq_dec_at:new Date().toISOString(),rq_token:null},"اعتُمدت تسعيرة الترميم "+money(p.rq_total)+" ر.س بواسطة "+rqName(p)+" ("+(ROLES[S.role]||"")+")",[],"اعتُمدت التسعيرة ✔");
 })}
 async function rqUp(id){await mOnce(async()=>{
   const p=rqP(id);if(!p)return;
