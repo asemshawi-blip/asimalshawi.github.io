@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="المشاريع">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"></noscript>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin><link rel="preconnect" href="https://wmavitpimbcjohcjgqhz.supabase.co" crossorigin><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--navy:#0f2742;--bg:#f4f6fa;--card:#fff;--text:#1b2a3b;--muted:#64748b;--line:#e2e8f0;--run:#2563eb;--late:#dc2626;--plan:#d97706;--done:#16a34a}
@@ -129,6 +129,17 @@ header h1{margin:0;font-size:19px}.hb{display:flex;gap:8px;align-items:center}.r
 @media(max-width:850px){.prGrid{grid-template-columns:1fr}.priceList{max-height:26vh}.prMeta{grid-template-columns:repeat(2,minmax(110px,1fr))}.modal .box.prApp{padding:12px}}
 @media print{body *{visibility:hidden!important}.pricePrint,.pricePrint *{visibility:visible!important}.pricePrint{position:absolute!important;inset:0!important;width:100%!important}.pricePrint .prActions,.pricePrint input,.pricePrint select,.pricePrint button{display:none!important}.prLine{break-inside:avoid}.prTotals{break-inside:avoid}}
 .prRange{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px}.prRange span{background:#f1f5f9;border-radius:8px;padding:6px 4px;text-align:center;font-size:12px;color:#64748b}.prRange b{display:block;font-size:17px;color:#0f2740}.prAlert{background:#fee2e2;border:1px solid #dc2626;color:#991b1b;border-radius:10px;padding:9px 12px;margin:8px 0;font-weight:700}.prWarn{background:#fef3c7;border:1px solid #d97706;color:#92400e;border-radius:10px;padding:8px 12px;margin:8px 0;font-size:14px}.prOk{color:#166534;font-size:14px;margin:6px 0}
+.modal .box.pgmx{max-width:980px;max-height:94vh}.pgmh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pgmtb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.pgmtb .btn{margin:0;padding:8px 14px}.pgmtb select{width:auto;min-width:160px;margin:0}.pgmtb input{width:90px;margin:0;padding:8px}
+.pgmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-top:8px}
+.pgmt{position:relative;border:3px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#eef1f5;cursor:pointer;user-select:none;-webkit-user-select:none}.pgmt.on{border-color:#ed8700;box-shadow:0 0 0 2px #ed870055}
+.pgmt img{display:block;width:100%;height:130px;object-fit:contain;background:#eef1f5;margin:0}
+.pgmt small{display:block;padding:3px 6px;font-size:11px;color:#475569;min-height:24px;background:#fff;line-height:1.4}
+.pgmn{position:absolute;top:4px;inset-inline-start:4px;background:#102944;color:#fff;border-radius:8px;min-width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;padding:0 5px;z-index:1}
+.pgmc{position:absolute;top:4px;inset-inline-end:4px;background:#ed8700;color:#fff;border-radius:50%;width:24px;height:24px;display:none;align-items:center;justify-content:center;font-size:14px;font-weight:700;z-index:1}.pgmt.on .pgmc{display:flex}
+.pgmp{position:absolute;bottom:28px;inset-inline-start:4px;color:#fff;font-size:10.5px;border-radius:10px;padding:0 8px;z-index:1}
+.pgmg{grid-column:1/-1;font-weight:700;color:#102944;margin-top:6px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.pgmf{position:sticky;bottom:-18px;background:#fff;padding:10px 0 4px;border-top:1px solid var(--line);margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}.pgmf .btn{margin:0}
 </style>
 </head>
 <body>
@@ -152,6 +163,7 @@ const TABS=[
 {k:"issues",n:"المعوقات والملاحظات",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"اكتب المعوق أو الملاحظة..."},
 {k:"reports",n:"التقارير",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"عنوان التقرير وملخصه...",file:"*/*"},
 {k:"media",n:"الصور",see:"owner,pm,mgmt,contr,site",add:"owner,pm,contr,site",ph:"وصف (اختياري)",file:"image/*",multi:1}];
+const PAGE=40;
 let S={works:[],user:null,role:"none",projects:[],cur:null,tab:"notes",entries:[],urls:{},modal:null,link:"",wl:{obs:[],notes:[]},sites:[],ps:[],siteErr:"",q:""};
 
 /* ===== 2) مساعدات ===== */
@@ -207,12 +219,14 @@ async function boot(){
   if(inv()){await sb.rpc("accept_invite",{t:inv()});history.replaceState(null,"",location.pathname)}
   const {data:p}=await sb.from("profiles").select("role").eq("id",S.user.id).single();
   S.role=p?.role||"none";
-  const loads=[load()];
-  if(mSee())loads.push(loadM().catch(e=>{MT.err=String(e&&e.message||e)}));
-  await Promise.all(loads);
+  const q0=new URLSearchParams(location.search),needM=!!(q0.get("m")||q0.get("t")==="maint");
+  const mp=mSee()?loadM().catch(e=>{MT.err=String(e&&e.message||e)}):Promise.resolve();   /* الصيانة تُحمَّل بالتوازي ولا تؤخر ظهور المشاريع */
+  await load();
+  if(needM)await mp;
   render();
   const dl=await deepLink();
-  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mSiteWelcome()}
+  if(isMg()&&!dl){await loadWelcome();S.modal="welcome";render()}else if(S.role==="site"&&!dl){await mp;await mSiteWelcome()}
+  mp.then(()=>{if(!S.cur&&!S.modal)render()});
   checkPush();
 }
 
@@ -258,8 +272,10 @@ async function up(pid,f,quiet){
 }
 async function loadE(){
   if(S.tab==="works")return loadW();
-  const {data}=await sb.from("entries").select("*").eq("project_id",S.cur).eq("kind",S.tab).order("created_at",{ascending:false});
-  S.entries=data||[];await sign(S.entries.map(e=>e.file_path));
+  const lim=S.lim||PAGE,pid=S.cur,tab=S.tab;
+  const {data}=await sb.from("entries").select("*").eq("project_id",pid).eq("kind",tab).order("created_at",{ascending:false}).range(0,lim);
+  if(S.cur!==pid||S.tab!==tab)return;
+  const L=data||[];S.more=L.length>lim;S.entries=L.slice(0,lim);await sign(S.entries.map(e=>e.file_path));
 }
 
 
@@ -492,12 +508,12 @@ function defTab(id){
   return "works";
 }
 async function openP(id){
-  S.cur=id;S.view=null;S.tab=defTab(id);S.entries=[];
+  S.cur=id;S.view=null;S.tab=defTab(id);S.entries=[];S.lim=0;S.more=false;S.ld=0;
   render();scrollTo(0,0);
-  await Promise.allSettled([loadE(),loadPS()]);
-  if(S.cur===id)render();
+  await Promise.allSettled([loadE().then(()=>{if(S.cur===id)render()}),loadPS().then(()=>{if(S.cur===id)render()})]);
 }
-async function setTab(k){S.tab=k;S.pe=null;S.peSel=null;await loadE();render()}
+async function setTab(k){S.tab=k;S.pe=null;S.peSel=null;S.lim=0;S.more=false;if(k!=="works"){S.entries=[];S.ld=1;render()}await loadE();S.ld=0;render()}
+async function moreE(){S.lim=(S.lim||PAGE)+PAGE;await loadE();render()}
 /* ملفات رُفعت دفعة واحدة بنفس النص: تُعرض تحت نص واحد بدل تكراره على كل صورة */
 function entGroups(list){
   const out=[],open=new Map();
@@ -565,7 +581,7 @@ function proj(){
   <div class="bar ${ST[p.status][1]}"><i style="width:${clamp(p.progress)}%"></i></div><div class="row"><span>الإنجاز ${clamp(p.progress)}%</span></div>
   ${det}${talk}${acts}${["owner","pm"].includes(S.role)?`<div class="acts"><button class="btn alt" onclick="openReport()">📄 إصدار تقرير PDF</button></div>`:""}${renoQuoteBox(p)}${qxBox("p",p.id)}${ed?siteBox():""}
   <div class="tabs">${T.map(x=>`<div class="tab ${x.k===S.tab?"on":""}" onclick="setTab('${x.k}')">${x.n}</div>`).join("")}</div>
-  <div class="box">${S.tab==="works"?worksHtml(p):add+(items||'<div class="empty">لا يوجد شيء بعد</div>')}</div>`;
+  <div class="box">${S.tab==="works"?worksHtml(p):add+(S.tab==="media"&&ed?`<div class="acts"><button class="btn alt" onclick="pgmOpen('p','${p.id}')">🗂 ترتيب الصور وتغيير حالتها</button></div>`:"")+(items||(S.ld?'<div class="empty">جاري التحميل…</div>':'<div class="empty">لا يوجد شيء بعد</div>'))+(S.more?'<button class="btn alt" style="width:100%" onclick="moreE()">عرض المزيد</button>':"")}</div>`;
 }
 
 /* ===== 6) عمليات المشروع والمدخلات ===== */
@@ -693,7 +709,7 @@ const RPCSS=`
 .rpg .pr.l3{gap:12px}
 .rpg .pf{flex:1;width:0;border:1px solid #e3e9ef;border-radius:10px;overflow:hidden;background:#eef1f5}.rpg .pf .pc{background:#fff}
 .rpg .pf img{display:block;width:auto;max-width:100%;height:auto;margin:0 auto}
-.rpg .pf.l1 img{max-height:640px}.rpg .pf.l2 img{max-height:430px}.rpg .pf.l3 img{max-height:330px}
+.rpg .pf.l1 img{max-height:720px}.rpg .pf.l2 img{max-height:660px}.rpg .pf.l3 img{max-height:330px}
 .rpg .pf .pc{padding:8px 11px 9px;font-size:11.5px;line-height:1.7;min-height:52px}
 .rpg .pf.l3 .pc{padding:6px 8px 7px;font-size:10.5px;min-height:46px}
 .rpg .pp{border:1px solid #e3e9ef;border-radius:12px;overflow:hidden;margin-bottom:14px;background:#fff}.rpg .pp .pw{display:flex}
@@ -734,7 +750,7 @@ const RPCSS=`
 .rpg.rcv .pe div{flex:1;border:1px solid #e3e9ef;border-radius:12px;padding:10px 14px;background:#fff}
 .rpg.rcv .pe small{display:block;color:#8996a5;font-size:11px}
 .rpg.rcv .pe b{display:block;color:#102944;font-size:14.5px;font-weight:700;line-height:1.5}
-.rpg.rcv .im{margin:22px 46px 0;height:500px;border-radius:14px;overflow:hidden;border:1px solid #e3e9ef;background:#eef1f5}
+.rpg.rcv .im{margin:22px 46px 0;height:600px;border-radius:14px;overflow:hidden;border:1px solid #e3e9ef;background:#eef1f5}
 .rpg.rcv .im img{display:block;width:100%;height:100%}
 .rpg.rcv .qs{margin:22px 46px 0;height:500px;border-radius:14px;border:1px solid #e3e9ef;background:#f6f9fc;padding:30px 34px}
 .rpg.rcv .qs .big{font-size:78px;font-weight:800;color:#102944;line-height:1.1}
@@ -796,7 +812,7 @@ function reportHtml(){
   <label style="display:flex;align-items:center;gap:8px;margin:10px 0"><input id="rpba" type="checkbox" ${r.ba!==false?"checked":""} style="width:18px;height:18px">إظهار مقارنات الصور (صورة مقابل صورة، مثل قبل / بعد)</label>
   ${rpPriceBox(p,r,canPrice)}
   <label class="lbl">تخطيط الصور</label><select id="rpl">${sel("3","شبكة مصغرة — 3 صور في الصف")}${sel("2","صورتان في الصف")}${sel("1","صورة في كل صف")}</select>
-  <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">إضافة أسماء المراحل أسفل الصور</button>
+  <button class="btn alt" type="button" onclick="pgmOpen('p',S.cur)">🗂 ترتيب الصور وتغيير حالتها</button> <button class="btn alt" type="button" onclick="rpChoosePhotoStages(this)">إضافة أسماء المراحل أسفل الصور</button>
   ${r.photoList?.length?`<div style="margin:8px 0;max-height:220px;overflow:auto">${r.photoList.map(e=>`<label class="lbl" style="display:block;margin:6px 0">${esc(dfmt(e.created_at))} · ${esc(cut(cleanTxt(e.body)||"صورة من الموقع",50))}<select onchange="rpSavePhotoStage('${esc(String(e.id))}',this.value)" style="display:block;width:100%"><option value="">بدون اسم مرحلة</option>${(r.phaseOptions||[]).map(f=>`<option value="${esc(f)}" ${r.stageByPhoto?.[e.id]===f?"selected":""}>${esc(f)}</option>`).join("")}</select></label>`).join("")}</div>`:`<p class="lbl">تظهر الصور كلها تلقائياً. اختر اسم مرحلة لكل صورة عند الرغبة.</p>`}
   <p class="lbl">الأقسام الإضافية وأسماء المراحل اختيارية.</p>
   <label class="lbl">الجودة</label><select id="rpq"><option value="hi" ${r.q==="hi"?"selected":""}>عالية (للعرض والطباعة)</option><option value="md" ${r.q==="md"?"selected":""}>متوسطة (حجم أصغر للمشاركة)</option></select>
@@ -943,7 +959,7 @@ function rpClassify(rows,f,t){
   rpMarkDup(rows);
   const inP=e=>{const d=new Date(e.created_at);return d>=f&&d<=t},isImg=e=>e.file_path&&(e.file_type||"").startsWith("image");
   const issAll=rows.filter(e=>e.kind==="issues"),byId=new Map(rows.map(e=>[String(e.id),e]));
-  const pairs=rows.filter(e=>e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&String(x.b.id)!==String(x.a.id)&&isImg(x.b)).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+  const pairs=rows.filter(e=>e.ba_ref&&isImg(e)&&inP(e)).map(a=>({a,b:byId.get(String(a.ba_ref))})).filter(x=>x.b&&String(x.b.id)!==String(x.a.id)&&isImg(x.b)).sort((x,y)=>pgmCmpD(x.a,y.a));
   return {f,t,pairs,pairIds:new Set(),
     ups:rows.filter(e=>e.kind==="reports"&&inP(e)&&cleanTxt(e.body)&&!e._dup),
     atts:rows.filter(e=>e.kind==="reports"&&inP(e)&&e.file_path&&!isImg(e)).length,
@@ -965,9 +981,9 @@ async function rpPrep(url,mode,L){
        إن خرجت اللوحة رمادية (حد ذاكرة canvas في الآيباد/الآيفون) نعيد الرسم بمقاس أصغر بدل أن تدخل صورة فارغة التقرير */
     for(const f of [1,.6,.35]){
       const ms=Math.min(1,Math.max(L.W,L.H)/Math.max(nw,nh))*f;
-      const W=cv?Math.round(1428*f):Math.max(1,Math.round(nw*ms)),H=cv?Math.round(1000*f):Math.max(1,Math.round(nh*ms)),c=document.createElement("canvas");c.width=W;c.height=H;
+      const W=cv?Math.round(1428*f):Math.max(1,Math.round(nw*ms)),H=cv?Math.round(1187*f):Math.max(1,Math.round(nh*ms)),c=document.createElement("canvas");c.width=W;c.height=H;
       const x=c.getContext("2d");x.fillStyle="#eef1f5";x.fillRect(0,0,W,H);
-      const s=cv?Math.max(W/nw,H/nh):W/nw,w=nw*s,h=nh*s;
+      const s=cv?Math.min(W/nw,H/nh):W/nw,w=nw*s,h=nh*s;
       x.drawImage(img,(W-w)/2,(H-h)/2,w,h);
       const ok=!rpBlank(c),out=ok?c.toDataURL("image/jpeg",.84):"";c.width=c.height=0;
       if(ok&&out.length>1000)return out;
@@ -1133,7 +1149,7 @@ function rpPages(p,cfg,d,root){
   const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc">'+phChip(e)+'<b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
   const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push('<div class="pr l'+LY+'">'+h+'</div>')}return rows};
   if(cfg.ba&&d.pairs&&d.pairs.length){fresh();put('<div>'+sec("مقارنة الصور")+'<div class="st">'+d.pairs.length+' مقارنة</div></div>');mark();d.pairs.forEach(pr=>put(pairCard(pr)))}
-  const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort((a,b)=>{const RK={before:0,inspect:1,material:2,during:3,defect:4,handover:5,after:6},r=e=>e.ba in RK?RK[e.ba]:3;return (r(a)-r(b))||(new Date(a.created_at)-new Date(b.created_at))});
+  const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort(pgmCmpP);
   if(allPics.length){const perPage=LY==="3"?6:LY==="2"?2:1;for(let offset=0;offset<allPics.length;offset+=perPage){fresh();const chunk=allPics.slice(offset,offset+perPage);if(offset===0){put('<div>'+sec("صور الفترة المحددة")+'<div class="st">'+allPics.length+' صورة</div></div>');mark()}picRows(chunk).forEach(put)}}
   else put('<div class="em">لا توجد صور مسجلة في الفترة المحددة.</div>');
   /* الفهرس */
@@ -1237,15 +1253,43 @@ async function saveProj(){
    if(ch.length)logA("project",ch.join(" · "),data.id)}
   S.modal=null;await load();
 }
+/* حذف ملفات من التخزين على دفعات مع التحقق من الأخطاء */
+async function rmFiles(paths){
+  paths=[...new Set((paths||[]).filter(Boolean))];let n=0,err="";
+  for(let i=0;i<paths.length;i+=100){const {data,error}=await sb.storage.from("media").remove(paths.slice(i,i+100));if(error){err=error.message;break}n+=(data||[]).length}
+  return {n,err,total:paths.length};
+}
+async function listFolder(prefix){
+  const out=[];
+  for(let o=0;;o+=1000){const {data,error}=await sb.storage.from("media").list(prefix,{limit:1000,offset:o});if(error)throw error;(data||[]).forEach(f=>{if(f.id)out.push(prefix+"/"+f.name)});if(!data||data.length<1000)break}
+  return out;
+}
+async function quoteFiles(col,id){
+  try{const {data:rs}=await sb.from("quote_rounds").select("id").eq(col,String(id));const ids=(rs||[]).map(r=>r.id);if(!ids.length)return [];
+    const {data:of}=await sb.from("quote_offers").select("file_path").in("round_id",ids).not("file_path","is",null);return (of||[]).map(o=>o.file_path)}catch(e){return []}
+}
 async function delProj(){
-  if(!confirm("حذف المشروع وكل ما فيه؟"))return;
-  const {data:es}=await sb.from("entries").select("file_path").eq("project_id",S.cur);
-  const paths=(es||[]).map(e=>e.file_path).filter(Boolean);
-  const cp=S.projects.find(x=>x.id===S.cur)?.cover_path;if(cp)paths.push(cp);
-  if(paths.length)await sb.storage.from("media").remove(paths);
-  const {error}=await sb.from("projects").delete().eq("id",S.cur);
-  if(error)return alert(error.message);
-  S.cur=null;S.modal=null;await load();
+  const id=S.cur,p=S.projects.find(x=>x.id===id);if(!p||delProj.b)return;
+  if(!confirm("حذف المشروع «"+p.name+"» نهائياً مع كل صوره وملفاته من التخزين؟\nلا يمكن التراجع."))return;
+  delProj.b=1;
+  try{
+    /* 1) نجمع كل مسارات الملفات: السجلات + الغلاف + عروض الأسعار + أي ملف داخل مجلد المشروع في التخزين */
+    const paths=[];
+    for(let o=0;;o+=1000){const {data,error}=await sb.from("entries").select("file_path").eq("project_id",id).not("file_path","is",null).range(o,o+999);if(error)return alert(error.message);(data||[]).forEach(e=>paths.push(e.file_path));if(!data||data.length<1000)break}
+    if(p.cover_path)paths.push(p.cover_path);
+    paths.push(...await quoteFiles("project_id",id));
+    try{paths.push(...await listFolder(id))}catch(e){}
+    /* 2) نحذف المشروع من قاعدة البيانات أولاً، فإن رُفض لا نلمس الملفات */
+    const {data:del,error}=await sb.from("projects").delete().eq("id",id).select("id");
+    if(error)return alert(error.message);
+    if(!del||!del.length)return alert("ما انحذف المشروع: لا توجد صلاحية حذف.");
+    /* 3) نحذف الملفات من التخزين نهائياً */
+    const r=await rmFiles(paths);
+    S.cur=null;S.modal=null;
+    if(r.err)alert("حُذف المشروع من القاعدة، لكن تعذر حذف بعض ملفاته من التخزين ("+r.err+").\nافتح «🧹 المساحة» لحذف المتبقي.");
+    else mToast("تم حذف المشروع وكل ملفاته نهائياً"+(r.total?" ("+r.total+" ملف)":""));
+    await load();
+  }finally{delProj.b=0}
 }
 
 
@@ -1276,7 +1320,9 @@ const mDur=t=>t.work_qty?(+t.work_qty)+" "+(t.work_unit==="h"?"ساعة":"يوم
 const mMeName=()=>(S.me&&S.me.name)||(S.user.email||"").split("@")[0]||ROLES[S.role]||"";
 const mAge=t=>{const h=(Date.now()-new Date(t.stage_at||t.created_at))/36e5;return h<1?"الآن":h<24?"منذ "+Math.floor(h)+" ساعة":"منذ "+Math.floor(h/24)+" يوم"};
 const mErr=e=>{const m=(e&&e.message)||String(e||"");alert(/column|schema cache/i.test(m)?(/contractor_phone/i.test(m)?"شغّل supabase/maintenance_contractor_phone.sql في Supabase أولاً.":(/cost_ok_by|cost_ok_role|mgmt_by|rq_/.test(m)?"يلزم تشغيل ملف reno_approvals.sql في Supabase أولاً.":"يلزم تشغيل ملف maintenance_v2.sql في Supabase أولاً."))+"\n\n"+m:m)};
-const mCover=t=>{const e=MT.e.find(e=>e.ticket_id===t.id&&e.file_path&&(e.file_type||"").startsWith("image"));return e?e.file_path:null};
+const mCover=t=>{
+  if(!MT._cv||MT._cvE!==MT.e||MT._cvN!==MT.e.length){MT._cv=new Map();for(const e of MT.e)if(e.file_path&&(e.file_type||"").startsWith("image")&&!MT._cv.has(e.ticket_id))MT._cv.set(e.ticket_id,e.file_path);MT._cvE=MT.e;MT._cvN=MT.e.length}
+  return MT._cv.get(t.id)||null};
 const mShow=t=>!t.closed_at||(Date.now()-new Date(t.closed_at))<30*864e5;   /* المغلقة تظهر في الرئيسية 30 يوما */
 const mCol=t=>t.closed_at?"done":(mStg(t)==="exec"?"run":"plan");
 function mToast(m){const d=document.createElement("div");d.className="mtoast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
@@ -1285,13 +1331,20 @@ async function mOnce(fn){if(mOnce.b)return;mOnce.b=1;try{await fn()}finally{mOnc
 async function loadM(){
   if(!mSee())return;
   if(!S.me){try{const r=await sb.from("profiles").select("name").eq("id",S.user.id).maybeSingle();S.me=(r&&r.data)||{}}catch(e){S.me={}}}
-  const [a,b,quotes]=await Promise.all([sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000),sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000)]);
+  const sf=p=>Promise.resolve(p).then(r=>r,e=>({data:null,error:{message:String((e&&e.message)||e)}}));
+  const [a,b,quotes,ob,rp,sm]=await Promise.all([
+    sb.from("mnt_requests").select("*").order("created_at",{ascending:false}).limit(1000),
+    sb.from("mnt_events").select("*").order("created_at",{ascending:false}).limit(5000),
+    sb.from("mnt_quotes").select("ticket_id,items,subtotal,vat,total,updated_at,status,note").limit(1000),
+    sf(sb.from("mnt_obstacles").select("*").order("created_at",{ascending:true}).limit(5000)),
+    sf(sb.from("mnt_obstacle_replies").select("*").order("created_at",{ascending:true}).limit(5000)),
+    mCreateOk()?sf(sb.rpc("mnt_sites")):Promise.resolve(null)]);
   if(a.error||b.error||quotes.error){MT.err=(a.error||b.error||quotes.error).message;MT.t=[];MT.e=[];return}
   MT.err="";MT.t=a.data||[];MT.e=(b.data||[]).reverse();MT.q={};
   (quotes.data||[]).forEach(q=>MT.q[q.ticket_id]=q);
-  if(mCreateOk()){const {data:sm}=await sb.rpc("mnt_sites");MT.sm=sm||[]}
-  try{const ob=await sb.from("mnt_obstacles").select("*").order("created_at",{ascending:true}).limit(5000);MT.o=ob.error?[]:(ob.data||[]);MT.oerr=ob.error?ob.error.message:""}catch(e){MT.o=[];MT.oerr=String((e&&e.message)||e)}
-  try{const rp=await sb.from("mnt_obstacle_replies").select("*").order("created_at",{ascending:true}).limit(5000);MT.or=rp.error?[]:(rp.data||[]);MT.orerr=rp.error?rp.error.message:""}catch(e){MT.or=[];MT.orerr=String((e&&e.message)||e)}
+  if(sm)MT.sm=sm.data||[];
+  MT.o=ob.error?[]:(ob.data||[]);MT.oerr=ob.error?ob.error.message:"";
+  MT.or=rp.error?[]:(rp.data||[]);MT.orerr=rp.error?rp.error.message:"";
   await sign(MT.t.filter(mShow).map(mCover).concat(MT.o.map(o=>o.file_path)).filter(Boolean));
 }
 function mPush(t,title,body,roles){try{sb.rpc("maint_notify",{p_project:"",p_ticket:t.id,p_roles:roles,p_title:title,p_body:String(body||"").slice(0,200)}).then(()=>{},()=>{})}catch(e){}}
@@ -1318,12 +1371,12 @@ async function mUpd(id,patch,ev,roles,pt,o){
   if(roles&&roles.length)mPush(t,pt||("صيانة "+mNo(t)),o.body||ev,roles);
   await loadM();if(!o.keep)S.modal=null;render();if(o.toast)mToast(o.toast);return true;
 }
-async function mUploadFiles(t,fs,phase){
+async function mUploadFiles(t,fs,phase,note){
   let n=0;
   for(const f of fs){
     if((f.type||"").startsWith("video/")){alert("الفيديو غير متاح في الصيانة");continue}
     const path=await up("maint",f);if(!path)continue;
-    if(await mEvent(t,"photo",null,phase,{path,type:f.type||"image/jpeg"}))n++;
+    if(await mEvent(t,"photo",note||null,phase,{path,type:f.type||"image/jpeg"}))n++;
   }
   return n;
 }
@@ -1467,7 +1520,7 @@ function mPhotosHtml(t){
     return `<span class="mthw">${im}${e.ref_id?'<span class="cvt" style="background:#2e69ad">⇄</span>':""}${isCov?'<span class="cvt">★ صورة العرض</span>':`<button class="pb pc" title="اجعلها صورة العرض" onclick="mPicCover('${e.id}')">★</button>`}<button class="pb" style="inset-inline-start:34px;background:#2e69ad" title="تعديل الصورة" onclick="mPeOpen('${e.id}')">✏️</button><button class="pb pd" title="حذف الصورة" onclick="mPicDel('${e.id}')">✕</button></span>`};
   const pics=L=>L.filter(e=>S.urls[e.file_path]).map(one).join("");
   const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
-  const add=adm?`<div class="mpadd"><select id="mpph">${mPhOpts("before")}</select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button></div>`:"";
+  const add=adm?`<div class="mpadd"><select id="mpph">${mPhOpts("before")}</select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><input id="mpnote" placeholder="ملاحظة على الصور (اختياري)" style="flex:1 1 100%;margin:0"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button><button class="btn alt" onclick="pgmOpen('m','${t.id}')">🗂 ترتيب الصور وتغيير حالتها</button></div>`:"";
   const pe=adm&&MT.pe?all.find(x=>String(x.id)===String(MT.pe)):null;
   return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary>${pe?mPeHtml(pe,all):""}<div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||(all.length?'<div class="lbl">جاري تحميل الصور...</div>':'<div class="lbl">لا توجد صور</div>')}</div>${add}</details>`;
 }
@@ -1515,7 +1568,7 @@ async function mPicCover(eid){await mOnce(async()=>{
 })}
 async function mPicAdd(id){await mOnce(async()=>{
   const t=mT(id),fs=[...($("mpfl")?.files||[])];if(!t)return;if(!fs.length)return alert("اختر صورة أولاً");
-  const n=await mUploadFiles(t,fs,$("mpph")?.value||"before");
+  const n=await mUploadFiles(t,fs,$("mpph")?.value||"before",($("mpnote")?.value||"").trim());
   await loadM();await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));render();if(n)mToast("رُفعت "+n+" صورة");
 })}
 const mDirs=id=>MT.e.filter(e=>String(e.ticket_id)===String(id)&&e.kind==="directive"&&e.body);
@@ -1768,8 +1821,10 @@ async function mReopen(id){
 async function mDel(id){
   if(!confirm("حذف الطلب وكل صوره نهائياً؟"))return;
   const paths=MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path).concat((MT.o||[]).filter(o=>o.ticket_id===id&&o.file_path).map(o=>o.file_path));
-  if(paths.length)await sb.storage.from("media").remove(paths);
+  paths.push(...await quoteFiles("ticket_id",id));
   const {error}=await sb.from("mnt_requests").delete().eq("id",id);if(error)return alert(error.message);
+  const r=paths.length?await rmFiles(paths):{err:""};
+  if(r.err)alert("حُذف الطلب لكن تعذر حذف بعض ملفاته من التخزين: "+r.err);
   S.modal=null;await loadM();render();
 }
 
@@ -2078,7 +2133,7 @@ function mPdfTextChunks(value,max=650){
   if(rest)out.push(rest);return out;
 }
 /* ---------- تقرير PDF متعدد الصفحات ---------- */
-const MRCSS=`.rpg .pf.m2 img{max-height:480px}.rpg .pf.m3 img{max-height:340px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
+const MRCSS=`.rpg .pf.m2 img{max-height:620px}.rpg .pf.m3 img{max-height:430px}.rpg .pf.m3 .tg{font-size:11px;padding:3px 11px}.rpg .pf .tg{display:block}.rpg .mh2{font-size:12px;color:#647589;margin:0 0 8px}.rpg .team{margin-bottom:12px}.rpg .gh{margin-bottom:12px}`;
 async function mPdf(id){
   if(!mAdm())return;
   const t=mT(id);if(!t)return;
@@ -2090,9 +2145,9 @@ async function mPdf(id){
     if(!document.getElementById("rpcss")){const s=document.createElement("style");s.id="rpcss";s.textContent=RPCSS;document.head.appendChild(s)}
     if(!document.getElementById("rpcss2")){const s=document.createElement("style");s.id="rpcss2";s.textContent=MRCSS;document.head.appendChild(s)}
     const imgs=MT.e.filter(e=>e.ticket_id===id&&e.file_path&&(e.file_type||"").startsWith("image"));
-    let bef=imgs.filter(e=>e.phase==="before"||e.phase==="issue");   /* قبل = صور الطلب + صور المعاينة */
-    const aft=imgs.filter(e=>e.phase==="after"),img={};
-    const byId=new Map(imgs.map(e=>[String(e.id),e])),mid=["inspect","material","during","defect","handover"].map(k=>[k,imgs.filter(e=>e.phase===k)]);
+    let bef=imgs.filter(e=>e.phase==="before"||e.phase==="issue").sort(pgmCmpD);   /* قبل = صور الطلب + صور المعاينة */
+    const aft=imgs.filter(e=>e.phase==="after").sort(pgmCmpD),img={};
+    const byId=new Map(imgs.map(e=>[String(e.id),e])),mid=["inspect","material","during","defect","handover"].map(k=>[k,imgs.filter(e=>e.phase===k).sort(pgmCmpD)]);
     const prs=imgs.filter(e=>e.ref_id&&byId.get(String(e.ref_id))&&String(e.ref_id)!==String(e.id)).map(a=>({a,b:byId.get(String(a.ref_id))})),pid=new Set(prs.flatMap(x=>[String(x.a.id),String(x.b.id)]));
     const pics=[...new Set([...bef,...aft,...mid.flatMap(x=>x[1]),...prs.flatMap(x=>[x.a,x.b])])];
     if(pics.length){
@@ -2138,8 +2193,9 @@ if(mRs("insp")&&t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.
         (MT.or||[]).filter(r=>String(r.obstacle_id)===String(o.id)).forEach(r=>putText((r.kind==="directive"?"📌 توجيه":"↩ رد")+" · "+(r.author_role||"")+" · "+dfmt(r.created_at),r.body));
       });
     }
+    let pn=0;
     const row=(L,tag,cls,title,col)=>{const P=L.filter(e=>img[e.file_path]);if(!P.length)return;
-      const n=P.length>=3?3:2,card=e=>`<div class="pf m${n}"><div class="tg ${cls}"${col?` style="background:${col}"`:""}>${tag}</div><img src="${img[e.file_path]}"></div>`;
+      const n=P.length>=3?3:2,card=e=>{const tx=cleanTxt(e.body||"").replace(/\n/g," ");return `<div class="pf m${n}"><div class="tg ${cls}"${col?` style="background:${col}"`:""}>${tag}</div><img src="${img[e.file_path]}"><div class="pc"><b><i>${String(++pn).padStart(2,"0")}</i>${esc(cut(tx,n===3?90:170))}</b><small>${esc(dfmt(e.created_at))} · ${esc(tfmt(e.created_at))}</small></div></div>`};
       const hd=`<div style="font-weight:700;color:#102944;margin:4px 0 8px">${title} (${P.length})</div>`;
       for(let k=0;k<P.length;k+=n){
         if(box.children.length)fresh();
@@ -2147,7 +2203,7 @@ if(mRs("insp")&&t.diagnosis)putText("تقرير المعاينة",t.diagnosis,t.
         for(let f=P.slice(k,k+n).length;f<n;f++)cells+='<div class="pf" style="visibility:hidden;border:0"></div>';
         put(`<div>${k===0?hd:""}<div class="pr">${cells}</div></div>`);   /* العنوان يبقى مع أول صفّ صور ولا ينفصل عنه */
       }};
-    const PPs=prs.filter(x=>img[x.a.file_path]&&img[x.b.file_path]).sort((x,y)=>new Date(x.a.created_at)-new Date(y.a.created_at));
+    const PPs=prs.filter(x=>img[x.a.file_path]&&img[x.b.file_path]).sort((x,y)=>pgmCmpD(x.a,y.a));
     const pidU=mRs("pairs")?pid:new Set();
     if(mRs("pairs")&&PPs.length){
       const ord=k=>Object.keys(MPT).indexOf(k),sd=e=>{const q=MPT[e.phase]||["صورة","#52667b"];return '<div class="ps"><div class="pl" style="background:'+q[1]+'">'+esc(q[0])+'</div><img src="'+img[e.file_path]+'" alt=""><small>'+esc(dfmt(e.created_at))+'</small></div>'};
@@ -2336,6 +2392,130 @@ async function delE(id){
   await loadE();render();
 }
 
+
+/* ===== مدير الصور: ترتيب + تحديد متعدد + تغيير الحالة (المشاريع والصيانة) =====
+   الترتيب يُحفظ في العمود sort_no ويُستخدم تلقائياً في تقارير المشاريع والصيانة (شغّل photo-order.sql مرة واحدة) */
+const PGM_RK={before:0,inspect:1,material:2,during:3,defect:4,handover:5,after:6};
+const pgmRk=e=>e.ba in PGM_RK?PGM_RK[e.ba]:3;
+const pgmByDate=(a,b)=>new Date(a.created_at)-new Date(b.created_at);
+const pgmDefP=(a,b)=>(pgmRk(a)-pgmRk(b))||pgmByDate(a,b);
+const pgmCmp=def=>(a,b)=>{const x=a.sort_no,y=b.sort_no,hx=x!=null,hy=y!=null;if(hx&&hy)return (x-y)||def(a,b);if(hx)return -1;if(hy)return 1;return def(a,b)};
+const pgmCmpP=pgmCmp(pgmDefP),pgmCmpD=pgmCmp(pgmByDate);
+const PGM_MSEC=[["before","📷 قبل (الطلب والمعاينة)"],["inspect","📷 المعاينة"],["material","📷 توريد مواد"],["during","📷 أثناء التنفيذ"],["defect","📷 ملاحظات / عيوب"],["handover","📷 التسليم والاستلام"],["after","📷 بعد التسليم"],["other","📷 صور أخرى (لا تظهر في التقرير)"]];
+const pgmMKey=e=>e.phase==="issue"?"before":(PGM_MSEC.some(x=>x[0]===e.phase)?e.phase:"other");
+const pgmMIdx=e=>PGM_MSEC.findIndex(x=>x[0]===pgmMKey(e));
+let PGM=null;
+async function pgmOpen(k,id){
+  if(!(k==="p"?["owner","pm"].includes(S.role):mAdm()))return;
+  PGM={k,id,list:[],sel:new Set(),dirty:false,busy:true,back:S.modal,msg:"",orig:{}};
+  if(S.modal==="report"){try{S.rep={...S.rep,...rpReadCfg()}}catch(e){}}
+  S.modal="phm";render();
+  try{
+    let L;
+    if(k==="p"){
+      const rows=[];
+      for(let o=0;;o+=1000){const {data,error}=await sb.from("entries").select("*").eq("project_id",id).in("kind",["media","reports"]).order("created_at",{ascending:true}).range(o,o+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break}
+      L=rows.filter(e=>e.file_path&&(e.file_type||"").startsWith("image")).sort(pgmCmpP);
+    }else{
+      L=MT.e.filter(e=>String(e.ticket_id)===String(id)&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image"))).sort((a,b)=>(pgmMIdx(a)-pgmMIdx(b))||pgmCmpD(a,b));
+    }
+    await sign(L.map(e=>e.file_path));
+    PGM.list=L;L.forEach(e=>PGM.orig[e.id]=e.sort_no==null?null:e.sort_no);
+  }catch(e){PGM.msg="تعذر تحميل الصور: "+(e.message||e)}
+  PGM.busy=false;if(S.modal==="phm")render();
+}
+function pgmHtml(){
+  if(!PGM)return "";
+  return `<div class="modal"><div class="box pgmx"><div class="pgmh"><h3 style="margin:0">🗂 ترتيب الصور وتغيير حالتها</h3><button class="btn alt" onclick="pgmClose()">إغلاق</button></div>
+  <p class="lbl">اضغط على الصور لتحديدها ثم انقلها أو غيّر حالتها دفعة واحدة. الترتيب هنا هو ترتيب الصور في التقرير${PGM.k==="m"?" (داخل كل نوع)":""}.</p><div id="pgmBody">${pgmBody()}</div></div></div>`;
+}
+function pgmBody(){
+  const G=PGM;
+  if(G.busy)return '<p class="lbl">جاري المعالجة…</p>';
+  if(!G.list.length)return `<p class="lbl">${esc(G.msg||"لا توجد صور.")}</p>`;
+  const n=G.sel.size,dis=n?"":"disabled",P=G.k==="p"?PHT:MPT;
+  const opts='<option value="" selected disabled>— اختر الحالة —</option>'+(G.k==="p"?'<option value="__none">صورة عادية</option>'+phOpts(""):mPhOpts(""));
+  let h=`<div class="pgmtb"><button class="btn alt" onclick="pgmAll(1)">تحديد الكل</button><button class="btn alt" onclick="pgmAll(0)">إلغاء التحديد</button><span class="lbl"><b id="pgmN">${n}</b> محددة من ${G.list.length}</span></div>
+  <div class="pgmtb"><select id="pgmph">${opts}</select><button class="btn pgmneed" ${dis} onclick="pgmPhase()">تطبيق الحالة على المحدد</button></div>
+  <div class="pgmtb"><button class="btn alt pgmneed" ${dis} onclick="pgmMove('first')">⏮ للبداية</button><button class="btn alt pgmneed" ${dis} onclick="pgmMove('up')">➡ تقديم</button><button class="btn alt pgmneed" ${dis} onclick="pgmMove('down')">⬅ تأخير</button><button class="btn alt pgmneed" ${dis} onclick="pgmMove('last')">للنهاية ⏭</button>
+  <input id="pgmpos" type="number" min="1" inputmode="numeric" placeholder="رقم"><button class="btn alt pgmneed" ${dis} onclick="pgmMove('pos')">نقل إلى الموضع</button></div><div class="pgmgrid">`;
+  let last="",idx=0;
+  G.list.forEach(e=>{
+    const gk=G.k==="p"?"all":pgmMKey(e);
+    if(gk!==last){last=gk;idx=0;if(G.k==="m")h+=`<div class="pgmg">${esc(PGM_MSEC.find(x=>x[0]===gk)[1])}</div>`}
+    idx++;
+    const u=S.urls[e.file_path],t=P[G.k==="p"?e.ba:e.phase],on=G.sel.has(String(e.id));
+    h+=`<div class="pgmt${on?" on":""}" data-pg="${e.id}" onclick="pgmTog('${e.id}')"><div class="pgmn">${idx}</div><div class="pgmc">✓</div>${u?`<img src="${u}" loading="lazy" decoding="async" alt="">`:'<div style="height:130px"></div>'}${t?`<span class="pgmp" style="background:${t[1]}">${esc(t[0])}</span>`:""}<small>${esc(cut(String(e.body||"").replace(/\s+/g," "),40))}</small></div>`;
+  });
+  return h+`</div><div class="pgmf"><button class="btn" onclick="pgmSave()">💾 حفظ الترتيب</button><button class="btn alt" onclick="pgmClose()">إغلاق</button>${G.dirty?'<span class="lbl" style="color:#b45f00">● ترتيب غير محفوظ</span>':""}</div>`;
+}
+function pgmDraw(){const b=$("pgmBody");if(b)b.innerHTML=pgmBody()}
+function pgmTog(id){
+  id=String(id);PGM.sel.has(id)?PGM.sel.delete(id):PGM.sel.add(id);
+  const t=document.querySelector('[data-pg="'+id+'"]');if(t)t.classList.toggle("on",PGM.sel.has(id));
+  const n=$("pgmN");if(n)n.textContent=PGM.sel.size;
+  document.querySelectorAll(".pgmneed").forEach(b=>b.disabled=!PGM.sel.size);
+}
+function pgmAll(v){PGM.sel=new Set(v?PGM.list.map(e=>String(e.id)):[]);pgmDraw()}
+function pgmMove(mode){
+  const G=PGM;if(!G||!G.sel.size)return;
+  const pos=Math.floor(+($("pgmpos")?.value))||0;
+  if(mode==="pos"&&pos<1)return alert("اكتب رقم الموضع المطلوب");
+  const order=[],groups=new Map(),gk=e=>G.k==="p"?"all":pgmMKey(e),isS=e=>G.sel.has(String(e.id));
+  G.list.forEach(e=>{const k=gk(e);if(!groups.has(k)){groups.set(k,[]);order.push(k)}groups.get(k).push(e)});
+  order.forEach(k=>{
+    let a=groups.get(k);if(!a.some(isS))return;
+    if(mode==="first")a=[...a.filter(isS),...a.filter(e=>!isS(e))];
+    else if(mode==="last")a=[...a.filter(e=>!isS(e)),...a.filter(isS)];
+    else if(mode==="pos"){const rest=a.filter(e=>!isS(e)),mv=a.filter(isS),at=Math.min(Math.max(pos-1,0),rest.length);a=[...rest.slice(0,at),...mv,...rest.slice(at)]}
+    else if(mode==="up"){for(let i=1;i<a.length;i++)if(isS(a[i])&&!isS(a[i-1]))[a[i-1],a[i]]=[a[i],a[i-1]]}
+    else if(mode==="down"){for(let i=a.length-2;i>=0;i--)if(isS(a[i])&&!isS(a[i+1]))[a[i],a[i+1]]=[a[i+1],a[i]]}
+    groups.set(k,a)});
+  G.list=order.flatMap(k=>groups.get(k));G.dirty=true;pgmDraw();
+}
+async function pgmPhase(){
+  const G=PGM;if(!G||G.busy||!G.sel.size)return;
+  const v=$("pgmph").value;if(!v)return alert("اختر الحالة الجديدة أولاً");
+  const ids=[...G.sel],val=v==="__none"?null:v,tb=G.k==="p"?"entries":"mnt_events",col=G.k==="p"?"ba":"phase",P=G.k==="p"?PHT:MPT;
+  const name=val?P[val][0]:"صورة عادية";
+  if(!confirm("تغيير حالة "+ids.length+" صورة إلى «"+name+"»؟"))return;
+  G.busy=true;pgmDraw();
+  const {data,error}=await sb.from(tb).update({[col]:val}).in("id",ids).select("id");
+  G.busy=false;
+  if(error||!data||data.length<ids.length){
+    pgmDraw();
+    return alert((error?error.message:"تم تعديل "+(data?data.length:0)+" من "+ids.length+" فقط (قد لا تملك صلاحية تعديل بعض الصور).")+"\nإذا استمرت المشكلة: شغّل ملف photo-phases.sql في Supabase.");
+  }
+  G.list.forEach(e=>{if(G.sel.has(String(e.id)))e[col]=val});
+  G.sel.clear();
+  G.list.sort(G.k==="p"?pgmCmpP:(a,b)=>(pgmMIdx(a)-pgmMIdx(b))||pgmCmpD(a,b));
+  pgmDraw();mToast("تم تغيير الحالة إلى «"+name+"» لـ "+ids.length+" صورة");
+  logA("entry","تغيير حالة "+ids.length+" صورة ← "+name);
+}
+async function pgmSave(){
+  const G=PGM;if(!G||G.busy)return;
+  const tb=G.k==="p"?"entries":"mnt_events",ch=[];
+  G.list.forEach((e,i)=>{if((G.orig[e.id]==null?null:G.orig[e.id])!==i+1)ch.push([e,i+1])});
+  if(!ch.length){G.dirty=false;pgmDraw();return mToast("الترتيب محفوظ مسبقاً")}
+  G.busy=true;pgmDraw();
+  let err="";
+  for(let i=0;i<ch.length&&!err;i+=8){
+    const part=ch.slice(i,i+8),rs=await Promise.all(part.map(([e,n])=>sb.from(tb).update({sort_no:n}).eq("id",e.id).select("id")));
+    for(const r of rs){if(r.error){err=r.error.message;break}if(!r.data||!r.data.length){err="لا توجد صلاحية تعديل";break}}
+    if(!err)part.forEach(([e,n])=>{e.sort_no=n;G.orig[e.id]=n});
+  }
+  G.busy=false;
+  if(err){pgmDraw();return alert("تعذر حفظ الترتيب: "+err+(/sort_no|column|schema cache/i.test(err)?"\nيلزم تشغيل ملف photo-order.sql في Supabase مرة واحدة.":""))}
+  G.dirty=false;pgmDraw();mToast("تم حفظ ترتيب الصور ✅");
+  logA("entry","ترتيب الصور في التقرير");
+}
+async function pgmClose(){
+  const G=PGM;if(!G)return;
+  if(G.dirty&&!confirm("لم تحفظ الترتيب الجديد. إغلاق بدون حفظ؟"))return;
+  if(G.k==="p"&&S.cur&&(S.tab==="media"||S.tab==="reports")){try{await loadE()}catch(e){}}
+  S.modal=G.back||null;PGM=null;render();
+}
+
 /* ===== 7) النوافذ ===== */
 function modal(m){S.modal=m;S.link="";S.cred=null;render()}
 function projForm(p){
@@ -2367,6 +2547,7 @@ function modalHtml(){
   if(m==="log")return logHtml();
   if(m==="users")return usersHtml();
   if(m==="orph")return orphHtml();
+  if(m==="phm")return pgmHtml();
   if(m==="rq")return rqHtml();
   if(m==="mtk")return mTicketHtml();
   if(m==="msite")return mSiteWelcomeHtml();
@@ -2463,7 +2644,7 @@ async function loadWelcome(){
   S.wl={obs:data||[],notes:[]};
 }
 async function openWelcome(){await loadWelcome();modal("welcome")}
-async function goP(id,tab){S.modal=null;S.cur=id;S.view=null;S.tab=tab||defTab(id);S.entries=[];render();scrollTo(0,0);await Promise.allSettled([loadE(),loadPS()]);if(S.cur===id)render()}
+async function goP(id,tab){S.modal=null;S.cur=id;S.view=null;S.tab=tab||defTab(id);S.entries=[];S.lim=0;S.more=false;S.ld=0;render();scrollTo(0,0);await Promise.allSettled([loadE().then(()=>{if(S.cur===id)render()}),loadPS().then(()=>{if(S.cur===id)render()})])}
 const pn=id=>S.projects.find(p=>p.id===id)?.name||"-";
 function welcomeHtml(){
   const o=S.wl.obs;
@@ -2475,12 +2656,12 @@ function welcomeHtml(){
 
 /* ===== مدراء الموقع: إسناد المشاريع ===== */
 async function loadPS(){
-  S.sites=[];S.ps=[];S.siteErr="";
+  S.sites=(S._sc&&Date.now()-S._sct<60000)?S._sc:[];S.ps=[];S.siteErr="";
   if(!["owner","pm"].includes(S.role)||!S.cur)return;
   try{
-    let sites=[];
+    let sites=S.sites.length?S.sites:[];
     // 1) site_managers view
-    try{
+    if(!sites.length)try{
       const {data,error}=await sb.from("site_managers").select("*").order("created_at");
       if(!error && data && data.length) sites=data;
       else if(error) S.siteErr=error.message;
@@ -2506,7 +2687,7 @@ async function loadPS(){
         }
       }catch(e){}
     }
-    S.sites=sites||[];
+    S.sites=sites||[];if(sites.length){S._sc=sites;S._sct=Date.now()}
     const {data:psData, error:psErr}=await sb.from("project_sites").select("user_id").eq("project_id",S.cur);
     if(psErr) S.siteErr=(S.siteErr?S.siteErr+" | ":"")+psErr.message;
     S.ps=(psData||[]).map(x=>x.user_id);
