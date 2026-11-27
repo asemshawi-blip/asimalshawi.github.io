@@ -273,6 +273,7 @@ async function up(pid,f,quiet){
 async function loadE(){
   if(S.tab==="works")return loadW();
   const lim=S.lim||PAGE,pid=S.cur,tab=S.tab;
+  if(tab==="media"&&S.worksPid!==pid){try{const {data:wd}=await sb.from("work_items").select("*").eq("project_id",pid).order("sort");if(S.cur===pid){S.works=wd||[];S.worksPid=pid}}catch(_){}}
   const {data}=await sb.from("entries").select("*").eq("project_id",pid).eq("kind",tab).order("created_at",{ascending:false}).range(0,lim);
   if(S.cur!==pid||S.tab!==tab)return;
   const L=data||[];S.more=L.length>lim;S.entries=L.slice(0,lim);await sign(S.entries.map(e=>e.file_path));
@@ -316,7 +317,7 @@ const WTPLK=[
 const WTPLS={new:WTPL,kiosk:WTPLK,reno:WTPLR};
 async function loadW(){
   const {data,error}=await sb.from("work_items").select("*").eq("project_id",S.cur).order("sort");
-  if(error)alert(error.message);S.works=data||[];
+  if(error)alert(error.message);S.works=data||[];S.worksPid=S.cur;
 }
 const wCalc=a=>{const w=a.reduce((x,i)=>x+Number(i.weight),0);return w?Math.round(a.reduce((x,i)=>x+i.weight*i.pct,0)/w):0};
 function wSync(p){if(S.works.length)p.progress=wCalc(S.works)}
@@ -519,7 +520,7 @@ function entGroups(list){
   const out=[],open=new Map();
   list.forEach(e=>{
     const b=(e.body||"").trim();
-    if(!b||!e.file_path||e.ba||e.kind==="issues"){out.push([e]);return}
+    if(!b||!e.file_path||e.ba||e.work_item_id||e.kind==="issues"){out.push([e]);return}
     const k=e.kind+"|"+(e.author_role||"")+"|"+b,g=open.get(k),t=+new Date(e.created_at);
     if(g&&Math.abs(t-g.t)<=120000){g.rows.push(e);g.t=t}else{const ng={rows:[e],t};open.set(k,ng);out.push(ng.rows)}
   });
@@ -571,7 +572,7 @@ function proj(){
   const toCO=p.coord_phone&&["owner","pm","site"].includes(S.role)?`<a class="wa" target="_blank" rel="noopener" href="${wa(p.coord_phone,`السلام عليكم${p.coord_name?" "+p.coord_name:""}،\nأتواصل معك ${cm}.`)}">📲 تواصل مع موظف التنسيق</a>`:"";
   const talk=mapAction||toPM||toCT||toAM||toSM||toCO?`<div class="acts">${mapAction}${toPM}${toSM}${toCO}${toCT}${toAM}</div>`:"";
   const acts=ed?`<div class="acts"><button class="btn" onclick="modal('edit')">تعديل المشروع</button><button class="btn alt" onclick="modal('invc')">إنشاء حساب مقاول</button><button class="btn alt" onclick="openLog()">🕘 سجل النشاط</button><button class="btn" style="background:#0e7490" onclick="reqSiteUpd('${p.id}')">🔔 طلب تحديث من مدير الموقع</button></div>`:"";
-  const entOne=e=>S.pe===e.id?peHtml(e):`<div class="item">${e.ba?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${refHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
+  const entOne=e=>S.pe===e.id?peHtml(e):`<div class="item">${(e.ba||e.work_item_id)?baBadge(e):""}<div>${esc(e.body)}</div>${fileHtml(e)}${refHtml(e)}${e.kind==="issues"?obsBar(e):""}<small>${esc(e.author_role)} · ${new Date(e.created_at).toLocaleDateString("ar")}</small>
   ${canEditE(e)?`<button class="sm" onclick="peOpen('${e.id}')">✏️ تعديل</button> `:""}${own||canDelMine(e)?`<button class="sm del" onclick="delE('${e.id}')">حذف</button>`:""}</div>`;
   const items=entGroups(S.entries).map(rows=>rows.length>1?entGroupHtml(rows,own):entOne(rows[0])).join("");
   const add=t.add.includes(S.role)?`<textarea id="tx" rows="3" placeholder="${t.ph}"></textarea>${t.file?`<input id="fl" type="file" accept="${t.file}" ${t.multi?"multiple":""}>`:""}${t.k==="media"?baUi():""}<button class="btn" id="bt" onclick="addE()">إضافة</button>`:"";
@@ -1138,6 +1139,7 @@ function rpPages(p,cfg,d,root){
   Object.entries(cfg.manual||{}).forEach(([k,v])=>{if(!v?.on||!v.text?.trim())return;const blocks=rpWriteBlocks(v.text);if(!blocks.length)return;put('<div>'+sec(manualLabels[k]||k)+blocks.join('')+'</div>');mark()});
   let pn=0;
   const phChip=e=>e.ba&&PHT[e.ba]?'<span style="display:table;background:'+PHT[e.ba][1]+';color:#fff;border-radius:12px;padding:0 10px;font-size:10px;margin-bottom:3px">'+esc(PHT[e.ba][0])+'</span>':'';
+  const wiN=e=>{const w=e.work_item_id&&(d.works||[]).find(x=>String(x.id)===String(e.work_item_id));return w?w.phase+" ← "+w.name:""};
   const pairIds=cfg.ba&&d.pairIds?d.pairIds:new Set();
   const pairCard=pr=>{
     let x=pr.b,y=pr.a;const o=k=>Object.keys(PHT).indexOf(k);
@@ -1146,7 +1148,7 @@ function rpPages(p,cfg,d,root){
     const cap=(!pr.a._dup&&cleanTxt(pr.a.body||""))||"";
     return '<div class="pp"><div class="pw">'+side(x)+side(y)+'</div>'+(cap?'<div class="pq">'+esc(cut(cap.replace(/\n/g," "),160))+'</div>':'')+'</div>';
   };
-  const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc">'+phChip(e)+'<b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]?'<strong style="display:block;margin-top:5px;color:#376b9a">المرحلة: '+esc(cfg.stageByPhoto[e.id])+'</strong>':'')+'</div></div>';
+  const picCard=(e,n)=>'<div class="pf l'+LY+'"><img src="'+d.img[e.file_path]+'" alt=""><div class="pc">'+phChip(e)+'<b><i>'+String(n).padStart(2,"0")+'</i>'+(e._dup?'':esc(cut(cleanTxt(e.body).replace(/\n/g," ")||"صورة من الموقع",LC.cap)))+'</b><small>'+esc(dfmt(e.created_at))+' · '+esc(tfmt(e.created_at))+'</small>'+(cfg.stageByPhoto?.[e.id]||wiN(e)?'<strong style="display:block;margin-top:5px;color:#376b9a">'+(cfg.stageByPhoto?.[e.id]?'المرحلة: '+esc(cfg.stageByPhoto[e.id]):'البند: '+esc(wiN(e)))+'</strong>':'')+'</div></div>';
   const picRows=arr=>{const rows=[];for(let i=0;i<arr.length;i+=LC.n){let h="";for(let j=0;j<LC.n;j++){const e=arr[i+j];h+=e?picCard(e,++pn):'<div class="pf" style="visibility:hidden;border:0"></div>'}rows.push('<div class="pr l'+LY+'">'+h+'</div>')}return rows};
   if(cfg.ba&&d.pairs&&d.pairs.length){fresh();put('<div>'+sec("مقارنة الصور")+'<div class="st">'+d.pairs.length+' مقارنة</div></div>');mark();d.pairs.forEach(pr=>put(pairCard(pr)))}
   const allPics=[...(d.pics||[])].filter(e=>!pairIds.has(String(e.id))).sort(pgmCmpP);
@@ -1176,9 +1178,12 @@ async function rpPdf(p,cfg,pages,prog){
 }
 
 /* ===== نوع الصورة + مقابلتها بصورة أخرى + تعديل الصورة بعد الإضافة ===== */
+const wiOpts=v=>{const W=S.works||[];return [...new Set(W.map(x=>x.phase))].map(f=>`<optgroup label="${esc(f)}">${W.filter(x=>x.phase===f).map(x=>`<option value="${esc(x.id)}" ${String(x.id)===String(v)?"selected":""}>${esc(x.name)}</option>`).join("")}</optgroup>`).join("")};
+const wiLabel=e=>{const w=e&&e.work_item_id&&(S.works||[]).find(x=>String(x.id)===String(e.work_item_id));return w?w.phase+" ← "+w.name:""};
 function baUi(){
   return `<label class="lbl">نوع الصور</label>
   <select id="bat" onchange="baChange()"><option value="">صور عادية</option>${phOpts("")}</select>
+  ${(S.works||[]).length?`<label class="lbl">ربط الصور ببند من بنود الأعمال (اختياري)</label><select id="bawi"><option value="">بدون ربط</option>${wiOpts("")}</select>`:""}
   <div id="bap" style="display:none"></div>`;
 }
 function baTiles(excl,sk){
@@ -1196,8 +1201,10 @@ function refPick(id,sk){
   document.querySelectorAll('[data-sk="'+sk+'"]').forEach(d=>{d.querySelector("img").style.borderColor=String(d.dataset.id)===String(S[sk])?"#ed8700":"#cbd5e1"});
 }
 function baBadge(e){
-  const t=PHT[e.ba];if(!t)return "";
-  return `<span style="display:inline-block;background:${t[1]};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px;margin-inline-end:6px">${esc(t[0])}</span>`;
+  const t=PHT[e.ba],w=wiLabel(e);let h="";
+  if(t)h+=`<span style="display:inline-block;background:${t[1]};color:#fff;border-radius:20px;padding:1px 13px;font-size:12px;font-weight:700;margin-bottom:6px;margin-inline-end:6px">${esc(t[0])}</span>`;
+  if(w)h+=`<span style="display:inline-block;background:#e8f0f8;color:#1d4f73;border:1px solid #c9dcee;border-radius:20px;padding:1px 12px;font-size:12px;font-weight:700;margin-bottom:6px;margin-inline-end:6px">🔗 ${esc(w)}</span>`;
+  return h;
 }
 /* الصورة المقابلة (إن وُجدت) تظهر مصغّرة تحت الصورة */
 function refHtml(e){
@@ -1216,6 +1223,7 @@ function peCancel(){S.pe=null;S.peSel=null;render()}
 function peHtml(e){
   return `<div class="item" id="pe_${e.id}" style="background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px;margin:8px 0"><b>✏️ تعديل الصورة</b>${fileHtml(e)}
   <label class="lbl">نوع الصورة</label><select id="pe_t"><option value="">صورة عادية</option>${phOpts(e.ba)}</select>
+  ${(S.works||[]).length?`<label class="lbl">البند المرتبط (اختياري)</label><select id="pe_wi"><option value="">بدون ربط</option>${wiOpts(e.work_item_id)}</select>`:""}
   <label class="lbl">الوصف</label><textarea id="pe_b" rows="2">${esc(e.body||"")}</textarea>
   ${baTiles(e.id,"peSel")}
   <button class="btn" id="pe_s" onclick="peSave('${e.id}')">حفظ التعديل</button> <button class="btn alt" onclick="peCancel()">إلغاء</button></div>`;
@@ -1224,10 +1232,11 @@ async function peSave(id){
   const e=S.entries.find(x=>String(x.id)===String(id));if(!e)return;
   const t=$("pe_t").value,body=$("pe_b").value.trim(),ref=S.peSel&&String(S.peSel)!==String(id)?S.peSel:null;
   const btn=$("pe_s");btn.disabled=true;btn.textContent="جاري الحفظ...";
-  const {data,error}=await sb.from("entries").update({ba:t||null,ba_ref:ref,body}).eq("id",id).select("id");
+  const upd={ba:t||null,ba_ref:ref,body};if($("pe_wi"))upd.work_item_id=$("pe_wi").value||null;
+  const {data,error}=await sb.from("entries").update(upd).eq("id",id).select("id");
   if(error||!data||!data.length){
     btn.disabled=false;btn.textContent="حفظ التعديل";
-    return alert((error?error.message:"ما تم الحفظ (لا توجد صلاحية تعديل).")+"\nإذا استمرت المشكلة: شغّل ملف photo-phases.sql في Supabase ثم أعد المحاولة.");
+    return alert((error?error.message:"ما تم الحفظ (لا توجد صلاحية تعديل).")+"\nإذا استمرت المشكلة: شغّل ملفي photo-phases.sql و photo-work-link.sql في Supabase ثم أعد المحاولة.");
   }
   logA("entry","تعديل صورة"+(t?" ← "+PHT[t][0]:"")+(ref?" (مع مقابلة)":""));
   S.pe=null;S.peSel=null;await loadE();render();
@@ -1304,7 +1313,7 @@ const mPhOpts=v=>["before","during","after","inspect","material","defect","hando
 const MPH={issue:"المشكلة",before:"قبل",during:"أثناء العمل",after:"بعد",other:"صور"};
 let MT={t:[],e:[],q:{},sm:[],o:[],oerr:"",id:null,err:"",rep:null};
 const mNo=t=>"MNT-"+String(t.no||0).padStart(4,"0");
-const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role);
+const mSee=()=>["owner","pm","mgmt","site"].includes(S.role),mCreateOk=()=>["owner","pm"].includes(S.role),mAdm=()=>["owner","pm"].includes(S.role),mPicOk=t=>mAdm()||(S.role==="site"&&!(t&&t.closed_at));
 const mT=id=>MT.t.find(x=>x.id===id),mNow=()=>new Date().toISOString();
 /* المرحلة الحالية (الطلبات القديمة بمرحلة "work" تُعرض كتنفيذ) */
 const mStg=t=>t.closed_at?"deliver":(t.stage==="work"?"exec":(t.stage==="review"&&t.review_at?"approved":(MST.some(s=>s[0]===t.stage)?t.stage:"new")));
@@ -1512,9 +1521,9 @@ function mQuick(t){const u=mMapUrl(t.map_url),ph=t.area_phone?String(t.area_phon
   if(!u&&!ph)return "";
   return `<div class="acts" style="margin:0 0 10px">${u?`<a class="btn" href="${esc(u)}" target="_blank" rel="noopener">📍 موقع الفرع</a>`:""}${ph?`<a class="btn alt" href="tel:+${ph}">📞 ${esc(t.area_name||"مدير المنطقة")}</a>`:""}</div>`}
 function mPhotosHtml(t){
-  const adm=mAdm();
+  const adm=mAdm(),canAdd=mPicOk(t);
   const all=MT.e.filter(e=>e.ticket_id===t.id&&e.file_path&&(!e.file_type||String(e.file_type).startsWith("image")));
-  if(!all.length&&!adm)return "";
+  if(!all.length&&!canAdd)return "";
   const cov=mCover(t);
   const grp=[["قبل",["issue","before"]],["أثناء العمل",["during","other"]],["بعد",["after"]],["معاينة",["inspect"]],["توريد مواد",["material"]],["ملاحظة / عيب",["defect"]],["تسليم واستلام",["handover"]]],known=["issue","before","during","other","after","inspect","material","defect","handover"];
   const one=e=>{const im=`<img class="mth" src="${S.urls[e.file_path]}" onclick="openImg(this.src)" alt="">`;
@@ -1523,7 +1532,7 @@ function mPhotosHtml(t){
     return `<span class="mthw">${im}${e.ref_id?'<span class="cvt" style="background:#2e69ad">⇄</span>':""}${isCov?'<span class="cvt">★ صورة العرض</span>':`<button class="pb pc" title="اجعلها صورة العرض" onclick="mPicCover('${e.id}')">★</button>`}<button class="pb" style="inset-inline-start:34px;background:#2e69ad" title="تعديل الصورة" onclick="mPeOpen('${e.id}')">✏️</button><button class="pb pd" title="حذف الصورة" onclick="mPicDel('${e.id}')">✕</button></span>`};
   const pics=L=>L.filter(e=>S.urls[e.file_path]).map(one).join("");
   const parts=grp.map(([n,ph])=>[n,pics(all.filter(e=>ph.includes(e.phase)))]).concat([["صور أخرى",pics(all.filter(e=>!known.includes(e.phase)))]]).filter(x=>x[1]);
-  const add=adm?`<div class="mpadd"><select id="mpph">${mPhOpts("before")}</select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><input id="mpnote" placeholder="ملاحظة على الصور (اختياري)" style="flex:1 1 100%;margin:0"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button><button class="btn alt" onclick="pgmOpen('m','${t.id}')">🗂 ترتيب الصور وتغيير حالتها</button></div>`:"";
+  const add=canAdd?`<div class="mpadd"><select id="mpph">${mPhOpts("before")}</select><input id="mpfl" type="file" accept="image/*" multiple class="mfile"><input id="mpnote" placeholder="ملاحظة على الصور (اختياري)" style="flex:1 1 100%;margin:0"><button class="btn alt" onclick="mPicAdd('${t.id}')">＋ رفع صور</button>${adm?`<button class="btn alt" onclick="pgmOpen('m','${t.id}')">🗂 ترتيب الصور وتغيير حالتها</button>`:""}</div>`:"";
   const pe=adm&&MT.pe?all.find(x=>String(x.id)===String(MT.pe)):null;
   return `<details class="mdt" open><summary>📷 الصور (${all.length})</summary>${pe?mPeHtml(pe,all):""}<div class="mgal">${parts.map(([n,h])=>`<div class="mgp"><b>${n}</b><div class="mpics">${h}</div></div>`).join("")||(all.length?'<div class="lbl">جاري تحميل الصور...</div>':'<div class="lbl">لا توجد صور</div>')}</div>${add}</details>`;
 }
@@ -1570,7 +1579,7 @@ async function mPicCover(eid){await mOnce(async()=>{
   await loadM();render();mToast("تم تغيير صورة العرض ★");
 })}
 async function mPicAdd(id){await mOnce(async()=>{
-  const t=mT(id),fs=[...($("mpfl")?.files||[])];if(!t)return;if(!fs.length)return alert("اختر صورة أولاً");
+  const t=mT(id),fs=[...($("mpfl")?.files||[])];if(!t||!mPicOk(t))return;if(!fs.length)return alert("اختر صورة أولاً");
   const n=await mUploadFiles(t,fs,$("mpph")?.value||"before",($("mpnote")?.value||"").trim());
   await loadM();await sign(MT.e.filter(e=>e.ticket_id===id&&e.file_path).map(e=>e.file_path));render();if(n)mToast("رُفعت "+n+" صورة");
 })}
@@ -2364,7 +2373,8 @@ async function addE(){
     if(!fs.length)return alert("ارفع صورة لتحديد قبل / بعد");
     if(fs.some(f=>!f.type.startsWith("image")))return alert("تحديد قبل / بعد للصور فقط");
   }
-  const bax=bat?{ba:bat,ba_ref:S.baSel||null}:{};
+  const wi=$("bawi")?.value||"";
+  const bax={...(bat?{ba:bat,ba_ref:S.baSel||null}:{}),...(wi&&fs.length?{work_item_id:wi}:{})};
   $("bt").disabled=true;
   const base={project_id:S.cur,kind:S.tab,author_role:ROLES[S.role]},rows=[];
   if(!navigator.onLine)return qAdd({...base,body,bax,files:fs});
@@ -2377,7 +2387,7 @@ async function addE(){
   if(!rows.length)return render();
   const {error}=await sb.from("entries").insert(rows);
   if(error&&!fs.length&&isNetErr(error)){await qAdd({...base,body,bax,files:[]});return}
-  if(error)alert(/ba_ref|\bba\b|check constraint/i.test(error.message)?"أنواع الصور الجديدة غير مفعّلة في قاعدة البيانات بعد. شغّل ملف photo-phases.sql في Supabase ثم أعد المحاولة.":error.message);
+  if(error)alert(/ba_ref|\bba\b|check constraint|work_item_id/i.test(error.message)?"ميزة الصور الجديدة غير مفعّلة في قاعدة البيانات بعد. شغّل ملفي photo-phases.sql و photo-work-link.sql في Supabase ثم أعد المحاولة.":error.message);
   if(!error)logA("entry",`${(TABS.find(x=>x.k===S.tab)||{}).n||""}: ${fs.length?fs.length+" ملف":body.slice(0,60)}`);
   if(!error)S.baSel=null;
   await loadE();render();
@@ -2792,16 +2802,25 @@ init();
   const EDGE_URL = "https://wmavitpimbcjohcjgqhz.supabase.co/functions/v1/ai-agent";
   function ready(fn){ if(typeof S !== "undefined" && typeof sb !== "undefined") fn(); else setTimeout(()=>ready(fn),300); }
   ready(function(){
-    const HISTORY_KEY='pm_agent_history_v3_smart';
+    const HK='pm_agent_history_v3_smart';const histKey=()=>HK+'_'+((S.user&&S.user.id)||'x');const isOwner=()=>!!(S.user&&S.role==='owner');try{localStorage.removeItem(HK)}catch(e){}
     const btn=document.createElement('button'); btn.id='agentBtn'; btn.innerHTML='🤖<span>الوكيل الذكي</span>'; btn.title='وكيل المشاريع الذكي';
     document.body.appendChild(btn);
     const panel=document.createElement('div'); panel.id='agentPanel';
     panel.innerHTML=`<div class="agentHead"><div><b>🤖 وكيل المشاريع <span class="aBadge">وكيل مستقل</span></b><span>تشاوره بأي صيغة، ويشاورك قبل أي تعديل</span></div><button class="agentClose">✕</button></div><div id="aBar"></div><div class="agentBody" id="agentBody"></div><div class="aQuick"><button data-q="وش رايك في وضع مشاريعي اليوم؟">وش رايك في وضعي؟</button><button data-q="وش المتأخر اليوم؟">المتأخر</button><button data-q="سوي لي تقرير المدير حق اليوم">تقرير المدير</button></div><div class="aTyping" id="aTyping">الوكيل الذكي يفكر...</div><div class="agentInput"><input id="agentInput" placeholder="شاوره بأي صيغة... مثل: هل أأجل مشروع الرياض؟" /><button id="agentSend">إرسال</button></div>`;
     document.body.appendChild(panel);
     const bodyEl=panel.querySelector('#agentBody'), inputEl=panel.querySelector('#agentInput'), typingEl=panel.querySelector('#aTyping');
-    let isOpen=false, busy=false;
-    function save(){ try{ localStorage.setItem(HISTORY_KEY, bodyEl.innerHTML); }catch(e){} }
-    function loadHist(){ try{ const h=localStorage.getItem(HISTORY_KEY); if(h){ bodyEl.innerHTML=h; bodyEl.scrollTop=bodyEl.scrollHeight; return true; } }catch(e){} return false; }
+    let isOpen=false, busy=false, lastUid=null;
+    btn.style.display='none';
+    /* الوكيل للمالك فقط: يظهر بعد تأكيد الدور، ويختفي ويُمسح عند الخروج أو تبديل الحساب */
+    function syncAccess(){
+      const ok=isOwner(), uid=ok?S.user.id:null;
+      btn.style.display=ok?'':'none';
+      if(!ok){ panel.classList.remove('open'); isOpen=false; }
+      if(uid!==lastUid){ lastUid=uid; bodyEl.innerHTML=''; panel.querySelector('#aBar').innerHTML=''; }
+    }
+    setInterval(syncAccess,700); syncAccess();
+    function save(){ try{ localStorage.setItem(histKey(), bodyEl.innerHTML); }catch(e){} }
+    function loadHist(){ try{ const h=localStorage.getItem(histKey()); if(h){ bodyEl.innerHTML=h; bodyEl.scrollTop=bodyEl.scrollHeight; return true; } }catch(e){} return false; }
     function addMsg(t,who='ai'){ const d=document.createElement('div'); d.className='aMsg '+who; d.textContent=t; bodyEl.appendChild(d); bodyEl.scrollTop=bodyEl.scrollHeight; save(); }
     function esc(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     btn.onclick=()=>{ isOpen=!isOpen; panel.classList.toggle('open',isOpen); if(isOpen) loadInbox(); if(isOpen && !bodyEl.children.length && !loadHist()){ addMsg('هلا فيك 👋\nأنا الحين ذكي، مو حافظ أوامر.\n\nشاورني بأي صيغة تبي:\n• "وش رايك أأجل مشروع الرياض؟"\n• "هل مشروع جدة متعثر ولا ماشي؟"\n• "قارن بين مشروع الرياض وجدة، وش أبدأ فيه؟"\n• "سجل معوق لمشروع الرياض: تأخر التوريد"\n\nأي تعديل بيشاورك قبل ما أنفذه.','ai'); } };
@@ -2822,7 +2841,7 @@ init();
     }
 
     async function send(){
-      const text=inputEl.value.trim(); if(!text||busy) return;
+      if(!isOwner()) return; const text=inputEl.value.trim(); if(!text||busy) return;
       inputEl.value=''; addMsg(text,'user');
       if(!S.user){ addMsg('سجل دخول أول عشان أشوف مشاريعك.','ai'); return; }
       busy=true; typingEl.style.display='block';
@@ -2874,6 +2893,7 @@ init();
     }
 
     async function executeAction(action){
+      if(!isOwner()) return false;
       const d=action.data||{};
       if(action.type==='notify_manager'){
         if(!['owner','pm'].includes(S.role)) return false;
